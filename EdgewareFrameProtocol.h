@@ -78,7 +78,7 @@ public:
 
     EdgewareFrameProtocol(uint32_t setMTU = 0);
     virtual ~EdgewareFrameProtocol();
-
+    
     EdgewareFrameMessages packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent);
     std::function<void(const std::vector<uint8_t> &subPacket)> sendCallback = std::bind(
             &EdgewareFrameProtocol::sendData, this, std::placeholders::_1);
@@ -100,6 +100,7 @@ public:
 
 private:
 
+    //Packet header part ----- START ------
     enum Frametype : uint8_t {
         type0,
         type1,
@@ -109,14 +110,13 @@ private:
     /*
     * <uint8_t> frameType
     * - 0x00 illegal - discard
-    * - 0x01 frame is larger than packet
-    * - 0x02 frame is less than packet
+    * - 0x01 frame is larger than MTU
+    * - 0x02 frame is less than MTU
     * <uint16_t> sizeOfData (optional if frameType is 0x02)
-    * <uint8_t> superFrameNo
+    * <uint16_t> superFrameNo
     * <uint16_t> fragmentNo
     * <uint16_t> ofFragmentNo
-    * <uint8_t> dataContent
-    *  - EdgewareFrameContent
+    * <EdgewareFrameContent> dataContent
     */
 
     struct EdgewareFrameType0 {
@@ -158,6 +158,10 @@ private:
         }
     };
 
+    //Packet header part ----- END ------
+
+    //Internal buffer management ----- START ------
+    
     struct CandidateToDeliver
     {
         uint64_t deliveryOrder;
@@ -174,6 +178,10 @@ private:
         }
     };
 
+    //Internal buffer management ----- END ------
+
+    //Private methods ----- START ------
+    
     void sendData(const std::vector<uint8_t> &subPacket);
     void gotData(const std::vector<uint8_t> &packet, EdgewareFrameContent content, bool broken);
     EdgewareFrameMessages unpackType1(const std::vector<uint8_t> &subPacket);
@@ -181,18 +189,22 @@ private:
     void unpackerWorker(uint32_t timeout);
     uint64_t superFrameRecalculator(uint16_t superframe);
 
+    //Private methods ----- END ------
+    
+    Bucket bucketList[UINT8_MAX+1]; //Internal queue
+    uint32_t bucketTimeout = 0; //time out passed to reciever
+    uint32_t headOfLineBlockingTimeout = 0; //HOL time out passed to reciever
+    std::mutex netMtx; //Mutex protecting the queue
 
-    Bucket bucketList[UINT8_MAX+1];
-    uint32_t bucketTimeout = 0;
-    uint32_t headOfLineBlockingTimeout = 0;
-    std::mutex netMtx;
-
-    uint32_t currentMTU = 0;
+    uint32_t currentMTU = 0; //current MUT used by the packer
+    
+    //various counters to keep track of the different frames
     uint16_t superFrameNo = 0;
     int64_t oldSuperframeNumber = 0;
     uint64_t superFrameRecalc = 0;
     bool superFrameFirstTime = true;
 
+    //Reciever thread management
     std::atomic_bool isThreadActive;
     std::atomic_bool threadActive;
 };
