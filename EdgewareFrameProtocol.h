@@ -15,6 +15,8 @@
 #include <thread>
 #include <unistd.h>
 
+#define UNIT_TESTS //Enable or disable the APIs used by the unit tests
+
 // GLobal Logger -- Start
 #define LOGG_NOTIFY 1
 #define LOGG_WARN 2
@@ -69,6 +71,13 @@ namespace EdgewareFrameMessagesNamespace {
         duplicatePacketRecieved
     };
 }
+namespace EdgewareFrameProtocolModeNamespace {
+    enum EdgewareFrameProtocolMode : uint8_t {
+        unknown,
+        packer,
+        unpacker,
+    };
+}
 
 using EdgewareFrameMessages = EdgewareFrameMessagesNamespace::EdgewareFrameMessagesDefines;
 using EdgewareFrameContent = EdgewareFrameContentNamespace::EdgewareFrameContentDefines;
@@ -76,7 +85,7 @@ using EdgewareFrameContent = EdgewareFrameContentNamespace::EdgewareFrameContent
 class EdgewareFrameProtocol {
 public:
 
-    EdgewareFrameProtocol(uint32_t setMTU = 0);
+    EdgewareFrameProtocol(uint32_t setMTU = 0, EdgewareFrameProtocolModeNamespace::EdgewareFrameProtocolMode mode = EdgewareFrameProtocolModeNamespace::unpacker);
     virtual ~EdgewareFrameProtocol();
     
     EdgewareFrameMessages packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent);
@@ -95,11 +104,13 @@ public:
     EdgewareFrameProtocol &operator=(EdgewareFrameProtocol const &) = delete;  // Copy assign
     EdgewareFrameProtocol &operator=(EdgewareFrameProtocol &&) = delete;      // Move assign
 
-
-
+    //Used by unitTests ---------------------
+#ifdef UNIT_TESTS
+    size_t geType1Size();
+    size_t geType2Size();
+#endif
 
 private:
-
     //Packet header part ----- START ------
     enum Frametype : uint8_t {
         type0,

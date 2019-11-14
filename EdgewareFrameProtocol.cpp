@@ -4,11 +4,11 @@
 
 #include "EdgewareFrameProtocol.h"
 
-//Constructor
-EdgewareFrameProtocol::EdgewareFrameProtocol(uint32_t setMTU) {
+//Constructor setting the MTU (Only needed if sending)
+EdgewareFrameProtocol::EdgewareFrameProtocol(uint32_t setMTU, EdgewareFrameProtocolModeNamespace::EdgewareFrameProtocolMode mode) {
     if (setMTU > UINT_MAX) {
         LOGGER(true, LOGG_FATAL, "MTU Larger than 65535, that is illegal.");
-    } else if (setMTU < UINT8_MAX) {
+    } else if ((setMTU < UINT8_MAX) && mode != EdgewareFrameProtocolModeNamespace::unpacker) {
         LOGGER(true, LOGG_FATAL, "MTU less than 255 is not accepted.");
     } else {
         currentMTU = setMTU;
@@ -347,7 +347,7 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpack(const std::vector<uint8_t> &
 //Pack data method. Fragments the data and calls the sendPAcket method at the host level.
 EdgewareFrameMessages
 EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent) {
-    if (packet.size() > currentMTU * UINT_MAX) {
+    if (packet.size() > currentMTU * UINT_MAX) { //FIXME
         return EdgewareFrameMessages::tooLargeFrame;
     }
 
@@ -406,4 +406,14 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
 
     superFrameNo++;
     return EdgewareFrameMessages::noError;
+}
+
+
+//Unit tests methods
+
+size_t EdgewareFrameProtocol::geType1Size() {
+    return sizeof(EdgewareFrameType1);
+}
+size_t EdgewareFrameProtocol::geType2Size(){
+    return sizeof(EdgewareFrameType2);
 }
