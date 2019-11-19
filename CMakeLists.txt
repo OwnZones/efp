@@ -3,4 +3,9 @@ project(efp)
 
 set(CMAKE_CXX_STANDARD 14)
 
-add_executable(efp main.cpp EdgewareFrameProtocol.cpp EdgewareFrameProtocol.h)
+add_library(efp STATIC EdgewareFrameProtocol.cpp)
+
+#remove_definitions(-DDEBUG)
+#add_definitions(-DDEBUG)
+add_executable(efptests main.cpp EdgewareFrameProtocol.cpp)
+

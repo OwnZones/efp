@@ -3,6 +3,7 @@
 //
 
 #include "EdgewareFrameProtocol.h"
+#include "EdgewareInternal.h"
 
 //Constructor setting the MTU (Only needed if sending)
 EdgewareFrameProtocol::EdgewareFrameProtocol(uint16_t setMTU, EdgewareFrameMode mode) {

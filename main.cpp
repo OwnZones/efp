@@ -1,9 +1,9 @@
+
 #include "EdgewareFrameProtocol.h"
 
 #include <iostream>
 
 #define MTU 1456 //SRT-max
-
 
 enum unitTests : int {
     unitTestInactive,
@@ -144,6 +144,12 @@ void sendData(const std::vector<uint8_t> &subPacket) {
                 unitTestsSavedData2D.push_back(subPacket);
                 break;
             }
+            break;
+        case unitTests::unitTest9:
+            if (subPacket[0] == 2) {
+                break;
+            }
+            myEFPReciever.unpack(subPacket);
             break;
         default:
             unitTestFailed = true;
@@ -335,6 +341,35 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
             activeUnitTest = unitTests::unitTestInactive;
             std::cout << "unitTest8 done" << std::endl;
             break;
+        case unitTests::unitTest9:
+            if (!broken) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            if (pts != UINT64_MAX) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            if (code != UINT32_MAX) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+
+            for (int x = 0; x < ((MTU - myEFPPacker.geType1Size()) * 5); x++) {
+                if (packet->framedata[x] != vectorChecker++) {
+
+                    unitTestFailed = true;
+                    unitTestActive = false;
+                    break;
+                }
+            }
+            unitTestActive = false;
+            activeUnitTest = unitTests::unitTestInactive;
+            std::cout << "unitTest9 done" << std::endl;
+            break;
         default:
             unitTestFailed = true;
             unitTestActive = false;
@@ -512,6 +547,24 @@ int main() {
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
     unitTestActive = true;
     result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts, 1, 2);
+    if (result != EdgewareFrameMessages::noError) {
+        std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
+                  << std::endl;
+        return EXIT_FAILURE;
+    }
+    if (waitForCompletion()) return EXIT_FAILURE;
+
+    //UnitTest9
+    //Test sending packets, 5 type 1 + 1 type 2.. Drop the type 2 packet.
+    //broken should be set, the PTS and code should be set to the illegal value and the vector should be linear for 5 times MTU - myEFPPacker.geType1Size()
+    activeUnitTest = unitTests::unitTest9;
+    unitTestPacketNumberSender = 0;
+    unitTestsSavedData.clear();
+    mydata.clear();
+    mydata.resize(((MTU - myEFPPacker.geType1Size()) * 5) + 12);
+    std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
+    unitTestActive = true;
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
