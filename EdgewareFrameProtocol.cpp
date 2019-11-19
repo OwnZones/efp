@@ -5,11 +5,13 @@
 #include "EdgewareFrameProtocol.h"
 
 //Constructor setting the MTU (Only needed if sending)
-EdgewareFrameProtocol::EdgewareFrameProtocol(uint32_t setMTU, EdgewareFrameProtocolModeNamespace::EdgewareFrameProtocolMode mode) {
-    if (setMTU > UINT_MAX) {
-        LOGGER(true, LOGG_FATAL, "MTU Larger than 65535, that is illegal.");
-    } else if ((setMTU < UINT8_MAX) && mode != EdgewareFrameProtocolModeNamespace::unpacker) {
-        LOGGER(true, LOGG_FATAL, "MTU less than 255 is not accepted.");
+EdgewareFrameProtocol::EdgewareFrameProtocol(uint16_t setMTU, EdgewareFrameMode mode) {
+    if (setMTU > USHRT_MAX) {
+        LOGGER(true, LOGG_FATAL, "MTU Larger than "  << unsigned(UINT_MAX) << " MTU not supported");
+        currentMTU = 0;
+    } else if ((setMTU < UINT8_MAX) && mode != EdgewareFrameMode::unpacker) {
+        LOGGER(true, LOGG_FATAL, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.");
+        currentMTU = 0;
     } else {
         currentMTU = setMTU;
     }
@@ -28,7 +30,7 @@ void EdgewareFrameProtocol::sendData(const std::vector<uint8_t> &subPacket) {
     LOGGER(true, LOGG_ERROR, "Implement the sendCallback method for the protocol to work.");
 }
 //Dummy callback for reciever
-void EdgewareFrameProtocol::gotData(const std::vector<uint8_t> &packet, EdgewareFrameContent content, bool broken) {
+void EdgewareFrameProtocol::gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code) {
     LOGGER(true, LOGG_ERROR, "Implement the recieveCallback method for the protocol to work.");
 }
 
@@ -36,7 +38,7 @@ void EdgewareFrameProtocol::gotData(const std::vector<uint8_t> &packet, Edgeware
 //counter. The maximum loss / hole this calculator can handle is (UINT16_MAX + 1)
 uint64_t EdgewareFrameProtocol::superFrameRecalculator(uint16_t superframe) {
     if (superFrameFirstTime) {
-        oldSuperframeNumber = (int64_t) superframe;
+        oldSuperframeNumber = (int64_t)superframe;
         superFrameRecalc = oldSuperframeNumber;
         superFrameFirstTime = false;
         return superFrameRecalc;
@@ -53,7 +55,7 @@ uint64_t EdgewareFrameProtocol::superFrameRecalculator(uint16_t superframe) {
     return superFrameRecalc;
 }
 
-//Unpack method for type1 packets. Type1 packets are parts of frames larger than the MTU
+//Unpack method for type1 packets. Type1 packets are the parts of frames larger than the MTU
 EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8_t> &subPacket) {
     std::lock_guard<std::mutex> lock(netMtx);
 
@@ -65,6 +67,8 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
         //LOGGER(false,LOGG_NOTIFY,"Setting: " << unsigned(type1Frame.superFrameNo));
         thisBucket->active = true;
         thisBucket->haveRecievedPacket.reset();
+        thisBucket->pts = UINT64_MAX;
+        thisBucket->code = UINT32_MAX;
         thisBucket->haveRecievedPacket[type1Frame.fragmentNo] = 1;
         thisBucket->deliveryOrder = superFrameRecalculator(type1Frame.superFrameNo);
         thisBucket->dataContent = type1Frame.dataContent;
@@ -72,9 +76,9 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
         thisBucket->fragmentCounter = 0;
         thisBucket->ofFragmentNo = type1Frame.ofFragmentNo;
         thisBucket->fragmentSize = (subPacket.size() - sizeof(EdgewareFrameType1));
-        thisBucket->bucketData.clear();
-        thisBucket->bucketData.insert(thisBucket->bucketData.end(), subPacket.begin() + sizeof(EdgewareFrameType1),
-                                      subPacket.end());
+        size_t insertDataPointer = thisBucket->fragmentSize * type1Frame.fragmentNo;
+        thisBucket->bucketData = std::make_shared<allignedFrameData>(thisBucket->fragmentSize * (type1Frame.ofFragmentNo + 1));
+        std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType1), subPacket.size() - sizeof(EdgewareFrameType1));
         return EdgewareFrameMessages::noError;
     }
 
@@ -89,43 +93,22 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
         return EdgewareFrameMessages::bufferOutOfBounds;
     }
 
-    //Have I already recieved this packet before? (1+1 first come first serve or just a duplicate)
+    //FIXME 1+1 mode not supported need a window of packets already dealt width
+    //Have I already recieved this packet before? (duplicate?)
+    //A duplicate can trigger a new of the same packet if at the border... //FIXME
     if (thisBucket->haveRecievedPacket[type1Frame.fragmentNo] == 1) {
         return EdgewareFrameMessages::duplicatePacketRecieved;
     } else {
         thisBucket->haveRecievedPacket[type1Frame.fragmentNo] = 1;
     }
 
-    //If for example there is one packet split up into type1 and type2 frame.
-    //Then for some reason the unpacker recieves the out of order
-    //Then the fragment size is unknown.. Lets fill it out now.. when we know.
-    if (!thisBucket->fragmentSize) {
-        thisBucket->fragmentSize = (subPacket.size() - sizeof(EdgewareFrameType1));
-    }
-
     //Let's re-set the timout and let also add +1 to the fragment counter
     thisBucket->timeout = bucketTimeout;
     thisBucket->fragmentCounter++;
 
-    //this is fragment data at the end of the packet fill it in and return
-    if (thisBucket->fragmentCounter == type1Frame.fragmentNo) {
-        thisBucket->bucketData.insert(thisBucket->bucketData.end(), subPacket.begin() + sizeof(EdgewareFrameType1),
-                                      subPacket.end());
-        return EdgewareFrameMessages::noError;
-    }
-
-
-    //This is a fragment of data at a position further away than the bucket contains.. fill at the end
     size_t insertDataPointer = thisBucket->fragmentSize * type1Frame.fragmentNo;
-    if (thisBucket->bucketData.size() < insertDataPointer) {
-        thisBucket->bucketData.insert(thisBucket->bucketData.end(), subPacket.begin() + sizeof(EdgewareFrameType1),
-                                      subPacket.end());
-        return EdgewareFrameMessages::noError;
-    }
+    std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType1), subPacket.size() - sizeof(EdgewareFrameType1));
 
-    //Or this data needs to be inserted somewhere between the start and the end
-    thisBucket->bucketData.insert(thisBucket->bucketData.begin() + insertDataPointer,
-                                  subPacket.begin() + sizeof(EdgewareFrameType1), subPacket.end());
     return EdgewareFrameMessages::noError;
 }
 
@@ -142,16 +125,19 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vec
     if (!thisBucket->active) {
         thisBucket->active = true;
         thisBucket->haveRecievedPacket.reset();
+        thisBucket->pts = type2Frame.pts;
+        thisBucket->code = type2Frame.code;
         thisBucket->haveRecievedPacket[type2Frame.fragmentNo] = 1;
         thisBucket->deliveryOrder = superFrameRecalculator(type2Frame.superFrameNo);
         thisBucket->dataContent = type2Frame.dataContent;
         thisBucket->timeout = bucketTimeout;
-        thisBucket->fragmentCounter = 0;
         thisBucket->ofFragmentNo = type2Frame.ofFragmentNo;
-        thisBucket->fragmentSize = 0;
-        thisBucket->bucketData.clear();
-        thisBucket->bucketData.insert(thisBucket->bucketData.end(), subPacket.begin() + sizeof(EdgewareFrameType2),
-                                      subPacket.end());
+        thisBucket->fragmentCounter = 0;
+        thisBucket->fragmentSize = type2Frame.type1PacketSize;
+        size_t reserveThis=((thisBucket->fragmentSize * type2Frame.ofFragmentNo) + (subPacket.size() - sizeof(EdgewareFrameType2)));
+        thisBucket->bucketData = std::make_shared<allignedFrameData>(reserveThis);
+        size_t insertDataPointer = type2Frame.type1PacketSize * type2Frame.fragmentNo;
+        std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType2), subPacket.size() - sizeof(EdgewareFrameType2));
         return EdgewareFrameMessages::noError;
     }
 
@@ -168,15 +154,21 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vec
     }
 
     thisBucket->timeout = bucketTimeout;
+    thisBucket->pts = type2Frame.pts;
+    thisBucket->code = type2Frame.code;
     thisBucket->fragmentCounter++;
-    thisBucket->bucketData.insert(thisBucket->bucketData.end(), subPacket.begin() + sizeof(EdgewareFrameType2),
-                                  subPacket.end());
+    thisBucket->bucketData->frameSize = (thisBucket->fragmentSize * type2Frame.ofFragmentNo) + (subPacket.size() - sizeof(EdgewareFrameType2));
+
+    //Type 2 is always at the end and is always the highest number fragment
+    size_t insertDataPointer = type2Frame.type1PacketSize * type2Frame.fragmentNo;
+    std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType2), subPacket.size() - sizeof(EdgewareFrameType2));
     return EdgewareFrameMessages::noError;
 }
 
 
 // This is the thread going trough the buckets to see if they should be delivered to
 // the 'user'
+// 1000 times per second is a bit aggressive, change to 100 times per second?
 
 void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
     //Set the defaults. meaning the thread is running and there is no head of line blocking action going on.
@@ -189,23 +181,22 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
     while (threadActive) {
         usleep(1000); //Check all active buckets each milisecond
         uint32_t activeCount = 0;
-        std::vector<CandidateToDeliver> vec;
+        std::vector<CandidateToDeliver> candidates;
         uint64_t deliveryOrderOldest = UINT64_MAX;
 
         //The default mode is not to clear any buckets
         bool clearHeadOfLineBuckets=false;
-        //If im in head of blocking garbage collect mode.
+        //If I'm in head of blocking garbage collect mode.
         if (foundHeadOfLineBlocking) {
             //If some one instructed me to timeout then let's timeout first
             if (headOfLineBlockingCounter) {
                 headOfLineBlockingCounter--;
             } else {
-                //Timeout triggered.. Let's garbage collect
+                //Timeout triggered.. Let's garbage collect the head.
                 clearHeadOfLineBuckets=true;
                 foundHeadOfLineBlocking=false;
             }
         }
-
         netMtx.lock();
 
         //Scan trough all buckets
@@ -227,24 +218,25 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
 
                 //If the bucket is ready to be delivered or is the bucket timedout?
                 if (bucketList[i].fragmentCounter == bucketList[i].ofFragmentNo) {
-                    vec.push_back(CandidateToDeliver(bucketList[i].deliveryOrder, i, false));
+                    candidates.push_back(CandidateToDeliver(bucketList[i].deliveryOrder, i, false, bucketList[i].pts, bucketList[i].code));
                 } else if (!--bucketList[i].timeout) {
-                    vec.push_back(CandidateToDeliver(bucketList[i].deliveryOrder, i, true));
+                    candidates.push_back(CandidateToDeliver(bucketList[i].deliveryOrder, i, true, bucketList[i].pts, bucketList[i].code));
                     bucketList[i].timeout = 1; //We want to timeout this again if head of line blocking is on
                 }
             }
         }
 
         //Do we got any timedout buckets or finished buckets?
-        if (vec.size()) {
+        if (candidates.size()) {
             //Sort them in delivery order
-            std::sort(vec.begin(), vec.end(), sortDeliveryOrder());
+            std::sort(candidates.begin(), candidates.end(), sortDeliveryOrder());
 
             //So ok we have cleared the head send it all out
             if (clearHeadOfLineBuckets) {
-                for (auto &x: vec) {
-                    recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, x.broken);
+                for (auto &x: candidates) {
+                    recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, x.broken, x.pts, x.code);
                     bucketList[x.bucket].active = false;
+                    bucketList[x.bucket].bucketData = nullptr;
                 }
             } else {
 
@@ -253,27 +245,28 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 //A 0 timout means out of order delivery else we-re here. then sleap.. then
                 //spin the timouts then clear the head.
 
-                //Check for head of line blocking only if hol-timoeut is set
-                if (deliveryOrderOldest < bucketList[vec[0].bucket].deliveryOrder && headOfLineBlockingTimeout &&
+                //Check for head of line blocking only if HOL-timoeut is set
+                if (deliveryOrderOldest < bucketList[candidates[0].bucket].deliveryOrder && headOfLineBlockingTimeout &&
                     !foundHeadOfLineBlocking) {
                     LOGGER(false, LOGG_NOTIFY, "HOL found"); //FIXME-REMOVE
-                    foundHeadOfLineBlocking = true; //Found hol
+                    foundHeadOfLineBlocking = true; //Found hole
                     headOfLineBlockingCounter = headOfLineBlockingTimeout; //Number of ms to spin
-                    headOfLineBlockingTail = bucketList[vec[0].bucket].deliveryOrder; //This is the tail
+                    headOfLineBlockingTail = bucketList[candidates[0].bucket].deliveryOrder; //This is the tail
                 }
 
-                //Deliver only when head of line blocking is cleared and were hopfully back to normal
+                //Deliver only when head of line blocking is cleared and we're back to normal
                 if (!foundHeadOfLineBlocking) {
-                    for (auto &x: vec) {
-                        recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, x.broken);
+                    for (auto &x: candidates) {
+                        recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, x.broken, x.pts, x.code);
                         bucketList[x.bucket].active = false;
+                        bucketList[x.bucket].bucketData = nullptr;
                     }
                 }
             }
         }
         netMtx.unlock();
 
-        //Is more than 50% of the buffer used... Keep track of this in bad network conditions.
+        //Is more than 50% of the buffer used... Keep track of this. 50% might be a bit low. FIXME set to 80% and warn user.
         if (activeCount > UINT8_MAX / 2) {
             LOGGER(true, LOGG_FATAL, "Current active buckets are more than half the circular buffer.");
         }
@@ -285,7 +278,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
 //Start reciever worker thread
 void EdgewareFrameProtocol::startUnpacker(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster) {
     if (bucketTimeoutMaster == 0) {
-        LOGGER(true, LOGG_FATAL, "bucketTimeoutMaster cant be 0 forcing 1");
+        LOGGER(true, LOGG_FATAL, "bucketTimeoutMaster can't be 0 forcing 1");
         bucketTimeoutMaster = 1;
     }
     bucketTimeout = bucketTimeoutMaster;
@@ -300,7 +293,7 @@ void EdgewareFrameProtocol::stopUnpacker() {
     while (isThreadActive) {
         usleep(1000);
         if (!--lockProtect) {
-            LOGGER(true, LOGG_FATAL, "Thread not stopping fatal.");
+            LOGGER(true, LOGG_FATAL, "unpackerWorker thread not stopping. Quitting anyway");
             break;
         }
     }
@@ -312,8 +305,7 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpack(const std::vector<uint8_t> &
     //Type 0 packets can be used to fill with user data outside efp packets
     //Type 1 are packets larger than MTU
     //Type 2 are packets smaller than MTU
-    //Type 2 packets are also used at the end of TYPE1 packet superFrames
-    //They have type2Frame.ofFragmentNo larger than 0
+    //Type 2 packets are also used at the end of Type 1 packet superFrames
 
     if (subPacket[0] == Frametype::type0) {
         return EdgewareFrameMessages::noError;
@@ -334,20 +326,30 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpack(const std::vector<uint8_t> &
 
         //This is a single frame smaller than MTU
         //Simplest case
-        //FIXME - multi delivery same source is not handeled
+        //FIXME - multi delivery same source is not handled
 
-        recieveCallback(std::vector<uint8_t>(subPacket.begin() + sizeof(EdgewareFrameType2), subPacket.end()),
-                        type2Frame.dataContent, false);
+        framePtr thisFrame = std::make_shared<allignedFrameData>(subPacket.size()-sizeof(EdgewareFrameType2));
+        std::memcpy(thisFrame->framedata, subPacket.data() + sizeof(EdgewareFrameType2), subPacket.size() - sizeof(EdgewareFrameType2));
+        recieveCallback(thisFrame, type2Frame.dataContent, false, type2Frame.pts, type2Frame.code);
     } else {
         return EdgewareFrameMessages::unknownFrametype;
     }
     return EdgewareFrameMessages::noError;
 }
 
-//Pack data method. Fragments the data and calls the sendPAcket method at the host level.
+//Pack data method. Fragments the data and calls the sendCallback method at the host level.
 EdgewareFrameMessages
-EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent) {
-    if (packet.size() > currentMTU * UINT_MAX) { //FIXME
+EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent, uint64_t pts, uint32_t code) {
+
+    if (pts == UINT64_MAX ) {
+        return EdgewareFrameMessages::reservedPTSValue;
+    }
+
+    if (code == UINT32_MAX ) {
+        return EdgewareFrameMessages::reservedCodeValue;
+    }
+
+    if (packet.size() > currentMTU * UINT_MAX) { //FIXME (Add header in the calculation)
         return EdgewareFrameMessages::tooLargeFrame;
     }
 
@@ -356,6 +358,8 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
         type2Frame.superFrameNo = superFrameNo;
         type2Frame.dataContent = dataContent;
         type2Frame.sizeOfData = (uint16_t) packet.size();
+        type2Frame.pts = pts;
+        type2Frame.code = code;
         std::vector<uint8_t> finalPacket;
         finalPacket.insert(finalPacket.end(), (uint8_t *) &type2Frame, ((uint8_t *) &type2Frame) + sizeof type2Frame);
         finalPacket.insert(finalPacket.end(), packet.begin(), packet.end());
@@ -374,7 +378,7 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
 
     size_t diffFrames = sizeof(EdgewareFrameType2) - sizeof(EdgewareFrameType1);
     uint16_t ofFragmentNo =
-            ceil((double) (packet.size() + diffFrames) / (double) (currentMTU - sizeof(EdgewareFrameType1))) - 1;
+            ceil((double) (packet.size() + diffFrames) / (double) (currentMTU - sizeof(EdgewareFrameType1)))-1;
     type1Frame.ofFragmentNo = ofFragmentNo;
 
     for (; fragmentNo < ofFragmentNo; fragmentNo++) {
@@ -392,25 +396,24 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
         LOGGER(true, LOGG_FATAL, "Calculation bug.. Value that made me sink -> " << packet.size());
         return EdgewareFrameMessages::internalCalculationError;
     }
-
     EdgewareFrameType2 type2Frame;
     type2Frame.superFrameNo = superFrameNo;
     type2Frame.fragmentNo = fragmentNo;
     type2Frame.ofFragmentNo = ofFragmentNo;
     type2Frame.dataContent = dataContent;
     type2Frame.sizeOfData = (uint16_t) dataLeftToSend;
+    type2Frame.pts = pts;
+    type2Frame.code = code;
+    type2Frame.type1PacketSize = currentMTU - sizeof(type1Frame);
     std::vector<uint8_t> finalPacket;
     finalPacket.insert(finalPacket.end(), (uint8_t *) &type2Frame, ((uint8_t *) &type2Frame) + sizeof type2Frame);
     finalPacket.insert(finalPacket.end(), packet.begin() + dataPointer, packet.begin() + dataPointer + dataLeftToSend);
     sendCallback(finalPacket);
-
     superFrameNo++;
     return EdgewareFrameMessages::noError;
 }
 
-
 //Unit tests methods
-
 size_t EdgewareFrameProtocol::geType1Size() {
     return sizeof(EdgewareFrameType1);
 }

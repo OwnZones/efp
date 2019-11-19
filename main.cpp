@@ -36,6 +36,8 @@ enum unitTests : int {
 std::atomic<unitTests> activeUnitTest;
 std::atomic_bool unitTestActive;
 std::atomic_bool unitTestFailed;
+std::vector<uint8_t> unitTestsSavedData;
+std::vector<std::vector<uint8_t>> unitTestsSavedData2D;
 
 std::atomic_int unitTestPacketNumberSender;
 std::atomic_int unitTestPacketNumberReciever;
@@ -101,10 +103,47 @@ void sendData(const std::vector<uint8_t> &subPacket) {
             myEFPReciever.unpack(subPacket);
             break;
         case unitTests::unitTest6:
-            if (!unitTestPacketNumberSender++){
+            if (!unitTestPacketNumberSender++) {
                 break;
             }
             myEFPReciever.unpack(subPacket);
+            break;
+        case unitTests::unitTest7:
+            if (unitTestPacketNumberSender == 1) {
+                unitTestPacketNumberSender++;
+                unitTestsSavedData = subPacket;
+                break;
+            }
+            if (unitTestPacketNumberSender == 2) {
+                unitTestPacketNumberSender++;
+                myEFPReciever.unpack(subPacket);
+                myEFPReciever.unpack(unitTestsSavedData);
+                break;
+            }
+            unitTestPacketNumberSender++;
+            myEFPReciever.unpack(subPacket);
+            break;
+        case unitTests::unitTest8:
+            unitTestPacketNumberSender++;
+            if (subPacket[0] == 2) {
+                unitTestPacketNumberSender = 0;
+                myEFPReciever.unpack(subPacket);
+                for (auto &x: unitTestsSavedData2D) {
+                    if (unitTestPacketNumberSender == 1) {
+                        unitTestsSavedData = x;
+                    } else if (unitTestPacketNumberSender == 2) {
+                        unitTestPacketNumberSender++;
+                        myEFPReciever.unpack(x);
+                        myEFPReciever.unpack(unitTestsSavedData);
+                    } else {
+                        myEFPReciever.unpack(x);
+                    }
+                    unitTestPacketNumberSender++;
+                }
+            } else {
+                unitTestsSavedData2D.push_back(subPacket);
+                break;
+            }
             break;
         default:
             unitTestFailed = true;
@@ -114,12 +153,20 @@ void sendData(const std::vector<uint8_t> &subPacket) {
     }
 }
 
-void gotData(const std::vector<uint8_t> &packet, EdgewareFrameContent content, bool broken) {
-    //std::cout << "Got data size ->" << packet.size() << " Content type: " << unsigned(content) << " Broken->" << broken << std::endl;
-    uint8_t vectorChecker=0;
+void
+gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts,
+        uint32_t code) {
+    //std::cout << "Got data size ->" << packet->frameSize << " Content type: " << unsigned(content) << " Broken->" << broken << std::endl;
+
+    uint8_t vectorChecker = 0;
 
     switch (activeUnitTest) {
         case unitTests::unitTest2:
+            if (pts != 1 || code != 2) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
             if (broken) {
                 unitTestFailed = true;
                 unitTestActive = false;
@@ -135,12 +182,17 @@ void gotData(const std::vector<uint8_t> &packet, EdgewareFrameContent content, b
             std::cout << "unitTest2 done" << std::endl;
             break;
         case unitTests::unitTest3:
+            if (pts != 1 || code != 2) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
             if (broken) {
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
             }
-            if (packet[0] != 0xaa) {
+            if (packet->framedata[0] != 0xaa) {
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
@@ -150,12 +202,17 @@ void gotData(const std::vector<uint8_t> &packet, EdgewareFrameContent content, b
             std::cout << "unitTest3 done" << std::endl;
             break;
         case unitTests::unitTest4:
+            if (pts != 1 || code != 2) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
             if (broken) {
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
             }
-            if (packet.size() != (MTU - myEFPPacker.geType1Size()) + 1) {
+            if (packet->frameSize != (MTU - myEFPPacker.geType1Size()) + 1) {
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
@@ -165,18 +222,23 @@ void gotData(const std::vector<uint8_t> &packet, EdgewareFrameContent content, b
             std::cout << "unitTest4 done" << std::endl;
             break;
         case unitTests::unitTest5:
+            if (pts != 1 || code != 2) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
             if (broken) {
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
             }
-            if (packet.size() != ((MTU*5) + (MTU/2))) {
+            if (packet->frameSize != ((MTU * 5) + (MTU / 2))) {
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
             }
-            for (auto &x: packet) {
-                if (x != vectorChecker++) {
+            for (int x = 0; x < packet->frameSize; x++) {
+                if (packet->framedata[x] != vectorChecker++) {
                     unitTestFailed = true;
                     unitTestActive = false;
                     break;
@@ -187,8 +249,13 @@ void gotData(const std::vector<uint8_t> &packet, EdgewareFrameContent content, b
             std::cout << "unitTest5 done" << std::endl;
             break;
         case unitTests::unitTest6:
+            if (pts != 1 || code != 2) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
             //One block of MTU should be gone
-            if (packet.size() != (((MTU - myEFPPacker.geType1Size())*1) + 12)) {
+            if (packet->frameSize != (((MTU - myEFPPacker.geType1Size()) * 2) + 12)) {
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
@@ -199,9 +266,9 @@ void gotData(const std::vector<uint8_t> &packet, EdgewareFrameContent content, b
                 unitTestActive = false;
                 break;
             }
-            vectorChecker = (MTU-myEFPPacker.geType1Size()) % 256;
-            for (auto &x: packet) {
-                if (x != vectorChecker++) {
+            vectorChecker = (MTU - myEFPPacker.geType1Size()) % 256;
+            for (int x = (MTU - myEFPPacker.geType1Size()); x < packet->frameSize; x++) {
+                if (packet->framedata[x] != vectorChecker++) {
                     unitTestFailed = true;
                     unitTestActive = false;
                     break;
@@ -210,6 +277,63 @@ void gotData(const std::vector<uint8_t> &packet, EdgewareFrameContent content, b
             unitTestActive = false;
             activeUnitTest = unitTests::unitTestInactive;
             std::cout << "unitTest6 done" << std::endl;
+            break;
+        case unitTests::unitTest7:
+            if (pts != 1 || code != 2) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            if (broken) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            if (packet->frameSize != (((MTU - myEFPPacker.geType1Size()) * 5) + 12)) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            for (int x = 0; x < packet->frameSize; x++) {
+                if (packet->framedata[x] != vectorChecker++) {
+                    unitTestFailed = true;
+                    unitTestActive = false;
+                    break;
+                }
+            }
+            unitTestActive = false;
+            activeUnitTest = unitTests::unitTestInactive;
+            std::cout << "unitTest7 done" << std::endl;
+            break;
+        case unitTests::unitTest8:
+            if (pts != 1 || code != 2) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            if (broken) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            if (packet->frameSize != (((MTU - myEFPPacker.geType1Size()) * 5) + 12)) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+
+            for (int x = 0; x < packet->frameSize; x++) {
+                if (packet->framedata[x] != vectorChecker++) {
+
+                    unitTestFailed = true;
+                    unitTestActive = false;
+                    break;
+                }
+            }
+
+            unitTestActive = false;
+            activeUnitTest = unitTests::unitTestInactive;
+            std::cout << "unitTest8 done" << std::endl;
             break;
         default:
             unitTestFailed = true;
@@ -220,8 +344,14 @@ void gotData(const std::vector<uint8_t> &packet, EdgewareFrameContent content, b
 }
 
 bool waitForCompletion() {
+    int breakOut = 0;
     while (unitTestActive) {
         usleep(1000 * 500); //half a second
+        if (breakOut++ == 10) {
+            std::cout << "waitForCompletion did wait for 5 seconds. fail the test." << std::endl;
+            unitTestFailed = true;
+            unitTestActive = false;
+        }
     }
     if (unitTestFailed) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed." << std::endl;
@@ -232,25 +362,31 @@ bool waitForCompletion() {
 
 int main() {
 
+    //Set unit tests status
     unitTestFailed = false;
 
-    //Create a packer and provide a callback for handling transmission
+    //Provide a callback for handling transmission
     myEFPPacker.sendCallback = std::bind(&sendData, std::placeholders::_1);
-
 
     //startUnpacker:
     // timeout not fully recieved frames ms,
     // if there is head-of-line packets blocking ready frames.. )
     myEFPReciever.startUnpacker(10, 2);
     myEFPReciever.recieveCallback = std::bind(&gotData, std::placeholders::_1, std::placeholders::_2,
-                                              std::placeholders::_3);
+                                              std::placeholders::_3, std::placeholders::_4, std::placeholders::_5);
+
+    //vector of data used during the unit-tests
+    std::vector<uint8_t> mydata;
+
+    //The result of the packer
+    EdgewareFrameMessages result;
 
     /*
-        std::generate(mydata.begin(), mydata.end(), [n = 0] () mutable { return n++; });
+     *
+     * START OF THE UNIT TESTS
+     *
      */
 
-    std::vector<uint8_t> mydata;
-    EdgewareFrameMessages result;
 
     //UnitTest1
     //Test sending a packet less than MTU + header - > Expected result is one type2 frame only sent
@@ -258,7 +394,7 @@ int main() {
     mydata.clear();
     mydata.resize(MTU - myEFPPacker.geType2Size());
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -272,7 +408,7 @@ int main() {
     mydata.clear();
     mydata.resize(MTU - myEFPPacker.geType2Size());
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -287,7 +423,7 @@ int main() {
     mydata.resize(1);
     mydata[0] = 0xaa;
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -302,7 +438,7 @@ int main() {
     mydata.clear();
     mydata.resize((MTU - myEFPPacker.geType1Size()) + 1);
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -317,7 +453,7 @@ int main() {
     mydata.resize((MTU * 5) + (MTU / 2));
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -325,22 +461,62 @@ int main() {
     }
     if (waitForCompletion()) return EXIT_FAILURE;
 
+
     //UnitTest6
-    //Test sending a packet of MTU*5+MTU/2 containing a linear vector drop the first packet -> the result should be a packet with that size containing a linear vector
-    //starting with the number (MTU-headertyp1) % 256. also check for broken flag is set.
+    //Test sending a packet of MTU*5+MTU/2 containing a linear vector drop the first packet -> the result should be a packet with a hole of MTU-headertype1
+    //then a linear vector of data starting with the number (MTU-headertyp1) % 256. also check for broken flag is set.
     activeUnitTest = unitTests::unitTest6;
     unitTestPacketNumberSender = 0;
     mydata.clear();
-    mydata.resize(((MTU - myEFPPacker.geType1Size())*2) + 12); //(MTU / 2));
+    mydata.resize(((MTU - myEFPPacker.geType1Size()) * 2) + 12);
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
         return EXIT_FAILURE;
     }
     usleep(1000 * 20); //We need to wait for the timeout of 10ms of delivering broken frames
+    if (waitForCompletion()) return EXIT_FAILURE;
+
+
+    //UnitTest7
+    //Test sending packets, 5 type 1 + 1 type 2.. Reorder type1 packet 3 and 2 so the delivery order is 1 3 2 4 5 6
+    //then check for correct length and correct vector in the payload
+    activeUnitTest = unitTests::unitTest7;
+    unitTestPacketNumberSender = 0;
+    unitTestsSavedData.clear();
+    mydata.clear();
+    mydata.resize(((MTU - myEFPPacker.geType1Size()) * 5) + 12);
+    std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
+    unitTestActive = true;
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
+    if (result != EdgewareFrameMessages::noError) {
+        std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
+                  << std::endl;
+        return EXIT_FAILURE;
+    }
+    if (waitForCompletion()) return EXIT_FAILURE;
+
+
+    //UnitTest8
+    //Test sending packets, 5 type 1 + 1 type 2.. Send the type2 packet first to the unpacker and send the type1 packets out of order
+    activeUnitTest = unitTests::unitTest8;
+    unitTestPacketNumberSender = 0;
+    unitTestsSavedData.clear();
+    unitTestsSavedData2D.clear();
+    mydata.clear();
+    size_t mysize = ((MTU - myEFPPacker.geType1Size()) * 5) + 12;
+    mydata.resize(mysize);
+    std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
+    unitTestActive = true;
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts, 1, 2);
+    if (result != EdgewareFrameMessages::noError) {
+        std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
+                  << std::endl;
+        return EXIT_FAILURE;
+    }
     if (waitForCompletion()) return EXIT_FAILURE;
 
     std::cout << "Tests completed" << std::endl;
