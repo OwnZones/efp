@@ -37,16 +37,16 @@ void EdgewareFrameProtocol::gotData(EdgewareFrameProtocol::framePtr &packet, Edg
 
 //This method is generating a linear uint64_t counter from the linear uint16_t
 //counter. The maximum loss / hole this calculator can handle is (UINT16_MAX + 1)
-uint64_t EdgewareFrameProtocol::superFrameRecalculator(uint16_t superframe) {
+uint64_t EdgewareFrameProtocol::superFrameRecalculator(uint16_t superFrame) {
     if (superFrameFirstTime) {
-        oldSuperframeNumber = (int64_t)superframe;
+        oldSuperframeNumber = (int64_t)superFrame;
         superFrameRecalc = oldSuperframeNumber;
         superFrameFirstTime = false;
         return superFrameRecalc;
     }
 
-    int64_t superFrameDiff = (int64_t) superframe - oldSuperframeNumber;
-    oldSuperframeNumber = (int64_t) superframe;
+    int64_t superFrameDiff = (int64_t) superFrame - oldSuperframeNumber;
+    oldSuperframeNumber = (int64_t) superFrame;
 
     if (superFrameDiff > 0) {
         superFrameRecalc += superFrameDiff;

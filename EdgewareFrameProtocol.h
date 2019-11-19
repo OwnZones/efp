@@ -69,17 +69,16 @@ using EdgewareFrameMode = EdgewareFrameProtocolModeNamespace::EdgewareFrameProto
 
 class EdgewareFrameProtocol {
 public:
-
     class allignedFrameData {
     public:
-        size_t frameSize = 0;         //Number of bytes aligned for Field1/Progressive video frames
-        uint8_t* framedata = nullptr;   //NV12 formated field1 or the progressive frame
+        size_t frameSize = 0;         //Number of bytes in frame
+        uint8_t* framedata = nullptr;   //recieved frame data
 
         allignedFrameData(const allignedFrameData&) = delete;
         allignedFrameData & operator=(const allignedFrameData &) = delete;
 
         allignedFrameData(size_t memAllocSize) {
-            posix_memalign((void**)&framedata, 32, memAllocSize);
+            posix_memalign((void**)&framedata, 32, memAllocSize);   //32 byte memory alignment for AVX2 processing //Winboze needs some other code.
             if (framedata) frameSize = memAllocSize;
         }
 
@@ -117,13 +116,12 @@ public:
 #endif
 
 private:
-
     //Bucket  ----- START ------
     class Bucket {
     public:
         bool active = false;
         EdgewareFrameContent dataContent = EdgewareFrameContent::unknown;
-        uint32_t timeout;
+        uint32_t timeout = 0;
         uint16_t fragmentCounter = 0;
         uint16_t ofFragmentNo = 0;
         uint64_t deliveryOrder = 0;
@@ -141,7 +139,7 @@ private:
     EdgewareFrameMessages unpackType1(const std::vector<uint8_t> &subPacket);
     EdgewareFrameMessages unpackType2LastFrame(const std::vector<uint8_t> &subPacket);
     void unpackerWorker(uint32_t timeout);
-    uint64_t superFrameRecalculator(uint16_t superframe);
+    uint64_t superFrameRecalculator(uint16_t superFrame);
     //Private methods ----- END ------
 
     //Internal lists and variables ----- START ------
@@ -149,19 +147,15 @@ private:
     uint32_t bucketTimeout = 0; //time out passed to reciever
     uint32_t headOfLineBlockingTimeout = 0; //HOL time out passed to reciever
     std::mutex netMtx; //Mutex protecting the queue
-
     uint32_t currentMTU = 0; //current MTU used by the packer
-
     //various counters to keep track of the different frames
     uint16_t superFrameNo = 0;
     int64_t oldSuperframeNumber = 0;
     uint64_t superFrameRecalc = 0;
     bool superFrameFirstTime = true;
-
     //Reciever thread management
     std::atomic_bool isThreadActive;
     std::atomic_bool threadActive;
-
     //Internal lists and variables ----- END ------
 };
 

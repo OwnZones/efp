@@ -151,6 +151,9 @@ void sendData(const std::vector<uint8_t> &subPacket) {
             }
             myEFPReciever.unpack(subPacket);
             break;
+        case unitTests::unitTest10:
+            myEFPReciever.unpack(subPacket);
+            break;
         default:
             unitTestFailed = true;
             unitTestActive = false;
@@ -370,6 +373,16 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
             activeUnitTest = unitTests::unitTestInactive;
             std::cout << "unitTest9 done" << std::endl;
             break;
+        case unitTests::unitTest10:
+            if (packet->frameSize != 10882) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            unitTestActive = false;
+            activeUnitTest = unitTests::unitTestInactive;
+            std::cout << "unitTest10 done" << std::endl;
+            break;
         default:
             unitTestFailed = true;
             unitTestActive = false;
@@ -565,6 +578,20 @@ int main() {
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
     unitTestActive = true;
     result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
+    if (result != EdgewareFrameMessages::noError) {
+        std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
+                  << std::endl;
+        return EXIT_FAILURE;
+    }
+    if (waitForCompletion()) return EXIT_FAILURE;
+
+    //UnitTest10
+    //send 10882 bytes and get 10882 bytes type h264b
+    activeUnitTest = unitTests::unitTest10;
+    mydata.clear();
+    mydata.resize(10882);
+    unitTestActive = true;
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264b,1,2);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
