@@ -52,7 +52,10 @@ namespace EdgewareFrameMessagesNamespace {
         bufferOutOfBounds,
         duplicatePacketRecieved,
         reservedPTSValue,
-        reservedCodeValue
+        reservedCodeValue,
+        memoryAllocationError,
+        unpackerAlreadyStarted,
+        failedStoppingUnpacker
     };
 }
 namespace EdgewareFrameProtocolModeNamespace {
@@ -94,14 +97,12 @@ public:
     virtual ~EdgewareFrameProtocol();
 
     EdgewareFrameMessages packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent, uint64_t pts, uint32_t code);
-    std::function<void(const std::vector<uint8_t> &subPacket)> sendCallback = std::bind(
-            &EdgewareFrameProtocol::sendData, this, std::placeholders::_1);
+    std::function<void(const std::vector<uint8_t> &subPacket)> sendCallback = nullptr;
 
-    void startUnpacker(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster);
-    void stopUnpacker();
+    EdgewareFrameMessages startUnpacker(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster);
+    EdgewareFrameMessages stopUnpacker();
     EdgewareFrameMessages unpack(const std::vector<uint8_t> &subPacket);
-    std::function<void(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code)> recieveCallback = std::bind(
-            &EdgewareFrameProtocol::gotData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5);
+    std::function<void(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code)> recieveCallback = nullptr;
 
     // delete copy and move constructors and assign operators
     EdgewareFrameProtocol(EdgewareFrameProtocol const &) = delete;             // Copy construct
