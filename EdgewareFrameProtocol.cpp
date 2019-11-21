@@ -234,7 +234,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
     uint64_t oldestFrameDelivered = 0;
 
     while (threadActive) {
-        usleep(1000); //Check all active buckets each milisecond
+        usleep(1000 * 10); //Check all active buckets 100 times a second
         bool timeOutTrigger = false;
         uint32_t activeCount = 0;
         std::vector<CandidateToDeliver> candidates;
@@ -256,7 +256,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
         netMtx.lock();
 
         //Scan trough all buckets
-        for (int i = 0; i < UINT8_MAX; i++) {
+        for (uint64_t i = 0; i < CIRCULAR_BUFFER_SIZE; i++) {
             //Only work with the buckets that are active
             if (bucketList[i].active) {
                 //Keep track of number of active buckets
@@ -329,6 +329,12 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 //Check for head of line blocking only if HOL-timoeut is set
                 if (deliveryOrderOldest < bucketList[candidates[0].bucket].deliveryOrder && headOfLineBlockingTimeout &&
                     !foundHeadOfLineBlocking) {
+
+                    LOGGER(true, LOGG_NOTIFY, "HOL " << unsigned(deliveryOrderOldest) << " " << unsigned(bucketList[candidates[0].bucket].deliveryOrder))
+                    //for (auto &x: candidates) { //DEBUG-Keep for now
+                    //    std::cout << ">>>" << unsigned(x.deliveryOrder) << " is broken " << x.broken << std::endl;
+                    //}
+
                     foundHeadOfLineBlocking = true; //Found hole
                     headOfLineBlockingCounter = headOfLineBlockingTimeout; //Number of times to spin this loop
                     headOfLineBlockingTail = bucketList[candidates[0].bucket].deliveryOrder; //This is the tail
@@ -338,6 +344,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 if (!foundHeadOfLineBlocking) {
                     for (auto &x: candidates) {
                         if (expectedNextFrameToDeliver != x.deliveryOrder && headOfLineBlockingTimeout) {
+                            LOGGER(true, LOGG_NOTIFY, "HOL2")
                             foundHeadOfLineBlocking = true; //Found hole
                             headOfLineBlockingCounter = headOfLineBlockingTimeout; //Number of times to spin this loop
                             headOfLineBlockingTail = x.deliveryOrder; //So we basically give the non existing data a chance to arrive..
@@ -345,6 +352,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                         }
                         expectedNextFrameToDeliver++;
 
+                        //std::cout << unsigned(oldestFrameDelivered) << " " << unsigned(x.deliveryOrder) << std::endl;
                         if (oldestFrameDelivered <= x.deliveryOrder) {
                             oldestFrameDelivered = headOfLineBlockingTimeout?x.deliveryOrder:0;
                             recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, x.broken,

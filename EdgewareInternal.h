@@ -36,11 +36,11 @@ std::cout << a.str(); \
 struct CandidateToDeliver
 {
     uint64_t deliveryOrder;
-    uint8_t bucket;
+    uint64_t bucket;
     bool broken;
     uint64_t pts;
     uint32_t code;
-    CandidateToDeliver(uint64_t k, uint8_t s, bool t, uint64_t v, uint32_t l) : deliveryOrder(k), bucket(s), broken(t), pts(v), code(l){}
+    CandidateToDeliver(uint64_t k, uint64_t s, bool t, uint64_t v, uint32_t l) : deliveryOrder(k), bucket(s), broken(t), pts(v), code(l){}
 };
 
 struct sortDeliveryOrder
