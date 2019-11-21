@@ -58,12 +58,6 @@ uint64_t EdgewareFrameProtocol::superFrameRecalculator(uint16_t superFrame) {
 
     int16_t changeValue = (int16_t)superFrame - (int16_t)oldSuperframeNumber;
     int64_t cval = (int64_t)changeValue;
-
-    //std::cout << "1 -> " << unsigned(superFrame) <<
-    //" " << signed(changeValue) <<
-    //" " << signed(cval) <<
-    //std::endl;
-
     oldSuperframeNumber = superFrame;
 
     if (cval > INT16_MAX) {
@@ -80,7 +74,7 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
     std::lock_guard<std::mutex> lock(netMtx);
 
     EdgewareFrameType1 type1Frame = *(EdgewareFrameType1 *) subPacket.data();
-    Bucket *thisBucket = &bucketList[type1Frame.superFrameNo & 0b1111111111111];
+    Bucket *thisBucket = &bucketList[type1Frame.superFrameNo & CIRCULAR_BUFFER_SIZE];
 
     //is this entry in the buffer active? If no, create a new else continue filling the bucket with data.
     if (!thisBucket->active) {
@@ -92,7 +86,6 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
         thisBucket->code = UINT32_MAX;
         thisBucket->haveRecievedPacket[type1Frame.fragmentNo] = 1;
         thisBucket->deliveryOrder = superFrameRecalculator(type1Frame.superFrameNo);
-        std::cout << "in -> " << unsigned(type1Frame.superFrameNo) << " recalc -> " << unsigned(thisBucket->deliveryOrder) << std::endl;
         thisBucket->dataContent = type1Frame.dataContent;
         thisBucket->timeout = bucketTimeout;
         thisBucket->fragmentCounter = 0;
@@ -162,7 +155,7 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
 EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vector<uint8_t> &subPacket) {
     std::lock_guard<std::mutex> lock(netMtx);
     EdgewareFrameType2 type2Frame = *(EdgewareFrameType2 *) subPacket.data();
-    Bucket *thisBucket = &bucketList[type2Frame.superFrameNo & 0b1111111111111];
+    Bucket *thisBucket = &bucketList[type2Frame.superFrameNo & CIRCULAR_BUFFER_SIZE];
 
     if (!thisBucket->active) {
         thisBucket->active = true;
@@ -172,7 +165,6 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vec
         thisBucket->code = type2Frame.code;
         thisBucket->haveRecievedPacket[type2Frame.fragmentNo] = 1;
         thisBucket->deliveryOrder = superFrameRecalculator(type2Frame.superFrameNo);
-        std::cout << "GAP ->" << unsigned(thisBucket->deliveryOrder) << std::endl;
         thisBucket->dataContent = type2Frame.dataContent;
         thisBucket->timeout = bucketTimeout;
         thisBucket->ofFragmentNo = type2Frame.ofFragmentNo;
@@ -286,13 +278,11 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 //If the bucket is ready to be delivered or is the bucket timedout?
                 if (!bucketList[i].timeout) {
                     timeOutTrigger = true;
-                    //std::cout << "bip!" << unsigned(bucketList[i].fragmentCounter) << " " << unsigned(bucketList[i].ofFragmentNo) << std::endl;
                     candidates.push_back(CandidateToDeliver(bucketList[i].deliveryOrder, i,
                                                             bucketList[i].fragmentCounter != bucketList[i].ofFragmentNo, bucketList[i].pts,
                                                             bucketList[i].code));
                     bucketList[i].timeout = 1; //We want to timeout this again if head of line blocking is on
                 } else if (bucketList[i].fragmentCounter == bucketList[i].ofFragmentNo) {
-                    std::cout << "GAG ->" << unsigned(bucketList[i].deliveryOrder) << std::endl;
                     candidates.push_back(CandidateToDeliver(bucketList[i].deliveryOrder, i, false, bucketList[i].pts,
                                                             bucketList[i].code));
                 }
@@ -302,26 +292,26 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
         size_t numCandidatesToDeliver=candidates.size();
         if ((!fistDelivery && numCandidatesToDeliver >= 2) || timeOutTrigger) {
             fistDelivery=true;
-            //std::cout << "bim!" << std::endl;
             expectedNextFrameToDeliver=deliveryOrderOldest;
         }
 
         //Do we got any timedout buckets or finished buckets?
         if (numCandidatesToDeliver && fistDelivery) {
-            //std::cout << "pao!" << std::endl;
             //Sort them in delivery order
             std::sort(candidates.begin(), candidates.end(), sortDeliveryOrder());
 
+            //FIXME - we could implement fast HOL clearing here
+            // if we're waiting for a time out but all candidates are already to be delivered
 
-            for (auto &x: candidates) {
-                std::cout << ">>>" << unsigned(x.deliveryOrder) << " is broken " << x.broken << std::endl;
-            }
+            //for (auto &x: candidates) { //DEBUG-Keep for now
+            //    std::cout << ">>>" << unsigned(x.deliveryOrder) << " is broken " << x.broken << std::endl;
+            //}
 
             //So ok we have cleared the head send it all out
             if (clearHeadOfLineBuckets) {
                 for (auto &x: candidates) {
                     if (oldestFrameDelivered <= x.deliveryOrder) {
-                        oldestFrameDelivered = x.deliveryOrder;
+                        oldestFrameDelivered = headOfLineBlockingTimeout?x.deliveryOrder:0;
                         recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, x.broken,
                                         x.pts,
                                         x.code);
@@ -339,7 +329,6 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 //Check for head of line blocking only if HOL-timoeut is set
                 if (deliveryOrderOldest < bucketList[candidates[0].bucket].deliveryOrder && headOfLineBlockingTimeout &&
                     !foundHeadOfLineBlocking) {
-                    LOGGER(false, LOGG_NOTIFY, "HOL found"); //FIXME-REMOVE
                     foundHeadOfLineBlocking = true; //Found hole
                     headOfLineBlockingCounter = headOfLineBlockingTimeout; //Number of times to spin this loop
                     headOfLineBlockingTail = bucketList[candidates[0].bucket].deliveryOrder; //This is the tail
@@ -349,7 +338,6 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 if (!foundHeadOfLineBlocking) {
                     for (auto &x: candidates) {
                         if (expectedNextFrameToDeliver != x.deliveryOrder && headOfLineBlockingTimeout) {
-                            LOGGER(false, LOGG_NOTIFY, "HOL found2");
                             foundHeadOfLineBlocking = true; //Found hole
                             headOfLineBlockingCounter = headOfLineBlockingTimeout; //Number of times to spin this loop
                             headOfLineBlockingTail = x.deliveryOrder; //So we basically give the non existing data a chance to arrive..
@@ -358,8 +346,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                         expectedNextFrameToDeliver++;
 
                         if (oldestFrameDelivered <= x.deliveryOrder) {
-                            LOGGER(false, LOGG_NOTIFY, "a " << unsigned(oldestFrameDelivered))
-                            oldestFrameDelivered = x.deliveryOrder;
+                            oldestFrameDelivered = headOfLineBlockingTimeout?x.deliveryOrder:0;
                             recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, x.broken,
                                             x.pts, x.code);
                         }
@@ -371,8 +358,8 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
         }
         netMtx.unlock();
 
-        //Is more than 50% of the buffer used... Keep track of this. 50% might be a bit low. FIXME set to 80% and warn user.
-        if (activeCount > UINT8_MAX / 2) {
+        //Is more than 75% of the buffer used. //FIXME notify the user in some way
+        if (activeCount > (CIRCULAR_BUFFER_SIZE / 4) * 3 ) {
             LOGGER(true, LOGG_FATAL, "Current active buckets are more than half the circular buffer.");
         }
 

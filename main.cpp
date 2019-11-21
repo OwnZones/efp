@@ -184,17 +184,14 @@ void sendData(const std::vector<uint8_t> &subPacket) {
             unitTestPacketNumberSender++;
             break;
         case unitTests::unitTest11:
-            std::cout << "got> " << unsigned(subPacket[0]) << std::endl;
             if (subPacket[0] == 2) {
                 unitTestPacketNumberSender++;
                 unitTestsSavedData2D.push_back(subPacket);
                 unitTestsSavedData3D.push_back(unitTestsSavedData2D);
                 if (unitTestPacketNumberSender == 5) {
                     for (int item=unitTestsSavedData3D.size();item > 0;item--) {
-                        std::cout << "counter> " << unsigned(item-1) << std::endl;
                         int pakCnt=0;
                         for (auto &x: unitTestsSavedData3D[item-1]) {
-                            std::cout << "pakr> " << unsigned(pakCnt++) << std::endl;
                             if (item != 3) {
                                 myEFPReciever.unpack(x);
                             }
@@ -470,7 +467,6 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
             unitTestActive = false;
             break;
         case unitTests::unitTest11:
-            std::cout << "Got data size ->" << packet->frameSize << " Content type: " << unsigned(content) << " pts " << unsigned(pts) << " Broken->" << broken << std::endl;
             if (broken) {
                 unitTestFailed = true;
                 unitTestActive = false;
@@ -550,7 +546,6 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
             unitTestActive = false;
             break;
         case unitTests::unitTest12:
-            std::cout << "Got data size ->" << packet->frameSize << " Content type: " << unsigned(content) << " pts " << unsigned(pts) << " Broken->" << broken << std::endl;
             if (broken) {
                 unitTestFailed = true;
                 unitTestActive = false;

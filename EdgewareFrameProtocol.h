@@ -17,6 +17,9 @@
 
 #define UNIT_TESTS //Enable or disable the APIs used by the unit tests
 
+#define CIRCULAR_BUFFER_SIZE 0b1111111111111 //must be a continious set of set bits from LSB to MSB
+//0b1111111111111 == 8191
+
 #define EFP_MAJOR_VERSION 1
 #define EFP_MINOR_VERSION 0
 
@@ -25,7 +28,7 @@ namespace EdgewareFrameContentNamespace {
         unknown,                //Standard                      //code
         privateData,            //Any user defined format       //USER (not needed)
         adts,                   //Mpeg-4 AAC ADTS framing       //ADTS (not needed)
-        mpegts,                 //ITU-T H.222 188 TS packets    //MPEG (not needed)
+        mpegts,                 //ITU-T H.222 188byte TS        //MPEG (not needed)
         mpegpes,                //ITU-T H.222 PES packets       //MPES (not needed)
         jpeg2000,               //ITU-T T.800 Annex M           //J2KV (not needed)
         jpeg,                   //ITU-T.81                      //JPEG (not needed)
@@ -35,9 +38,9 @@ namespace EdgewareFrameContentNamespace {
         //Formats defined below (MSB='1') also uses code to define the data format in the superframe
 
         didsdid=0x80,           //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
-        sdi,                     //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
+        sdi,                    //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
         h264,                   //ITU-T H.264                   //ANXB = Annex B framing / AVCC = AVCC framing
-        h265                   //ITU-T H.265                   //ANXB = Annex B framing / AVCC = AVCC framing
+        h265                    //ITU-T H.265                   //ANXB = Annex B framing / AVCC = AVCC framing
     };
 }
 
@@ -149,8 +152,7 @@ private:
 
     //Internal lists and variables ----- START ------
 
-    //0b1111111111111 == 8191
-    Bucket bucketList[0b1111111111111 + 1]; //Internal queue
+    Bucket bucketList[CIRCULAR_BUFFER_SIZE + 1]; //Internal queue
     uint32_t bucketTimeout = 0; //time out passed to reciever
     uint32_t headOfLineBlockingTimeout = 0; //HOL time out passed to reciever
     std::mutex netMtx; //Mutex protecting the queue
