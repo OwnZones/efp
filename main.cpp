@@ -38,6 +38,8 @@ std::atomic_bool unitTestActive;
 std::atomic_bool unitTestFailed;
 std::vector<uint8_t> unitTestsSavedData;
 std::vector<std::vector<uint8_t>> unitTestsSavedData2D;
+std::vector<std::vector<std::vector<uint8_t>>> unitTestsSavedData3D;
+uint64_t expectedPTS;
 
 std::atomic_int unitTestPacketNumberSender;
 std::atomic_int unitTestPacketNumberReciever;
@@ -47,6 +49,8 @@ EdgewareFrameProtocol myEFPPacker(MTU, EdgewareFrameProtocolModeNamespace::packe
 
 void sendData(const std::vector<uint8_t> &subPacket) {
     //std::cout << "Send data of size ->" << subPacket.size() << " Packet type: " << unsigned(subPacket[0]) << " Unit test number: " << unsigned(activeUnitTest) << std::endl;
+
+    EdgewareFrameMessages info;
 
     switch (activeUnitTest) {
         case unitTests::unitTest1:
@@ -60,10 +64,22 @@ void sendData(const std::vector<uint8_t> &subPacket) {
             std::cout << "unitTest1 done" << std::endl;
             break;
         case unitTests::unitTest2:
-            myEFPReciever.unpack(subPacket);
+            info = myEFPReciever.unpack(subPacket);
+            if (info != EdgewareFrameMessages::noError) {
+                std::cout << "Error-> " << unsigned(info) << std::endl;
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
             break;
         case unitTests::unitTest3:
-            myEFPReciever.unpack(subPacket);
+            info = myEFPReciever.unpack(subPacket);
+            if (info != EdgewareFrameMessages::noError) {
+                std::cout << "Error-> " << unsigned(info) << std::endl;
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
             break;
         case unitTests::unitTest4:
             if (subPacket[0] != 1 && unitTestPacketNumberSender == 0) {
@@ -166,6 +182,49 @@ void sendData(const std::vector<uint8_t> &subPacket) {
                 unitTestActive = false;
             }
             unitTestPacketNumberSender++;
+            break;
+        case unitTests::unitTest11:
+            std::cout << "got> " << unsigned(subPacket[0]) << std::endl;
+            if (subPacket[0] == 2) {
+                unitTestPacketNumberSender++;
+                unitTestsSavedData2D.push_back(subPacket);
+                unitTestsSavedData3D.push_back(unitTestsSavedData2D);
+                if (unitTestPacketNumberSender == 5) {
+                    for (int item=unitTestsSavedData3D.size();item > 0;item--) {
+                        std::cout << "counter> " << unsigned(item-1) << std::endl;
+                        int pakCnt=0;
+                        for (auto &x: unitTestsSavedData3D[item-1]) {
+                            std::cout << "pakr> " << unsigned(pakCnt++) << std::endl;
+                            if (item != 3) {
+                                myEFPReciever.unpack(x);
+                            }
+                        }
+                    }
+                }
+                unitTestsSavedData2D.clear();
+                break;
+            }
+            unitTestsSavedData2D.push_back(subPacket);
+            break;
+        case unitTests::unitTest12:
+            if (subPacket[0] == 2) {
+                unitTestPacketNumberSender++;
+                unitTestsSavedData2D.push_back(subPacket);
+                unitTestsSavedData3D.push_back(unitTestsSavedData2D);
+                if (unitTestPacketNumberSender == 5) {
+                    for (int item=unitTestsSavedData3D.size();item > 0;item--) {
+                        std::vector<std::vector<uint8_t>> unitTestsSavedData2DLocal=unitTestsSavedData3D[item-1];
+                        for (int fragment=unitTestsSavedData2DLocal.size();fragment > 0;fragment--) {
+                            if (item != 3) {
+                                myEFPReciever.unpack(unitTestsSavedData2DLocal[fragment-1]);
+                            }
+                        }
+                    }
+                }
+                unitTestsSavedData2D.clear();
+                break;
+            }
+            unitTestsSavedData2D.push_back(subPacket);
             break;
         default:
             unitTestFailed = true;
@@ -410,6 +469,166 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
             unitTestFailed = true;
             unitTestActive = false;
             break;
+        case unitTests::unitTest11:
+            std::cout << "Got data size ->" << packet->frameSize << " Content type: " << unsigned(content) << " pts " << unsigned(pts) << " Broken->" << broken << std::endl;
+            if (broken) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+
+            unitTestPacketNumberReciever++;
+            if (unitTestPacketNumberReciever == 1) {
+                if (pts == 1) {
+                    expectedPTS=2;
+                    break;
+                }
+                if (pts == 2) {
+                    expectedPTS=4;
+                    break;
+                }
+                if (pts == 4) {
+                    expectedPTS=5;
+                    break;
+                }
+                if (pts == 5) {
+                    unitTestActive = false;
+                    activeUnitTest = unitTests::unitTestInactive;
+                    std::cout << "unitTest11 done" << std::endl;
+                }
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            if (unitTestPacketNumberReciever == 2) {
+                if (expectedPTS == pts) {
+                    if (pts == 2) {
+                        expectedPTS=4;
+                    }
+                    if (pts == 4) {
+                        expectedPTS=5;
+                    }
+                    if (pts == 5) {
+                        unitTestActive = false;
+                        activeUnitTest = unitTests::unitTestInactive;
+                        std::cout << "unitTest11 done" << std::endl;
+                    }
+                    break;
+                }
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            if (unitTestPacketNumberReciever == 3) {
+                if (expectedPTS == pts) {
+                    if (pts == 4) {
+                        expectedPTS=5;
+                    }
+                    if (pts == 5) {
+                        unitTestActive = false;
+                        activeUnitTest = unitTests::unitTestInactive;
+                        std::cout << "unitTest11 done" << std::endl;
+                    }
+                    break;
+                }
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            if (unitTestPacketNumberReciever == 4) {
+                if (expectedPTS == pts) {
+                    unitTestActive = false;
+                    activeUnitTest = unitTests::unitTestInactive;
+                    std::cout << "unitTest11 done" << std::endl;
+                    break;
+                }
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            unitTestFailed = true;
+            unitTestActive = false;
+            break;
+        case unitTests::unitTest12:
+            std::cout << "Got data size ->" << packet->frameSize << " Content type: " << unsigned(content) << " pts " << unsigned(pts) << " Broken->" << broken << std::endl;
+            if (broken) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+
+            unitTestPacketNumberReciever++;
+            if (unitTestPacketNumberReciever == 1) {
+                if (pts == 1) {
+                    expectedPTS=2;
+                    break;
+                }
+                if (pts == 2) {
+                    expectedPTS=4;
+                    break;
+                }
+                if (pts == 4) {
+                    expectedPTS=5;
+                    break;
+                }
+                if (pts == 5) {
+                    unitTestActive = false;
+                    activeUnitTest = unitTests::unitTestInactive;
+                    std::cout << "unitTest12 done" << std::endl;
+                }
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            if (unitTestPacketNumberReciever == 2) {
+                if (expectedPTS == pts) {
+                    if (pts == 2) {
+                        expectedPTS=4;
+                    }
+                    if (pts == 4) {
+                        expectedPTS=5;
+                    }
+                    if (pts == 5) {
+                        unitTestActive = false;
+                        activeUnitTest = unitTests::unitTestInactive;
+                        std::cout << "unitTest12 done" << std::endl;
+                    }
+                    break;
+                }
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            if (unitTestPacketNumberReciever == 3) {
+                if (expectedPTS == pts) {
+                    if (pts == 4) {
+                        expectedPTS=5;
+                    }
+                    if (pts == 5) {
+                        unitTestActive = false;
+                        activeUnitTest = unitTests::unitTestInactive;
+                        std::cout << "unitTest12 done" << std::endl;
+                    }
+                    break;
+                }
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            if (unitTestPacketNumberReciever == 4) {
+                if (expectedPTS == pts) {
+                    unitTestActive = false;
+                    activeUnitTest = unitTests::unitTestInactive;
+                    std::cout << "unitTest12 done" << std::endl;
+                    break;
+                }
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            unitTestFailed = true;
+            unitTestActive = false;
+            break;
         default:
             unitTestFailed = true;
             unitTestActive = false;
@@ -446,7 +665,7 @@ int main() {
     //startUnpacker:
     // timeout not fully recieved frames ms,
     // if there is head-of-line packets blocking ready frames.. )
-    myEFPReciever.startUnpacker(10, 2);
+    myEFPReciever.startUnpacker(20, 10);
     myEFPReciever.recieveCallback = std::bind(&gotData, std::placeholders::_1, std::placeholders::_2,
                                               std::placeholders::_3, std::placeholders::_4, std::placeholders::_5);
 
@@ -621,17 +840,70 @@ int main() {
     mydata.resize(MTU-myEFPPacker.geType2Size());
     unitTestActive = true;
 
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264b,1,0);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264,1,0);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
         return EXIT_FAILURE;
     }
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264b,2,0);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264,2,0);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
         return EXIT_FAILURE;
+    }
+
+    if (waitForCompletion()) return EXIT_FAILURE;
+
+    //UnitTest11
+    //Test sending 5 packets, 5 type 1 + 1 type 2..
+    //Reverse the packets to the unpacker and drop the middle packet (packet 3)
+    //This is testing the out of order head of line blocking mechanism
+    //The result should be deliver packet 1,2,4,5 even though we gave the unpacker them in order 5,4,2,1.
+    activeUnitTest = unitTests::unitTest11;
+    mydata.clear();
+    unitTestsSavedData2D.clear();
+    unitTestsSavedData3D.clear();
+    expectedPTS = 0;
+    unitTestPacketNumberSender=0;
+    unitTestPacketNumberReciever = 0;
+    mydata.resize(((MTU - myEFPPacker.geType1Size()) * 5) + 12);
+    unitTestActive = true;
+
+    for (int packetNumber=0;packetNumber < 5; packetNumber++) {
+        result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 0);
+        if (result != EdgewareFrameMessages::noError) {
+            std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
+                      << std::endl;
+            return EXIT_FAILURE;
+        }
+    }
+
+    if (waitForCompletion()) return EXIT_FAILURE;
+
+
+    //UnitTest12
+    //Test sending 5 packets, 5 type 1 + 1 type 2..
+    //Reverse the packets to the unpacker and drop the middle packet (packet 3) also deliver the fragments reversed meaning packet 5 last fragment first..
+    //This is testing the out of order head of line blocking mechanism
+    //The result should be deliver packer 1,2,4,5 even though we gave the unpacker them in order 5,4,2,1.
+    activeUnitTest = unitTests::unitTest12;
+    mydata.clear();
+    unitTestsSavedData2D.clear();
+    unitTestsSavedData3D.clear();
+    expectedPTS = 0;
+    unitTestPacketNumberSender=0;
+    unitTestPacketNumberReciever = 0;
+    mydata.resize(((MTU - myEFPPacker.geType1Size()) * 5) + 12);
+    unitTestActive = true;
+
+    for (int packetNumber=0;packetNumber < 5; packetNumber++) {
+        result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 0);
+        if (result != EdgewareFrameMessages::noError) {
+            std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
+                      << std::endl;
+            return EXIT_FAILURE;
+        }
     }
 
     if (waitForCompletion()) return EXIT_FAILURE;

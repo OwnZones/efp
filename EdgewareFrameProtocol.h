@@ -24,10 +24,6 @@ namespace EdgewareFrameContentNamespace {
     enum EdgewareFrameContentDefines : uint8_t {
         unknown,                //Standard                      //code
         privateData,            //Any user defined format       //USER (not needed)
-        h264b,                  //ITU-T H.264 Annex B framing   //264B (not needed)
-        h265b,                  //ITU-T H.265 Annex B framing   //265B (not needed)
-        h264a,                  //ITU-T H.264 AVCC framing      //264A (not needed)
-        h265a,                  //ITU-T H.265 AVCC framing      //265A (not needed)
         adts,                   //Mpeg-4 AAC ADTS framing       //ADTS (not needed)
         mpegts,                 //ITU-T H.222 188 TS packets    //MPEG (not needed)
         mpegpes,                //ITU-T H.222 PES packets       //MPES (not needed)
@@ -35,8 +31,13 @@ namespace EdgewareFrameContentNamespace {
         jpeg,                   //ITU-T.81                      //JPEG (not needed)
         jpegxs,                 //ISO/IEC 21122-3               //JPXS (not needed)
         pcmaudio,               //AES-3 framing                 //AES3 (not needed)
-        didsdid,               //FOURCC format                  //(FOURCC) (Must be the fourcc code for the format used)
-        sdi                     //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
+
+        //Formats defined below (MSB='1') also uses code to define the data format in the superframe
+
+        didsdid=0x80,           //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
+        sdi,                     //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
+        h264,                   //ITU-T H.264                   //ANXB = Annex B framing / AVCC = AVCC framing
+        h265                   //ITU-T H.265                   //ANXB = Annex B framing / AVCC = AVCC framing
     };
 }
 
@@ -50,12 +51,14 @@ namespace EdgewareFrameMessagesNamespace {
         internalCalculationError,
         endOfPacketError,
         bufferOutOfBounds,
+        bufferOutOfResources,
         duplicatePacketRecieved,
         reservedPTSValue,
         reservedCodeValue,
         memoryAllocationError,
         unpackerAlreadyStarted,
-        failedStoppingUnpacker
+        failedStoppingUnpacker,
+        parameterError
     };
 }
 namespace EdgewareFrameProtocolModeNamespace {
@@ -122,6 +125,7 @@ private:
     public:
         bool active = false;
         EdgewareFrameContent dataContent = EdgewareFrameContent::unknown;
+        uint16_t savedSuperFrameNo = 0; //the SuperFrameNumber using this bucket.
         uint32_t timeout = 0;
         uint16_t fragmentCounter = 0;
         uint16_t ofFragmentNo = 0;
@@ -144,14 +148,16 @@ private:
     //Private methods ----- END ------
 
     //Internal lists and variables ----- START ------
-    Bucket bucketList[UINT8_MAX + 1]; //Internal queue
+
+    //0b1111111111111 == 8191
+    Bucket bucketList[0b1111111111111 + 1]; //Internal queue
     uint32_t bucketTimeout = 0; //time out passed to reciever
     uint32_t headOfLineBlockingTimeout = 0; //HOL time out passed to reciever
     std::mutex netMtx; //Mutex protecting the queue
     uint32_t currentMTU = 0; //current MTU used by the packer
     //various counters to keep track of the different frames
-    uint16_t superFrameNo = 0;
-    int64_t oldSuperframeNumber = 0;
+    uint16_t superFrameNoGenerator = 0;
+    uint16_t oldSuperframeNumber = 0;
     uint64_t superFrameRecalc = 0;
     bool superFrameFirstTime = true;
     //Reciever thread management
