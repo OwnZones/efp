@@ -636,7 +636,7 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
             unitTestPacketNumberReciever++;
 
             if (unitTestPacketNumberReciever != pts) {
-                std::cout << "bug " << std::endl;
+                std::cout << "bug got " << unsigned(pts) << " Expected " << unsigned(unitTestPacketNumberReciever) << std::endl;
                 unitTestPacketNumberReciever = pts;
             }
 
@@ -646,15 +646,16 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
                 }
                 break;
             }
-            /*
-            if (unitTestPacketNumberReciever == 10000) {
+
+            if (unitTestPacketNumberReciever == 100000) {
                 unitTestActive = false;
                 activeUnitTest = unitTests::unitTestInactive;
                 std::cout << "unitTest13 done" << std::endl;
+                break;
             }
             unitTestFailed = true;
             unitTestActive = false;
-             */
+
             break;
         default:
             unitTestFailed = true;
@@ -692,7 +693,9 @@ int main() {
     //startUnpacker:
     // timeout not fully recieved frames ms,
     // if there is head-of-line packets blocking ready frames.. )
-    myEFPReciever.startUnpacker(2, 1);
+
+    myEFPReciever.startUnpacker(3, 1);
+
     myEFPReciever.recieveCallback = std::bind(&gotData, std::placeholders::_1, std::placeholders::_2,
                                               std::placeholders::_3, std::placeholders::_4, std::placeholders::_5);
 
@@ -708,7 +711,7 @@ int main() {
      *
      */
 
-    /*
+
     //UnitTest1
     //Test sending a packet less than MTU + header - > Expected result is one type2 frame only sent
     activeUnitTest = unitTests::unitTest1;
@@ -935,7 +938,7 @@ int main() {
 
     if (waitForCompletion()) return EXIT_FAILURE;
 
-     */
+
 
     //UnitTest13
     //Test sending 100 000 superframes of size from 500 to 10.000 bytes

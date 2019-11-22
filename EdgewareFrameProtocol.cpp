@@ -76,6 +76,8 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
     EdgewareFrameType1 type1Frame = *(EdgewareFrameType1 *) subPacket.data();
     Bucket *thisBucket = &bucketList[type1Frame.superFrameNo & CIRCULAR_BUFFER_SIZE];
 
+
+
     //is this entry in the buffer active? If no, create a new else continue filling the bucket with data.
     if (!thisBucket->active) {
         //LOGGER(false,LOGG_NOTIFY,"Setting: " << unsigned(type1Frame.superFrameNo));
@@ -86,6 +88,7 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
         thisBucket->code = UINT32_MAX;
         thisBucket->haveRecievedPacket[type1Frame.fragmentNo] = 1;
         thisBucket->deliveryOrder = superFrameRecalculator(type1Frame.superFrameNo);
+
         thisBucket->dataContent = type1Frame.dataContent;
         thisBucket->timeout = bucketTimeout;
         thisBucket->fragmentCounter = 0;
@@ -233,6 +236,8 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
 
     uint64_t oldestFrameDelivered = 0;
 
+    uint64_t savedPTS = 0;
+
     while (threadActive) {
         usleep(1000 * 10); //Check all active buckets 100 times a second
         bool timeOutTrigger = false;
@@ -247,7 +252,9 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
             //If some one instructed me to timeout then let's timeout first
             if (headOfLineBlockingCounter) {
                 headOfLineBlockingCounter--;
+                //LOGGER(true, LOGG_NOTIFY, "Flush head countdown " << unsigned(headOfLineBlockingCounter))
             } else {
+                //LOGGER(true, LOGG_NOTIFY, "Flush trigger " << unsigned(headOfLineBlockingCounter))
                 //Timeout triggered.. Let's garbage collect the head.
                 clearHeadOfLineBuckets = true;
                 foundHeadOfLineBlocking = false;
@@ -256,7 +263,9 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
         netMtx.lock();
 
         //Scan trough all buckets
-        for (uint64_t i = 0; i < CIRCULAR_BUFFER_SIZE; i++) {
+
+        for (uint64_t i = 0; i < CIRCULAR_BUFFER_SIZE+1; i++) {
+
             //Only work with the buckets that are active
             if (bucketList[i].active) {
                 //Keep track of number of active buckets
@@ -265,11 +274,10 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 //save the number of the oldest bucket in queue to be delivered
                 if (deliveryOrderOldest > bucketList[i].deliveryOrder) {
                     deliveryOrderOldest = bucketList[i].deliveryOrder;
-                    expectedNextFrameToDeliver = deliveryOrderOldest;
                 }
-
                 //Are we cleaning out old buckets and did we found a head to timout?
-                if ((bucketList[i].deliveryOrder <= headOfLineBlockingTail) && clearHeadOfLineBuckets) {
+                if ((bucketList[i].deliveryOrder < headOfLineBlockingTail) && clearHeadOfLineBuckets) {
+                    LOGGER(true, LOGG_NOTIFY, "BOOM clear-> " << unsigned(bucketList[i].deliveryOrder))
                     bucketList[i].timeout = 1;
                 }
 
@@ -290,6 +298,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
         }
 
         size_t numCandidatesToDeliver=candidates.size();
+
         if ((!fistDelivery && numCandidatesToDeliver >= 2) || timeOutTrigger) {
             fistDelivery=true;
             expectedNextFrameToDeliver=deliveryOrderOldest;
@@ -301,7 +310,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
             std::sort(candidates.begin(), candidates.end(), sortDeliveryOrder());
 
             //FIXME - we could implement fast HOL clearing here
-            // if we're waiting for a time out but all candidates are already to be delivered
+            //if we're waiting for a time out but all candidates are already to be delivered
 
             //for (auto &x: candidates) { //DEBUG-Keep for now
             //    std::cout << ">>>" << unsigned(x.deliveryOrder) << " is broken " << x.broken << std::endl;
@@ -309,6 +318,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
 
             //So ok we have cleared the head send it all out
             if (clearHeadOfLineBuckets) {
+                //LOGGER(true, LOGG_NOTIFY, "FLUSH HEAD!")
                 for (auto &x: candidates) {
                     if (oldestFrameDelivered <= x.deliveryOrder) {
                         oldestFrameDelivered = headOfLineBlockingTimeout?x.deliveryOrder:0;
@@ -316,6 +326,9 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                                         x.pts,
                                         x.code);
                     }
+                    expectedNextFrameToDeliver = x.deliveryOrder+1;
+                    //std::cout << " (y) " << unsigned(expectedNextFrameToDeliver) << std::endl;
+                    savedPTS = bucketList[x.bucket].pts;
                     bucketList[x.bucket].active = false;
                     bucketList[x.bucket].bucketData = nullptr;
                 }
@@ -327,10 +340,9 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 //So in out of order delivery we time out the buckets instead of flushing the head.
 
                 //Check for head of line blocking only if HOL-timoeut is set
-                if (deliveryOrderOldest < bucketList[candidates[0].bucket].deliveryOrder && headOfLineBlockingTimeout &&
+                if (expectedNextFrameToDeliver < bucketList[candidates[0].bucket].deliveryOrder && headOfLineBlockingTimeout &&
                     !foundHeadOfLineBlocking) {
 
-                    LOGGER(true, LOGG_NOTIFY, "HOL " << unsigned(deliveryOrderOldest) << " " << unsigned(bucketList[candidates[0].bucket].deliveryOrder))
                     //for (auto &x: candidates) { //DEBUG-Keep for now
                     //    std::cout << ">>>" << unsigned(x.deliveryOrder) << " is broken " << x.broken << std::endl;
                     //}
@@ -338,19 +350,24 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                     foundHeadOfLineBlocking = true; //Found hole
                     headOfLineBlockingCounter = headOfLineBlockingTimeout; //Number of times to spin this loop
                     headOfLineBlockingTail = bucketList[candidates[0].bucket].deliveryOrder; //This is the tail
+                    //LOGGER(true, LOGG_NOTIFY, "HOL " << unsigned(expectedNextFrameToDeliver) << " "
+                    //<< unsigned(bucketList[candidates[0].bucket].deliveryOrder)
+                    //<< " tail " << unsigned(headOfLineBlockingTail)
+                    //<< " savedPTS " << unsigned(savedPTS))
                 }
 
                 //Deliver only when head of line blocking is cleared and we're back to normal
                 if (!foundHeadOfLineBlocking) {
                     for (auto &x: candidates) {
+
                         if (expectedNextFrameToDeliver != x.deliveryOrder && headOfLineBlockingTimeout) {
-                            LOGGER(true, LOGG_NOTIFY, "HOL2")
                             foundHeadOfLineBlocking = true; //Found hole
                             headOfLineBlockingCounter = headOfLineBlockingTimeout; //Number of times to spin this loop
                             headOfLineBlockingTail = x.deliveryOrder; //So we basically give the non existing data a chance to arrive..
+                            //LOGGER(true, LOGG_NOTIFY, "HOL2 " << unsigned(expectedNextFrameToDeliver) << " " << unsigned(x.deliveryOrder) << " tail " << unsigned(headOfLineBlockingTail))
                             break;
                         }
-                        expectedNextFrameToDeliver++;
+                        expectedNextFrameToDeliver = x.deliveryOrder + 1;
 
                         //std::cout << unsigned(oldestFrameDelivered) << " " << unsigned(x.deliveryOrder) << std::endl;
                         if (oldestFrameDelivered <= x.deliveryOrder) {
@@ -358,6 +375,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                             recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, x.broken,
                                             x.pts, x.code);
                         }
+                        savedPTS = bucketList[x.bucket].pts;
                         bucketList[x.bucket].active = false;
                         bucketList[x.bucket].bucketData = nullptr;
                     }
