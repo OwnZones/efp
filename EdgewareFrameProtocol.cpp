@@ -81,13 +81,18 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
     //is this entry in the buffer active? If no, create a new else continue filling the bucket with data.
     if (!thisBucket->active) {
         //LOGGER(false,LOGG_NOTIFY,"Setting: " << unsigned(type1Frame.superFrameNo));
+        uint64_t deliveryOrderCandidate = superFrameRecalculator(type1Frame.superFrameNo);
+        //Is this a old fragment where we already delivered the superframe?
+        if (deliveryOrderCandidate == thisBucket->deliveryOrder) {
+            return EdgewareFrameMessages::tooOldFragment;
+        }
+        thisBucket->deliveryOrder = deliveryOrderCandidate;
         thisBucket->active = true;
         thisBucket->savedSuperFrameNo = type1Frame.superFrameNo;
         thisBucket->haveRecievedPacket.reset();
         thisBucket->pts = UINT64_MAX;
         thisBucket->code = UINT32_MAX;
         thisBucket->haveRecievedPacket[type1Frame.fragmentNo] = 1;
-        thisBucket->deliveryOrder = superFrameRecalculator(type1Frame.superFrameNo);
 
         thisBucket->dataContent = type1Frame.dataContent;
         thisBucket->timeout = bucketTimeout;
@@ -126,7 +131,6 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
         return EdgewareFrameMessages::bufferOutOfBounds;
     }
 
-    //FIXME 1+1 mode not supported need a window of packets already dealt width
     //Have I already recieved this packet before? (duplicate?)
     if (thisBucket->haveRecievedPacket[type1Frame.fragmentNo] == 1) {
         return EdgewareFrameMessages::duplicatePacketRecieved;
@@ -161,13 +165,18 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vec
     Bucket *thisBucket = &bucketList[type2Frame.superFrameNo & CIRCULAR_BUFFER_SIZE];
 
     if (!thisBucket->active) {
+        uint64_t deliveryOrderCandidate = superFrameRecalculator(type2Frame.superFrameNo);
+        //Is this a old fragment where we already delivered the superframe?
+        if (deliveryOrderCandidate == thisBucket->deliveryOrder) {
+            return EdgewareFrameMessages::tooOldFragment;
+        }
+        thisBucket->deliveryOrder = deliveryOrderCandidate;
         thisBucket->active = true;
         thisBucket->savedSuperFrameNo = type2Frame.superFrameNo;
         thisBucket->haveRecievedPacket.reset();
         thisBucket->pts = type2Frame.pts;
         thisBucket->code = type2Frame.code;
         thisBucket->haveRecievedPacket[type2Frame.fragmentNo] = 1;
-        thisBucket->deliveryOrder = superFrameRecalculator(type2Frame.superFrameNo);
         thisBucket->dataContent = type2Frame.dataContent;
         thisBucket->timeout = bucketTimeout;
         thisBucket->ofFragmentNo = type2Frame.ofFragmentNo;
@@ -286,13 +295,10 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 //If the bucket is ready to be delivered or is the bucket timedout?
                 if (!bucketList[i].timeout) {
                     timeOutTrigger = true;
-                    candidates.push_back(CandidateToDeliver(bucketList[i].deliveryOrder, i,
-                                                            bucketList[i].fragmentCounter != bucketList[i].ofFragmentNo, bucketList[i].pts,
-                                                            bucketList[i].code));
+                    candidates.push_back(CandidateToDeliver(bucketList[i].deliveryOrder, i));
                     bucketList[i].timeout = 1; //We want to timeout this again if head of line blocking is on
                 } else if (bucketList[i].fragmentCounter == bucketList[i].ofFragmentNo) {
-                    candidates.push_back(CandidateToDeliver(bucketList[i].deliveryOrder, i, false, bucketList[i].pts,
-                                                            bucketList[i].code));
+                    candidates.push_back(CandidateToDeliver(bucketList[i].deliveryOrder, i));
                 }
             }
         }
@@ -322,9 +328,10 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 for (auto &x: candidates) {
                     if (oldestFrameDelivered <= x.deliveryOrder) {
                         oldestFrameDelivered = headOfLineBlockingTimeout?x.deliveryOrder:0;
-                        recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, x.broken,
-                                        x.pts,
-                                        x.code);
+                        recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, bucketList[x.bucket].fragmentCounter != bucketList[x.bucket].ofFragmentNo,
+                                        bucketList[x.bucket].pts,
+                                        bucketList[x.bucket].code);
+
                     }
                     expectedNextFrameToDeliver = x.deliveryOrder+1;
                     //std::cout << " (y) " << unsigned(expectedNextFrameToDeliver) << std::endl;
@@ -372,8 +379,9 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                         //std::cout << unsigned(oldestFrameDelivered) << " " << unsigned(x.deliveryOrder) << std::endl;
                         if (oldestFrameDelivered <= x.deliveryOrder) {
                             oldestFrameDelivered = headOfLineBlockingTimeout?x.deliveryOrder:0;
-                            recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, x.broken,
-                                            x.pts, x.code);
+                            recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, bucketList[x.bucket].fragmentCounter != bucketList[x.bucket].ofFragmentNo,
+                                            bucketList[x.bucket].pts,
+                                            bucketList[x.bucket].code);
                         }
                         savedPTS = bucketList[x.bucket].pts;
                         bucketList[x.bucket].active = false;

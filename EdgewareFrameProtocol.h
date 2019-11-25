@@ -61,7 +61,8 @@ namespace EdgewareFrameMessagesNamespace {
         memoryAllocationError,
         unpackerAlreadyStarted,
         failedStoppingUnpacker,
-        parameterError
+        parameterError,
+        tooOldFragment
     };
 }
 namespace EdgewareFrameProtocolModeNamespace {
@@ -132,7 +133,7 @@ private:
         uint32_t timeout = 0;
         uint16_t fragmentCounter = 0;
         uint16_t ofFragmentNo = 0;
-        uint64_t deliveryOrder = 0;
+        uint64_t deliveryOrder = UINT64_MAX;
         size_t fragmentSize = 0;
         uint64_t pts = UINT64_MAX;
         uint32_t code = UINT32_MAX;
