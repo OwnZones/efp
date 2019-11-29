@@ -21,10 +21,9 @@ EdgewareFrameProtocol::EdgewareFrameProtocol(uint16_t setMTU, EdgewareFrameMode 
     threadActive = false;
     isThreadActive = false;
     sendCallback = std::bind(&EdgewareFrameProtocol::sendData, this, std::placeholders::_1);
-    recieveCallback = std::bind(&EdgewareFrameProtocol::gotData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5);
+    recieveCallback = std::bind(&EdgewareFrameProtocol::gotData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5,std::placeholders::_6,std::placeholders::_7);
     LOGGER(true, LOGG_NOTIFY, "EdgewareFrameProtocol constructed");
 }
-
 
 EdgewareFrameProtocol::~EdgewareFrameProtocol() {
     //If my worker is active we need to stop it.
@@ -41,13 +40,12 @@ void EdgewareFrameProtocol::sendData(const std::vector<uint8_t> &subPacket) {
 
 //Dummy callback for reciever
 void EdgewareFrameProtocol::gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken,
-                                    uint64_t pts, uint32_t code) {
+                                    uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
     LOGGER(true, LOGG_ERROR, "Implement the recieveCallback method for the protocol to work.");
 }
 
 //This method is generating a linear uint64_t counter from the nonlinear uint16_t
 //counter. The maximum loss / hole this calculator can handle is (INT16_MAX)
-
 uint64_t EdgewareFrameProtocol::superFrameRecalculator(uint16_t superFrame) {
     if (superFrameFirstTime) {
         oldSuperframeNumber = superFrame;
@@ -70,13 +68,12 @@ uint64_t EdgewareFrameProtocol::superFrameRecalculator(uint16_t superFrame) {
 }
 
 //Unpack method for type1 packets. Type1 packets are the parts of frames larger than the MTU
-EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8_t> &subPacket) {
+EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8_t> &subPacket, uint8_t fromSource) {
     std::lock_guard<std::mutex> lock(netMtx);
 
     EdgewareFrameType1 type1Frame = *(EdgewareFrameType1 *) subPacket.data();
     Bucket *thisBucket = &bucketList[type1Frame.superFrameNo & CIRCULAR_BUFFER_SIZE];
-
-
+    //LOGGER(false, LOGG_NOTIFY, "superFrameNo1-> " << unsigned(type1Frame.superFrameNo))
 
     //is this entry in the buffer active? If no, create a new else continue filling the bucket with data.
     if (!thisBucket->active) {
@@ -88,13 +85,18 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
         }
         thisBucket->deliveryOrder = deliveryOrderCandidate;
         thisBucket->active = true;
+
+        thisBucket->flags = type1Frame.frameType & 0xf0;
+
+        thisBucket->stream = type1Frame.stream;
+        Stream *thisStream = &streams[fromSource][type1Frame.stream];
+        thisBucket->dataContent = thisStream->dataContent;
+        thisBucket->code = thisStream->code;
+
         thisBucket->savedSuperFrameNo = type1Frame.superFrameNo;
         thisBucket->haveRecievedPacket.reset();
         thisBucket->pts = UINT64_MAX;
-        thisBucket->code = UINT32_MAX;
         thisBucket->haveRecievedPacket[type1Frame.fragmentNo] = 1;
-
-        thisBucket->dataContent = type1Frame.dataContent;
         thisBucket->timeout = bucketTimeout;
         thisBucket->fragmentCounter = 0;
         thisBucket->ofFragmentNo = type1Frame.ofFragmentNo;
@@ -159,10 +161,12 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
 // The data IS the last data of a sequence
 // See the comments from above.
 
-EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vector<uint8_t> &subPacket) {
+EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vector<uint8_t> &subPacket, uint8_t fromSource) {
     std::lock_guard<std::mutex> lock(netMtx);
     EdgewareFrameType2 type2Frame = *(EdgewareFrameType2 *) subPacket.data();
     Bucket *thisBucket = &bucketList[type2Frame.superFrameNo & CIRCULAR_BUFFER_SIZE];
+
+    //LOGGER(false, LOGG_NOTIFY, "superFrameNo2-> " << unsigned(type2Frame.superFrameNo))
 
     if (!thisBucket->active) {
         uint64_t deliveryOrderCandidate = superFrameRecalculator(type2Frame.superFrameNo);
@@ -172,12 +176,20 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vec
         }
         thisBucket->deliveryOrder = deliveryOrderCandidate;
         thisBucket->active = true;
+
+        thisBucket->flags = type2Frame.frameType & 0xf0;
+
+        thisBucket->stream = type2Frame.stream;
+        Stream *thisStream = &streams[fromSource][type2Frame.stream];
+        thisStream->dataContent=type2Frame.dataContent;
+        thisStream->code=type2Frame.code;
+        thisBucket->dataContent = thisStream->dataContent;
+        thisBucket->code = thisStream->code;
+
         thisBucket->savedSuperFrameNo = type2Frame.superFrameNo;
         thisBucket->haveRecievedPacket.reset();
         thisBucket->pts = type2Frame.pts;
-        thisBucket->code = type2Frame.code;
         thisBucket->haveRecievedPacket[type2Frame.fragmentNo] = 1;
-        thisBucket->dataContent = type2Frame.dataContent;
         thisBucket->timeout = bucketTimeout;
         thisBucket->ofFragmentNo = type2Frame.ofFragmentNo;
         thisBucket->fragmentCounter = 0;
@@ -216,9 +228,18 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vec
     thisBucket->timeout = bucketTimeout;
     thisBucket->pts = type2Frame.pts;
     thisBucket->code = type2Frame.code;
+    thisBucket->flags = type2Frame.frameType & 0xf0;
     thisBucket->fragmentCounter++;
 
-    //when the type2 frame is recieved only then is the actual size to be delivered known... Now set it for the bucketData
+    //set the content type
+    thisBucket->stream = type2Frame.stream;
+    Stream *thisStream = &streams[fromSource][type2Frame.stream];
+    thisStream->dataContent=type2Frame.dataContent;
+    thisStream->code=type2Frame.code;
+    thisBucket->dataContent = thisStream->dataContent;
+    thisBucket->code = thisStream->code;
+
+    //when the type2 frames are recieved only then is the actual size to be delivered known... Now set the real size for the bucketData
     thisBucket->bucketData->frameSize =
             (thisBucket->fragmentSize * type2Frame.ofFragmentNo) + (subPacket.size() - sizeof(EdgewareFrameType2));
 
@@ -295,10 +316,10 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 //If the bucket is ready to be delivered or is the bucket timedout?
                 if (!bucketList[i].timeout) {
                     timeOutTrigger = true;
-                    candidates.push_back(CandidateToDeliver(bucketList[i].deliveryOrder, i));
+                    candidates.emplace_back(CandidateToDeliver(bucketList[i].deliveryOrder, i));
                     bucketList[i].timeout = 1; //We want to timeout this again if head of line blocking is on
                 } else if (bucketList[i].fragmentCounter == bucketList[i].ofFragmentNo) {
-                    candidates.push_back(CandidateToDeliver(bucketList[i].deliveryOrder, i));
+                    candidates.emplace_back(CandidateToDeliver(bucketList[i].deliveryOrder, i));
                 }
             }
         }
@@ -316,6 +337,17 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
             std::sort(candidates.begin(), candidates.end(), sortDeliveryOrder());
 
             //FIXME - we could implement fast HOL clearing here
+
+            //Fast HOL candidate
+            //We're not clearing cuckets and we have found HOL
+//            if (foundHeadOfLineBlocking && !clearHeadOfLineBuckets && headOfLineBlockingTimeout) {
+//                uint64_t thisCandidate=candidates[0].deliveryOrder;
+//                if (thisCandidate == )
+//                for (auto &x: candidates) { //DEBUG-Keep for now
+//
+//                }
+//            }
+
             //if we're waiting for a time out but all candidates are already to be delivered
 
             //for (auto &x: candidates) { //DEBUG-Keep for now
@@ -328,9 +360,11 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 for (auto &x: candidates) {
                     if (oldestFrameDelivered <= x.deliveryOrder) {
                         oldestFrameDelivered = headOfLineBlockingTimeout?x.deliveryOrder:0;
-                        recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, bucketList[x.bucket].fragmentCounter != bucketList[x.bucket].ofFragmentNo,
+                        recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent,bucketList[x.bucket].fragmentCounter != bucketList[x.bucket].ofFragmentNo,
                                         bucketList[x.bucket].pts,
-                                        bucketList[x.bucket].code);
+                                        bucketList[x.bucket].code,
+                        bucketList[x.bucket].stream,
+                                        bucketList[x.bucket].flags);
 
                     }
                     expectedNextFrameToDeliver = x.deliveryOrder+1;
@@ -379,9 +413,11 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                         //std::cout << unsigned(oldestFrameDelivered) << " " << unsigned(x.deliveryOrder) << std::endl;
                         if (oldestFrameDelivered <= x.deliveryOrder) {
                             oldestFrameDelivered = headOfLineBlockingTimeout?x.deliveryOrder:0;
-                            recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent, bucketList[x.bucket].fragmentCounter != bucketList[x.bucket].ofFragmentNo,
+                            recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent,bucketList[x.bucket].fragmentCounter != bucketList[x.bucket].ofFragmentNo,
                                             bucketList[x.bucket].pts,
-                                            bucketList[x.bucket].code);
+                                            bucketList[x.bucket].code,
+                                            bucketList[x.bucket].stream,
+                                            bucketList[x.bucket].flags);
                         }
                         savedPTS = bucketList[x.bucket].pts;
                         bucketList[x.bucket].active = false;
@@ -440,24 +476,27 @@ EdgewareFrameMessages EdgewareFrameProtocol::stopUnpacker() {
 }
 
 //Unpack method. We recieved a fragment of data or a full frame. Lets unpack it
-EdgewareFrameMessages EdgewareFrameProtocol::unpack(const std::vector<uint8_t> &subPacket) {
+EdgewareFrameMessages EdgewareFrameProtocol::unpack(const std::vector<uint8_t> &subPacket, uint8_t fromSource) {
     //Type 0 packet. Discard and continue
     //Type 0 packets can be used to fill with user data outside efp protocol packets just put a uint8_t = Frametype::type0 at position 0 and then any data.
     //Type 1 are packets larger than MTU
     //Type 2 are packets smaller than MTU
     //Type 2 packets are also used at the end of Type 1 packet superFrames
 
-    if (subPacket[0] == Frametype::type0) {
+    if ((subPacket[0] & 0x0f) == Frametype::type0) {
         return EdgewareFrameMessages::noError;
-    } else if (subPacket[0] == Frametype::type1) {
-        return unpackType1(subPacket);
-    } else if (subPacket[0] == Frametype::type2) {
+    } else if ((subPacket[0] & 0x0f) == Frametype::type1) {
+        if (subPacket.size() < sizeof(EdgewareFrameType1)) {
+            return EdgewareFrameMessages::framesizeMismatch;
+        }
+        return unpackType1(subPacket, fromSource);
+    } else if ((subPacket[0] & 0x0f) == Frametype::type2) {
         if (subPacket.size() < sizeof(EdgewareFrameType2)) {
             return EdgewareFrameMessages::framesizeMismatch;
         }
         EdgewareFrameType2 type2Frame = *(EdgewareFrameType2 *) subPacket.data();
         if (type2Frame.ofFragmentNo == type2Frame.fragmentNo) {
-            return unpackType2LastFrame(subPacket);
+            return unpackType2LastFrame(subPacket, fromSource);
         } else {
             return EdgewareFrameMessages::endOfPacketError;
         }
@@ -470,7 +509,9 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpack(const std::vector<uint8_t> &
 //Pack data method. Fragments the data and calls the sendCallback method at the host level.
 EdgewareFrameMessages
 EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent, uint64_t pts,
-                                   uint32_t code) {
+                                   uint32_t code, uint8_t stream, uint8_t flags) {
+
+    //FIXME std::vector.insert is heavy on non reserved data. Malloc and use C-style memory management instead.
 
     if (pts == UINT64_MAX) {
         return EdgewareFrameMessages::reservedPTSValue;
@@ -479,6 +520,8 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
     if (code == UINT32_MAX) {
         return EdgewareFrameMessages::reservedCodeValue;
     }
+
+    flags &= 0xf0;
 
     //Will the data fit?
     //we know that we can send USHRT_MAX (65535) packets
@@ -490,13 +533,18 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
     if ((packet.size() + sizeof(EdgewareFrameType2)) <= currentMTU) {
         EdgewareFrameType2 type2Frame;
         type2Frame.superFrameNo = superFrameNoGenerator;
+        type2Frame.frameType |= flags;
         type2Frame.dataContent = dataContent;
         type2Frame.sizeOfData = (uint16_t) packet.size(); //The total size fits uint16_t since we cap the MTU to uint16_t
         type2Frame.pts = pts;
         type2Frame.code = code;
+        type2Frame.stream = stream;
         std::vector<uint8_t> finalPacket;
-        finalPacket.insert(finalPacket.end(), (uint8_t *) &type2Frame, ((uint8_t *) &type2Frame) + sizeof type2Frame);
-        finalPacket.insert(finalPacket.end(), packet.begin(), packet.end());
+        finalPacket.reserve(sizeof(EdgewareFrameType2)+packet.size());
+        std::copy((uint8_t *) &type2Frame,((uint8_t *) &type2Frame) + sizeof type2Frame, std::back_inserter(finalPacket));
+        std::copy(packet.begin(),packet.end(), std::back_inserter(finalPacket));
+        //finalPacket.insert(finalPacket.end(), (uint8_t *) &type2Frame, ((uint8_t *) &type2Frame) + sizeof type2Frame);
+        //finalPacket.insert(finalPacket.end(), packet.begin(), packet.end());
         sendCallback(finalPacket);
         superFrameNoGenerator++;
         return EdgewareFrameMessages::noError;
@@ -504,7 +552,8 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
 
     uint16_t fragmentNo = 0;
     EdgewareFrameType1 type1Frame;
-    type1Frame.dataContent = dataContent;
+    type1Frame.frameType |= flags;
+    type1Frame.stream = stream;
     type1Frame.superFrameNo = superFrameNoGenerator;
     //The size is known for type1 packets no need to write it in any header.
     size_t dataPayload = (uint16_t) (currentMTU - sizeof(EdgewareFrameType1));
@@ -518,9 +567,14 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
 
     for (; fragmentNo < ofFragmentNo; fragmentNo++) {
         type1Frame.fragmentNo = fragmentNo;
+
         std::vector<uint8_t> finalPacket;
-        finalPacket.insert(finalPacket.end(), (uint8_t *) &type1Frame, ((uint8_t *) &type1Frame) + sizeof type1Frame);
-        finalPacket.insert(finalPacket.end(), packet.begin() + dataPointer, packet.begin() + dataPointer + dataPayload);
+        finalPacket.reserve(sizeof(EdgewareFrameType1)+dataPayload);
+        std::copy((uint8_t *) &type1Frame,((uint8_t *) &type1Frame) + sizeof type1Frame, std::back_inserter(finalPacket));
+        std::copy(packet.begin() + dataPointer,packet.begin() + dataPointer + dataPayload, std::back_inserter(finalPacket));
+
+        //finalPacket.insert(finalPacket.end(), (uint8_t *) &type1Frame, ((uint8_t *) &type1Frame) + sizeof type1Frame);
+        //finalPacket.insert(finalPacket.end(), packet.begin() + dataPointer, packet.begin() + dataPointer + dataPayload);
         dataPointer += dataPayload;
         sendCallback(finalPacket);
     }
@@ -533,6 +587,7 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
         return EdgewareFrameMessages::internalCalculationError;
     }
     EdgewareFrameType2 type2Frame;
+    type2Frame.frameType |= flags;
     type2Frame.superFrameNo = superFrameNoGenerator;
     type2Frame.fragmentNo = fragmentNo;
     type2Frame.ofFragmentNo = ofFragmentNo;

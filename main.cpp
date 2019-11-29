@@ -64,7 +64,7 @@ void sendData(const std::vector<uint8_t> &subPacket) {
             std::cout << "unitTest1 done" << std::endl;
             break;
         case unitTests::unitTest2:
-            info = myEFPReciever.unpack(subPacket);
+            info = myEFPReciever.unpack(subPacket,0);
             if (info != EdgewareFrameMessages::noError) {
                 std::cout << "Error-> " << unsigned(info) << std::endl;
                 unitTestFailed = true;
@@ -73,7 +73,7 @@ void sendData(const std::vector<uint8_t> &subPacket) {
             }
             break;
         case unitTests::unitTest3:
-            info = myEFPReciever.unpack(subPacket);
+            info = myEFPReciever.unpack(subPacket,0);
             if (info != EdgewareFrameMessages::noError) {
                 std::cout << "Error-> " << unsigned(info) << std::endl;
                 unitTestFailed = true;
@@ -113,16 +113,16 @@ void sendData(const std::vector<uint8_t> &subPacket) {
                 }
             }
             unitTestPacketNumberSender++;
-            myEFPReciever.unpack(subPacket);
+            myEFPReciever.unpack(subPacket,0);
             break;
         case unitTests::unitTest5:
-            myEFPReciever.unpack(subPacket);
+            myEFPReciever.unpack(subPacket,0);
             break;
         case unitTests::unitTest6:
             if (!unitTestPacketNumberSender++) {
                 break;
             }
-            myEFPReciever.unpack(subPacket);
+            myEFPReciever.unpack(subPacket,0);
             break;
         case unitTests::unitTest7:
             if (unitTestPacketNumberSender == 1) {
@@ -132,27 +132,27 @@ void sendData(const std::vector<uint8_t> &subPacket) {
             }
             if (unitTestPacketNumberSender == 2) {
                 unitTestPacketNumberSender++;
-                myEFPReciever.unpack(subPacket);
-                myEFPReciever.unpack(unitTestsSavedData);
+                myEFPReciever.unpack(subPacket,0);
+                myEFPReciever.unpack(unitTestsSavedData,0);
                 break;
             }
             unitTestPacketNumberSender++;
-            myEFPReciever.unpack(subPacket);
+            myEFPReciever.unpack(subPacket,0);
             break;
         case unitTests::unitTest8:
             unitTestPacketNumberSender++;
             if (subPacket[0] == 2) {
                 unitTestPacketNumberSender = 0;
-                myEFPReciever.unpack(subPacket);
+                myEFPReciever.unpack(subPacket,0);
                 for (auto &x: unitTestsSavedData2D) {
                     if (unitTestPacketNumberSender == 1) {
                         unitTestsSavedData = x;
                     } else if (unitTestPacketNumberSender == 2) {
                         unitTestPacketNumberSender++;
-                        myEFPReciever.unpack(x);
-                        myEFPReciever.unpack(unitTestsSavedData);
+                        myEFPReciever.unpack(x,0);
+                        myEFPReciever.unpack(unitTestsSavedData,0);
                     } else {
-                        myEFPReciever.unpack(x);
+                        myEFPReciever.unpack(x,0);
                     }
                     unitTestPacketNumberSender++;
                 }
@@ -165,7 +165,7 @@ void sendData(const std::vector<uint8_t> &subPacket) {
             if (subPacket[0] == 2) {
                 break;
             }
-            myEFPReciever.unpack(subPacket);
+            myEFPReciever.unpack(subPacket,0);
             break;
         case unitTests::unitTest10:
             if (unitTestPacketNumberSender == 0) {
@@ -173,8 +173,8 @@ void sendData(const std::vector<uint8_t> &subPacket) {
             }
 
             if (unitTestPacketNumberSender == 1) {
-                myEFPReciever.unpack(subPacket);
-                myEFPReciever.unpack(unitTestsSavedData);
+                myEFPReciever.unpack(subPacket,0);
+                myEFPReciever.unpack(unitTestsSavedData,0);
             }
 
             if (unitTestPacketNumberSender > 1) {
@@ -193,7 +193,7 @@ void sendData(const std::vector<uint8_t> &subPacket) {
                         int pakCnt=0;
                         for (auto &x: unitTestsSavedData3D[item-1]) {
                             if (item != 3) {
-                                myEFPReciever.unpack(x);
+                                myEFPReciever.unpack(x,0);
                             }
                         }
                     }
@@ -213,7 +213,7 @@ void sendData(const std::vector<uint8_t> &subPacket) {
                         std::vector<std::vector<uint8_t>> unitTestsSavedData2DLocal=unitTestsSavedData3D[item-1];
                         for (int fragment=unitTestsSavedData2DLocal.size();fragment > 0;fragment--) {
                             if (item != 3) {
-                                myEFPReciever.unpack(unitTestsSavedData2DLocal[fragment-1]);
+                                myEFPReciever.unpack(unitTestsSavedData2DLocal[fragment-1],0);
                             }
                         }
                     }
@@ -224,7 +224,7 @@ void sendData(const std::vector<uint8_t> &subPacket) {
             unitTestsSavedData2D.push_back(subPacket);
             break;
         case unitTests::unitTest13:
-            myEFPReciever.unpack(subPacket);
+            myEFPReciever.unpack(subPacket,0);
             break;
         default:
             unitTestFailed = true;
@@ -236,7 +236,7 @@ void sendData(const std::vector<uint8_t> &subPacket) {
 
 void
 gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts,
-        uint32_t code) {
+        uint32_t code, uint8_t stream, uint8_t flags) {
     //std::cout << "Got data size ->" << packet->frameSize << " Content type: " << unsigned(content) << " Broken->" << broken << std::endl;
 
     uint8_t vectorChecker = 0;
@@ -427,11 +427,8 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
                 unitTestActive = false;
                 break;
             }
-            if (code != UINT32_MAX) {
-                unitTestFailed = true;
-                unitTestActive = false;
-                break;
-            }
+
+            //Code can be whatever here
 
             for (int x = 0; x < ((MTU - myEFPPacker.geType1Size()) * 5); x++) {
                 if (packet->framedata[x] != vectorChecker++) {
@@ -697,7 +694,7 @@ int main() {
     myEFPReciever.startUnpacker(5, 2);
 
     myEFPReciever.recieveCallback = std::bind(&gotData, std::placeholders::_1, std::placeholders::_2,
-                                              std::placeholders::_3, std::placeholders::_4, std::placeholders::_5);
+                                              std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7);
 
     //vector of data used during the unit-tests
     std::vector<uint8_t> mydata;
@@ -711,14 +708,15 @@ int main() {
      *
      */
 
-/*
+    uint8_t streamID=1;
+
     //UnitTest1
     //Test sending a packet less than MTU + header - > Expected result is one type2 frame only sent
     activeUnitTest = unitTests::unitTest1;
     mydata.clear();
     mydata.resize(MTU - myEFPPacker.geType2Size());
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2,streamID,NO_FLAGS);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -733,7 +731,7 @@ int main() {
     mydata.clear();
     mydata.resize(MTU - myEFPPacker.geType2Size());
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2,streamID,NO_FLAGS);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -748,7 +746,7 @@ int main() {
     mydata.resize(1);
     mydata[0] = 0xaa;
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2,streamID,NO_FLAGS);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -763,7 +761,7 @@ int main() {
     mydata.clear();
     mydata.resize((MTU - myEFPPacker.geType1Size()) + 1);
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2,streamID,NO_FLAGS);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -778,7 +776,7 @@ int main() {
     mydata.resize((MTU * 5) + (MTU / 2));
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2,streamID,NO_FLAGS);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -796,7 +794,7 @@ int main() {
     mydata.resize(((MTU - myEFPPacker.geType1Size()) * 2) + 12);
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2,streamID,NO_FLAGS);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -816,7 +814,7 @@ int main() {
     mydata.resize(((MTU - myEFPPacker.geType1Size()) * 5) + 12);
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2,streamID,NO_FLAGS);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -836,7 +834,7 @@ int main() {
     mydata.resize(mysize);
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts, 1, 2);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts, 1, 2,streamID,NO_FLAGS);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -855,7 +853,7 @@ int main() {
     mydata.resize(((MTU - myEFPPacker.geType1Size()) * 5) + 12);
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
     unitTestActive = true;
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::adts,1,2,streamID,NO_FLAGS);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -870,13 +868,13 @@ int main() {
     mydata.resize(MTU-myEFPPacker.geType2Size());
     unitTestActive = true;
 
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264,1,0);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264,1,0,streamID,NO_FLAGS);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
         return EXIT_FAILURE;
     }
-    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264,2,0);
+    result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264,2,0,streamID,NO_FLAGS);
     if (result != EdgewareFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                   << std::endl;
@@ -901,7 +899,7 @@ int main() {
     unitTestActive = true;
 
     for (int packetNumber=0;packetNumber < 5; packetNumber++) {
-        result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 0);
+        result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 0,streamID,NO_FLAGS);
         if (result != EdgewareFrameMessages::noError) {
             std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                       << std::endl;
@@ -928,7 +926,7 @@ int main() {
     unitTestActive = true;
 
     for (int packetNumber=0;packetNumber < 5; packetNumber++) {
-        result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 0);
+        result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 0,streamID,NO_FLAGS);
         if (result != EdgewareFrameMessages::noError) {
             std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                       << std::endl;
@@ -938,7 +936,7 @@ int main() {
 
     if (waitForCompletion()) return EXIT_FAILURE;
 
-*/
+
 
     //UnitTest13
     //Test sending 100 000 superframes of size from 500 to 10.000 bytes
@@ -946,6 +944,8 @@ int main() {
     //This is testing the out of order head of line blocking mechanism
     //The result should be deliver packer 1,2,4,5 even though we gave the unpacker them in order 5,4,2,1.
     activeUnitTest = unitTests::unitTest13;
+
+    std::cout << "here1 " << std::endl;
 
     unitTestsSavedData2D.clear();
     unitTestsSavedData3D.clear();
@@ -955,11 +955,13 @@ int main() {
 
     unitTestActive = true;
     for (int packetNumber=0;packetNumber < 100000; packetNumber++) {
+
         mydata.clear();
         mydata.resize(((MTU - myEFPPacker.geType1Size()) * 5) + 12);
 
         //std::cout << "Pack " << unsigned(packetNumber) << std::endl;
-        result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 0);
+
+        result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 0, streamID, INLINE_PAYLOAD);
         if (result != EdgewareFrameMessages::noError) {
             std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
                       << std::endl;

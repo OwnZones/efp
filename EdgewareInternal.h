@@ -52,16 +52,17 @@ struct sortDeliveryOrder
 
 //No version control.
 //Type 0,1,2 aso. are static from when defined. For new protocol functions/features add new types.
-
-enum Frametype : uint8_t {
-    type0,
+//type15 is the maximum type number 4 bits used
+enum Frametype : uint8_t { //Only the 4 LSB are used
+    type0 = 0,
     type1,
-    type2
+    type2,
+    type3
 };
 
 /*
 * <uint8_t> frameType
-* - 0x00 illegal - discard
+* - 0x00 private data -> return and skip the payload of the packet.
 * - 0x01 frame is larger than MTU
 * - 0x02 frame is less than MTU
 * <uint16_t> sizeOfData (optional if frameType is 0x02)
@@ -69,23 +70,24 @@ enum Frametype : uint8_t {
 * <uint16_t> fragmentNo
 * <uint16_t> ofFragmentNo
 * <EdgewareFrameContent> dataContent
- * Where the datacontent is (uint64_t)pts+(uint64_t)FOURCC+(uint8_t[])data
+ * Where the datacontent is (uint8_t[])data
 */
 
 struct EdgewareFrameType0 {
-    Frametype frameType = Frametype::type0;
+    uint8_t frameType = Frametype::type0;
+    uint16_t sizeOfData = 0;
 };
 
 struct EdgewareFrameType1 {
-    Frametype frameType = Frametype::type1;
+    uint8_t frameType = Frametype::type1;
     uint16_t superFrameNo = 0;
     uint16_t fragmentNo = 0;
     uint16_t ofFragmentNo = 0;
-    EdgewareFrameContent dataContent = EdgewareFrameContent::unknown;
+    uint8_t  stream;
 };
 
 struct EdgewareFrameType2 {
-    Frametype frameType = Frametype::type2;
+    uint8_t frameType  = Frametype::type2;
     uint16_t sizeOfData = 0;
     uint16_t superFrameNo = 0;
     uint16_t fragmentNo = 0;
@@ -94,7 +96,20 @@ struct EdgewareFrameType2 {
     uint64_t pts = UINT64_MAX;
     uint32_t code = UINT32_MAX;
     EdgewareFrameContent dataContent = EdgewareFrameContent::unknown;
+    uint8_t  stream;
+};
+
+struct EdgewareFrameType3 {
+    uint8_t frameType  = Frametype::type3;
 };
 //Packet header part ----- END ------
+
+//Stream list ----- START ------
+struct Stream {
+    uint32_t code = UINT32_MAX;
+    EdgewareFrameContent dataContent = EdgewareFrameContent::unknown;
+};
+Stream streams[UINT8_MAX][UINT8_MAX];
+//Stream list ----- END ------
 
 #endif //EFP_EDGEWAREINTERNAL_H

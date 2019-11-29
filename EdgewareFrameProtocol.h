@@ -20,6 +20,9 @@
 #define CIRCULAR_BUFFER_SIZE 0b1111111111111 //must be a continious set of set bits from LSB to MSB
 //0b1111111111111 == 8191
 
+#define NO_FLAGS 0b00000000
+#define INLINE_PAYLOAD 0b00010000
+
 #define EFP_MAJOR_VERSION 1
 #define EFP_MINOR_VERSION 0
 
@@ -35,13 +38,31 @@ namespace EdgewareFrameContentNamespace {
         jpegxs,                 //ISO/IEC 21122-3               //JPXS (not needed)
         pcmaudio,               //AES-3 framing                 //AES3 (not needed)
 
-        //Formats defined below (MSB='1') also uses code to define the data format in the superframe
+        //Formats defined below (MSB='1') may also use a code to define the data format in the superframe
 
         didsdid=0x80,           //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
         sdi,                    //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
         h264,                   //ITU-T H.264                   //ANXB = Annex B framing / AVCC = AVCC framing
         h265                    //ITU-T H.265                   //ANXB = Annex B framing / AVCC = AVCC framing
     };
+
+
+    //Embedded data ----- START ------
+    enum EdgewareFrameEmbeddedContentDefines : uint8_t {
+        illegal,                //may not be used
+        embeddedPrivateData,    //private data
+        h222pat,                //pat from h222 pids should be trunkated to uint8_t leaving the LSB bits only
+        h222pmt,                //mmt from h222 pids should be trunkated to uint8_t leaving the LSB bits only
+        mp4FragBox,              //All boxes from a mp4 fragment excluding the payload
+        lastEmbeddedContent = 0x80
+        //defines below here do not allow following embedded data.
+    };
+
+    struct EdgewareEmbeddedHeader {
+        uint8_t embeddedFrameType = EdgewareFrameEmbeddedContentDefines::illegal;
+        uint16_t size = 0;
+    };
+    //Embedded data header part ----- END ------
 }
 
 namespace EdgewareFrameMessagesNamespace {
@@ -62,6 +83,7 @@ namespace EdgewareFrameMessagesNamespace {
         unpackerAlreadyStarted,
         failedStoppingUnpacker,
         parameterError,
+        maxStreamsUsed,
         tooOldFragment
     };
 }
@@ -103,13 +125,13 @@ public:
     EdgewareFrameProtocol(uint16_t setMTU = 0, EdgewareFrameMode mode = EdgewareFrameMode::unpacker);
     virtual ~EdgewareFrameProtocol();
 
-    EdgewareFrameMessages packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent, uint64_t pts, uint32_t code);
+    EdgewareFrameMessages packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
     std::function<void(const std::vector<uint8_t> &subPacket)> sendCallback = nullptr;
 
     EdgewareFrameMessages startUnpacker(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster);
     EdgewareFrameMessages stopUnpacker();
-    EdgewareFrameMessages unpack(const std::vector<uint8_t> &subPacket);
-    std::function<void(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code)> recieveCallback = nullptr;
+    EdgewareFrameMessages unpack(const std::vector<uint8_t> &subPacket, uint8_t fromSource);
+    std::function<void(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags)> recieveCallback = nullptr;
 
     // delete copy and move constructors and assign operators
     EdgewareFrameProtocol(EdgewareFrameProtocol const &) = delete;             // Copy construct
@@ -137,6 +159,8 @@ private:
         size_t fragmentSize = 0;
         uint64_t pts = UINT64_MAX;
         uint32_t code = UINT32_MAX;
+        uint8_t stream;
+        uint8_t flags;
         std::bitset<UINT16_MAX> haveRecievedPacket;
         framePtr bucketData = nullptr;
     };
@@ -144,9 +168,9 @@ private:
 
     //Private methods ----- START ------
     void sendData(const std::vector<uint8_t> &subPacket);
-    void gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code);
-    EdgewareFrameMessages unpackType1(const std::vector<uint8_t> &subPacket);
-    EdgewareFrameMessages unpackType2LastFrame(const std::vector<uint8_t> &subPacket);
+    void gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
+    EdgewareFrameMessages unpackType1(const std::vector<uint8_t> &subPacket, uint8_t fromSource);
+    EdgewareFrameMessages unpackType2LastFrame(const std::vector<uint8_t> &subPacket, uint8_t fromSource);
     void unpackerWorker(uint32_t timeout);
     uint64_t superFrameRecalculator(uint16_t superFrame);
     //Private methods ----- END ------
