@@ -539,12 +539,9 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
         type2Frame.pts = pts;
         type2Frame.code = code;
         type2Frame.stream = stream;
-        std::vector<uint8_t> finalPacket;
-        finalPacket.reserve(sizeof(EdgewareFrameType2)+packet.size());
-        std::copy((uint8_t *) &type2Frame,((uint8_t *) &type2Frame) + sizeof type2Frame, std::back_inserter(finalPacket));
-        std::copy(packet.begin(),packet.end(), std::back_inserter(finalPacket));
-        //finalPacket.insert(finalPacket.end(), (uint8_t *) &type2Frame, ((uint8_t *) &type2Frame) + sizeof type2Frame);
-        //finalPacket.insert(finalPacket.end(), packet.begin(), packet.end());
+        std::vector<uint8_t> finalPacket(sizeof(EdgewareFrameType2)+packet.size());
+        std::copy((uint8_t *) &type2Frame,((uint8_t *) &type2Frame) + sizeof(EdgewareFrameType2), finalPacket.begin());
+        std::copy(packet.begin(),packet.end(), finalPacket.begin() + sizeof(EdgewareFrameType2));
         sendCallback(finalPacket);
         superFrameNoGenerator++;
         return EdgewareFrameMessages::noError;
@@ -565,18 +562,13 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
             ceil((double) (packet.size() + diffFrames) / (double) (currentMTU - sizeof(EdgewareFrameType1))) - 1;
     type1Frame.ofFragmentNo = ofFragmentNo;
 
+    std::vector<uint8_t> finalPacketLoop(sizeof(EdgewareFrameType1)+dataPayload);
     for (; fragmentNo < ofFragmentNo; fragmentNo++) {
         type1Frame.fragmentNo = fragmentNo;
-
-        std::vector<uint8_t> finalPacket;
-        finalPacket.reserve(sizeof(EdgewareFrameType1)+dataPayload);
-        std::copy((uint8_t *) &type1Frame,((uint8_t *) &type1Frame) + sizeof type1Frame, std::back_inserter(finalPacket));
-        std::copy(packet.begin() + dataPointer,packet.begin() + dataPointer + dataPayload, std::back_inserter(finalPacket));
-
-        //finalPacket.insert(finalPacket.end(), (uint8_t *) &type1Frame, ((uint8_t *) &type1Frame) + sizeof type1Frame);
-        //finalPacket.insert(finalPacket.end(), packet.begin() + dataPointer, packet.begin() + dataPointer + dataPayload);
+        std::copy((uint8_t *) &type1Frame,((uint8_t *) &type1Frame) + sizeof(EdgewareFrameType1), finalPacketLoop.begin());
+        std::copy(packet.begin() + dataPointer,packet.begin() + dataPointer + dataPayload, finalPacketLoop.begin() + sizeof(EdgewareFrameType1));
         dataPointer += dataPayload;
-        sendCallback(finalPacket);
+        sendCallback(finalPacketLoop);
     }
 
     //Create the last type2 packet
@@ -596,9 +588,9 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
     type2Frame.pts = pts;
     type2Frame.code = code;
     type2Frame.type1PacketSize = currentMTU - sizeof(type1Frame);
-    std::vector<uint8_t> finalPacket;
-    finalPacket.insert(finalPacket.end(), (uint8_t *) &type2Frame, ((uint8_t *) &type2Frame) + sizeof type2Frame);
-    finalPacket.insert(finalPacket.end(), packet.begin() + dataPointer, packet.begin() + dataPointer + dataLeftToSend);
+    std::vector<uint8_t> finalPacket(sizeof(EdgewareFrameType2)+dataLeftToSend);
+    std::copy((uint8_t *) &type2Frame,((uint8_t *) &type2Frame) + sizeof(EdgewareFrameType2), finalPacket.begin());
+    std::copy(packet.begin() + dataPointer,packet.begin() + dataPointer + dataLeftToSend, finalPacket.begin() + sizeof(EdgewareFrameType2));
     sendCallback(finalPacket);
     superFrameNoGenerator++;
     return EdgewareFrameMessages::noError;

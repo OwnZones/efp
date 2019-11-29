@@ -65,26 +65,34 @@ namespace EdgewareFrameContentNamespace {
     //Embedded data header part ----- END ------
 }
 
+// Negative numbers are errors
+// 0 == No error
+// Positive numbers are informative
 namespace EdgewareFrameMessagesNamespace {
-    enum EdgewareFrameMessagesDefines : uint8_t {
-        noError,
-        tooLargeFrame,
-        notImplemented,
-        unknownFrametype,
-        framesizeMismatch,
-        internalCalculationError,
-        endOfPacketError,
-        bufferOutOfBounds,
-        bufferOutOfResources,
-        duplicatePacketRecieved,
-        reservedPTSValue,
-        reservedCodeValue,
-        memoryAllocationError,
-        unpackerAlreadyStarted,
-        failedStoppingUnpacker,
-        parameterError,
-        maxStreamsUsed,
-        tooOldFragment
+    enum EdgewareFrameMessagesDefines : int16_t {
+        tooLargeFrame = -10000,      //The frame is to large for EFP packer to handle
+        unknownFrametype,           //The frame type is unknown by EFP unpacker
+        framesizeMismatch,          //The unpacker recieved data less than the header size
+        internalCalculationError,   //The packer encountered a condition it can't handle
+        endOfPacketError,           //The unpacker recieved a type2 fragment not saying it was the last
+        bufferOutOfBounds,          //The unpackers circular buffer has wrapped around and all data in the buffer is from now untrusted also data prior to this may have been wrong.
+                                    //This error can be triggered if there is a super high data rate data coming in with a large gap/loss of the incomming fragments in the flow
+        bufferOutOfResources,       //This error is indicating there are no more buffer resources. In the unlikely event where all frames miss fragment(s) and the timeout is set high
+                                    //then broken superframes will be buffered and new incoming data will claim buffers. When there are no more buffers to claim this error will be triggered.
+        reservedPTSValue,           //UINT64_MAX is a EFP reserved value
+        reservedCodeValue,          //UINT32_MAX is a EFP reserved value
+        memoryAllocationError,      //Failed allocating system memory. This is fatal and results in unknown behaviour.
+
+        noError = 0,
+
+        notImplemented,             //feature/function/level/method/system aso. not implemented.
+        duplicatePacketRecieved,    //If the underlying infrastructure is handing EFP duplicate segments the second packet of the duplicate will generate this error if the
+                                    //the superframe is still not delivered to the host system. if it has then tooOldFragment will be returned instead.
+        tooOldFragment,             //if the superframe has been delivered 100% complete or fragments of it due to a timeout and a fragment belongning to the superframe arrives then it's
+                                    //discarded and the tooOldFragment is triggered.
+        unpackerAlreadyStarted,     //The EFP unpacker is already started no need to start it again. (Stop it and start it again to change parameters)
+        failedStoppingUnpacker,     //The EFP unpacker failed stopping it's resources.
+        parameterError             //When starting the unpacker the parameters given where not valid.
     };
 }
 namespace EdgewareFrameProtocolModeNamespace {
@@ -138,6 +146,9 @@ public:
     EdgewareFrameProtocol(EdgewareFrameProtocol &&) = delete;                  // Move construct
     EdgewareFrameProtocol &operator=(EdgewareFrameProtocol const &) = delete;  // Copy assign
     EdgewareFrameProtocol &operator=(EdgewareFrameProtocol &&) = delete;      // Move assign
+
+    //Help methods ---------------------
+    //EdgewareFrameMessages packAndSend(const std::vector<uint8_t> &packet,
 
     //Used by unitTests ---------------------
 #ifdef UNIT_TESTS
