@@ -53,7 +53,7 @@ namespace EdgewareFrameContentNamespace {
         embeddedPrivateData,    //private data
         h222pat,                //pat from h222 pids should be trunkated to uint8_t leaving the LSB bits only
         h222pmt,                //mmt from h222 pids should be trunkated to uint8_t leaving the LSB bits only
-        mp4FragBox,              //All boxes from a mp4 fragment excluding the payload
+        mp4FragBox,             //All boxes from a mp4 fragment excluding the payload
         lastEmbeddedContent = 0x80
         //defines below here do not allow following embedded data.
     };
@@ -71,6 +71,7 @@ namespace EdgewareFrameContentNamespace {
 namespace EdgewareFrameMessagesNamespace {
     enum EdgewareFrameMessagesDefines : int16_t {
         tooLargeFrame = -10000,      //The frame is to large for EFP packer to handle
+        tooLargeEmbeddedData,        //The embedded data frame is too large.
         unknownFrametype,           //The frame type is unknown by EFP unpacker
         framesizeMismatch,          //The unpacker recieved data less than the header size
         internalCalculationError,   //The packer encountered a condition it can't handle
@@ -82,6 +83,7 @@ namespace EdgewareFrameMessagesNamespace {
         reservedPTSValue,           //UINT64_MAX is a EFP reserved value
         reservedCodeValue,          //UINT32_MAX is a EFP reserved value
         memoryAllocationError,      //Failed allocating system memory. This is fatal and results in unknown behaviour.
+        illegalEmbeddedData,        //illegal embedded data
 
         noError = 0,
 
@@ -105,6 +107,7 @@ namespace EdgewareFrameProtocolModeNamespace {
 
 using EdgewareFrameMessages = EdgewareFrameMessagesNamespace::EdgewareFrameMessagesDefines;
 using EdgewareFrameContent = EdgewareFrameContentNamespace::EdgewareFrameContentDefines;
+using EdgewareEmbeddedFrameContent = EdgewareFrameContentNamespace::EdgewareFrameEmbeddedContentDefines;
 using EdgewareFrameMode = EdgewareFrameProtocolModeNamespace::EdgewareFrameProtocolModeDefines;
 
 class EdgewareFrameProtocol {
@@ -148,7 +151,8 @@ public:
     EdgewareFrameProtocol &operator=(EdgewareFrameProtocol &&) = delete;      // Move assign
 
     //Help methods ---------------------
-    //EdgewareFrameMessages packAndSend(const std::vector<uint8_t> &packet,
+    EdgewareFrameMessages addEmbeddedData(std::vector<uint8_t> *packet, std::vector<uint8_t> &data, EdgewareEmbeddedFrameContent content = EdgewareEmbeddedFrameContent::illegal, bool isLast=false);
+    EdgewareFrameMessages extractEmbeddedData(std::vector<uint8_t> &packet, std::vector<std::vector<uint8_t>> *embeddedDataList, std::vector<EdgewareEmbeddedFrameContent> *dataContent ,size_t *payloadDataPosition);
 
     //Used by unitTests ---------------------
 #ifdef UNIT_TESTS

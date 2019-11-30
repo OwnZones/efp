@@ -448,7 +448,7 @@ EdgewareFrameMessages EdgewareFrameProtocol::startUnpacker(uint32_t bucketTimeou
         return EdgewareFrameMessages::parameterError;
     }
     if (holTimeoutMaster>=bucketTimeoutMaster) {
-        LOGGER(true, LOGG_FATAL, "holTimeoutMaster cant be less or equal to bucketTimeoutMaster");
+        LOGGER(true, LOGG_FATAL, "holTimeoutMaster can't be less or equal to bucketTimeoutMaster");
         return EdgewareFrameMessages::parameterError;
     }
 
@@ -511,7 +511,7 @@ EdgewareFrameMessages
 EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent, uint64_t pts,
                                    uint32_t code, uint8_t stream, uint8_t flags) {
 
-    //FIXME std::vector.insert is heavy on non reserved data. Malloc and use C-style memory management instead.
+    //Malloc and use C-style memory management instead?
 
     if (pts == UINT64_MAX) {
         return EdgewareFrameMessages::reservedPTSValue;
@@ -589,10 +589,47 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
     type2Frame.code = code;
     type2Frame.type1PacketSize = currentMTU - sizeof(type1Frame);
     std::vector<uint8_t> finalPacket(sizeof(EdgewareFrameType2)+dataLeftToSend);
-    std::copy((uint8_t *) &type2Frame,((uint8_t *) &type2Frame) + sizeof(EdgewareFrameType2), finalPacket.begin());
-    std::copy(packet.begin() + dataPointer,packet.begin() + dataPointer + dataLeftToSend, finalPacket.begin() + sizeof(EdgewareFrameType2));
+    std::copy((uint8_t *) &type2Frame, ((uint8_t *) &type2Frame) + sizeof(EdgewareFrameType2), finalPacket.begin());
+    std::copy(packet.begin() + dataPointer, packet.begin() + dataPointer + dataLeftToSend, finalPacket.begin() + sizeof(EdgewareFrameType2));
     sendCallback(finalPacket);
     superFrameNoGenerator++;
+    return EdgewareFrameMessages::noError;
+}
+
+//Helper methods
+
+EdgewareFrameMessages addEmbeddedData(std::vector<uint8_t> *packet, std::vector<uint8_t> &data, EdgewareEmbeddedFrameContent content, bool isLast) {
+    packet->insert(packet->begin(), data.begin(), data.end());
+    EdgewareFrameContentNamespace::EdgewareEmbeddedHeader embeddedHeader;
+    embeddedHeader.embeddedFrameType = content;
+    if (data.size()>UINT16_MAX) {
+        return EdgewareFrameMessages::tooLargeEmbeddedData;
+    }
+    embeddedHeader.size = data.size();
+    if (isLast) {
+        embeddedHeader.embeddedFrameType = embeddedHeader.embeddedFrameType | EdgewareEmbeddedFrameContent::lastEmbeddedContent;
+    }
+    packet->insert(packet->begin(),sizeof(EdgewareFrameContentNamespace::EdgewareEmbeddedHeader));
+    std::copy((uint8_t *) &embeddedHeader,((uint8_t *) &embeddedHeader) + sizeof(EdgewareFrameContentNamespace::EdgewareEmbeddedHeader), packet->begin());
+    return EdgewareFrameMessages::noError;
+}
+
+EdgewareFrameMessages extractEmbeddedData(std::vector<uint8_t> &packet, std::vector<std::vector<uint8_t>> *embeddedDataList, std::vector<uint8_t> *dataContent ,size_t *payloadDataPosition) {
+    bool moreData = true;
+    size_t headerSize= sizeof(EdgewareFrameContentNamespace::EdgewareEmbeddedHeader);
+    do {
+        EdgewareFrameContentNamespace::EdgewareEmbeddedHeader embeddedHeader =
+                *(EdgewareFrameContentNamespace::EdgewareEmbeddedHeader *) (packet.data() + *payloadDataPosition);
+        if (embeddedHeader.embeddedFrameType == EdgewareEmbeddedFrameContent::illegal) {
+            return EdgewareFrameMessages::illegalEmbeddedData;
+        }
+        dataContent->emplace_back((embeddedHeader.embeddedFrameType & 0x7f));
+        std::vector<uint8_t>embeddedData(embeddedHeader.size);
+        std::copy(packet.begin() + headerSize + *payloadDataPosition,packet.begin() + headerSize + *payloadDataPosition + embeddedHeader.size , embeddedData.begin());
+        embeddedDataList->emplace_back(embeddedData);
+        moreData = embeddedHeader.embeddedFrameType & 0x80;
+        payloadDataPosition += (embeddedHeader.size + headerSize);
+    } while (!moreData);
     return EdgewareFrameMessages::noError;
 }
 
@@ -604,3 +641,5 @@ size_t EdgewareFrameProtocol::geType1Size() {
 size_t EdgewareFrameProtocol::geType2Size() {
     return sizeof(EdgewareFrameType2);
 }
+
+
