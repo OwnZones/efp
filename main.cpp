@@ -701,12 +701,19 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
                     break;
                 }
 
-                if (embeddedData.size() != 1 && embeddedContentFlag.size() != 1) {
+                if (embeddedData.size() != embeddedContentFlag.size()) {
                     unitTestFailed = true;
                     unitTestActive = false;
                     break;
                 }
 
+                if (unitTestPacketNumberReciever & 1) {
+                    if (embeddedData.size() != 2) {
+                        unitTestFailed = true;
+                        unitTestActive = false;
+                        break;
+                    }
+                }
 
                 for (int x = 0; x<embeddedData.size();x++) {
                     if(embeddedContentFlag[x] == EdgewareEmbeddedFrameContent::embeddedPrivateData) {
@@ -722,8 +729,8 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
                         unitTestActive = false;
                         break;
                     }
-                }
 
+                }
                 for (int x = payloadDataPosition; x < packet->frameSize; x++) {
                     if (packet->framedata[x] != vectorChecker++) {
                         unitTestFailed = true;
@@ -1083,8 +1090,9 @@ int main() {
 
     if (waitForCompletion()) return EXIT_FAILURE;
 
-
     //UnitTest14
+    //Send 15 packets with embeddedPrivateData. odd packet numbers will have two embedded private data fields. Also check for not broken and correct fourcc code.
+    //the reminder of the packet is a vector. Check it's integrity
 
     activeUnitTest = unitTests::unitTest14;
 
@@ -1096,12 +1104,20 @@ int main() {
 
     unitTestActive = true;
     for (int packetNumber=0;packetNumber < 15; packetNumber++) {
-
         mydata.clear();
         mydata.resize(((MTU - myEFPPacker.geType1Size()) * 5) + 12);
         std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
+
         PrivateData myPrivateData;
-        myEFPPacker.addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData),EdgewareEmbeddedFrameContent::embeddedPrivateData,true);
+        PrivateData myPrivateDataExtra;
+        if(!(packetNumber & 1)) {
+            myEFPPacker.addEmbeddedData(&mydata, &myPrivateDataExtra, sizeof(myPrivateDataExtra),EdgewareEmbeddedFrameContent::embeddedPrivateData,true);
+            myEFPPacker.addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData),EdgewareEmbeddedFrameContent::embeddedPrivateData,false);
+        } else {
+            myEFPPacker.addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData),EdgewareEmbeddedFrameContent::embeddedPrivateData,true);
+        }
+
+
         result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 'ANXB', streamID, INLINE_PAYLOAD);
         if (result != EdgewareFrameMessages::noError) {
             std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"

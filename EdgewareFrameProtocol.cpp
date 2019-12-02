@@ -601,8 +601,8 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
     return EdgewareFrameMessages::noError;
 }
 
-//Helper methods
-
+//Helper methods for embeding/extracting data in the payload part. It's not recommended to use these methods in production code as it's better to build the
+//frames externally to avoid insert and copy of data.
 
 EdgewareFrameMessages EdgewareFrameProtocol::addEmbeddedData(std::vector<uint8_t> *packet, void  *privateData, size_t privateDataSize, EdgewareEmbeddedFrameContent content, bool isLast) {
     if (privateDataSize>UINT16_MAX) {
@@ -632,11 +632,9 @@ EdgewareFrameMessages EdgewareFrameProtocol::extractEmbeddedData(EdgewareFramePr
         embeddedDataList->emplace_back(embeddedData);
         moreData = embeddedHeader.embeddedFrameType & 0x80;
         *payloadDataPosition += (embeddedHeader.size + headerSize);
-
         if (*payloadDataPosition >= packet->frameSize) {
-            //exception
+            return EdgewareFrameMessages::bufferOutOfBounds;
         }
-
     } while (!moreData);
     return EdgewareFrameMessages::noError;
 }
