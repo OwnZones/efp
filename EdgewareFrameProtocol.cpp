@@ -539,10 +539,15 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
         type2Frame.pts = pts;
         type2Frame.code = code;
         type2Frame.stream = stream;
-        std::vector<uint8_t> finalPacket(sizeof(EdgewareFrameType2)+packet.size());
-        std::copy((uint8_t *) &type2Frame,((uint8_t *) &type2Frame) + sizeof(EdgewareFrameType2), finalPacket.begin());
-        std::copy(packet.begin(),packet.end(), finalPacket.begin() + sizeof(EdgewareFrameType2));
-        sendCallback(finalPacket);
+        try {
+            std::vector<uint8_t> finalPacket(sizeof(EdgewareFrameType2)+packet.size());
+            std::copy((uint8_t *) &type2Frame,((uint8_t *) &type2Frame) + sizeof(EdgewareFrameType2), finalPacket.begin());
+            std::copy(packet.begin(),packet.end(), finalPacket.begin() + sizeof(EdgewareFrameType2));
+            sendCallback(finalPacket);
+        }
+        catch (std::bad_alloc const&) {
+            return EdgewareFrameMessages::memoryAllocationError;
+        }
         superFrameNoGenerator++;
         return EdgewareFrameMessages::noError;
     }
@@ -598,37 +603,40 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
 
 //Helper methods
 
-EdgewareFrameMessages addEmbeddedData(std::vector<uint8_t> *packet, std::vector<uint8_t> &data, EdgewareEmbeddedFrameContent content, bool isLast) {
-    packet->insert(packet->begin(), data.begin(), data.end());
-    EdgewareFrameContentNamespace::EdgewareEmbeddedHeader embeddedHeader;
-    embeddedHeader.embeddedFrameType = content;
-    if (data.size()>UINT16_MAX) {
+
+EdgewareFrameMessages EdgewareFrameProtocol::addEmbeddedData(std::vector<uint8_t> *packet, void  *privateData, size_t privateDataSize, EdgewareEmbeddedFrameContent content, bool isLast) {
+    if (privateDataSize>UINT16_MAX) {
         return EdgewareFrameMessages::tooLargeEmbeddedData;
     }
-    embeddedHeader.size = data.size();
-    if (isLast) {
-        embeddedHeader.embeddedFrameType = embeddedHeader.embeddedFrameType | EdgewareEmbeddedFrameContent::lastEmbeddedContent;
-    }
-    packet->insert(packet->begin(),sizeof(EdgewareFrameContentNamespace::EdgewareEmbeddedHeader));
-    std::copy((uint8_t *) &embeddedHeader,((uint8_t *) &embeddedHeader) + sizeof(EdgewareFrameContentNamespace::EdgewareEmbeddedHeader), packet->begin());
+    EdgewareFrameContentNamespace::EdgewareEmbeddedHeader embeddedHeader;
+    embeddedHeader.size = privateDataSize;
+    embeddedHeader.embeddedFrameType = content;
+    if (isLast) embeddedHeader.embeddedFrameType = embeddedHeader.embeddedFrameType | EdgewareEmbeddedFrameContent::lastEmbeddedContent;
+    packet->insert(packet->begin(), (uint8_t*)privateData, (uint8_t*)privateData+privateDataSize);
+    packet->insert(packet->begin(), (uint8_t *)&embeddedHeader, (uint8_t *)&embeddedHeader + sizeof(embeddedHeader));
     return EdgewareFrameMessages::noError;
 }
 
-EdgewareFrameMessages extractEmbeddedData(std::vector<uint8_t> &packet, std::vector<std::vector<uint8_t>> *embeddedDataList, std::vector<uint8_t> *dataContent ,size_t *payloadDataPosition) {
+EdgewareFrameMessages EdgewareFrameProtocol::extractEmbeddedData(EdgewareFrameProtocol::framePtr &packet, std::vector<std::vector<uint8_t>> *embeddedDataList, std::vector<uint8_t> *dataContent ,size_t *payloadDataPosition) {
     bool moreData = true;
     size_t headerSize= sizeof(EdgewareFrameContentNamespace::EdgewareEmbeddedHeader);
     do {
         EdgewareFrameContentNamespace::EdgewareEmbeddedHeader embeddedHeader =
-                *(EdgewareFrameContentNamespace::EdgewareEmbeddedHeader *) (packet.data() + *payloadDataPosition);
+                *(EdgewareFrameContentNamespace::EdgewareEmbeddedHeader *) (packet->framedata + *payloadDataPosition);
         if (embeddedHeader.embeddedFrameType == EdgewareEmbeddedFrameContent::illegal) {
             return EdgewareFrameMessages::illegalEmbeddedData;
         }
         dataContent->emplace_back((embeddedHeader.embeddedFrameType & 0x7f));
         std::vector<uint8_t>embeddedData(embeddedHeader.size);
-        std::copy(packet.begin() + headerSize + *payloadDataPosition,packet.begin() + headerSize + *payloadDataPosition + embeddedHeader.size , embeddedData.begin());
+        std::copy(packet->framedata + headerSize + *payloadDataPosition,packet->framedata + headerSize + *payloadDataPosition + embeddedHeader.size , embeddedData.begin());
         embeddedDataList->emplace_back(embeddedData);
         moreData = embeddedHeader.embeddedFrameType & 0x80;
-        payloadDataPosition += (embeddedHeader.size + headerSize);
+        *payloadDataPosition += (embeddedHeader.size + headerSize);
+
+        if (*payloadDataPosition >= packet->frameSize) {
+            //exception
+        }
+
     } while (!moreData);
     return EdgewareFrameMessages::noError;
 }
@@ -641,5 +649,6 @@ size_t EdgewareFrameProtocol::geType1Size() {
 size_t EdgewareFrameProtocol::geType2Size() {
     return sizeof(EdgewareFrameType2);
 }
+
 
 

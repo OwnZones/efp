@@ -47,6 +47,11 @@ std::atomic_int unitTestPacketNumberReciever;
 EdgewareFrameProtocol myEFPReciever;
 EdgewareFrameProtocol myEFPPacker(MTU, EdgewareFrameProtocolModeNamespace::packer);
 
+struct PrivateData {
+    int myPrivateInteger = 10;
+    uint8_t myPrivateUint8_t = 44;
+};
+
 void sendData(const std::vector<uint8_t> &subPacket) {
     //std::cout << "Send data of size ->" << subPacket.size() << " Packet type: " << unsigned(subPacket[0]) << " Unit test number: " << unsigned(activeUnitTest) << std::endl;
 
@@ -224,7 +229,22 @@ void sendData(const std::vector<uint8_t> &subPacket) {
             unitTestsSavedData2D.push_back(subPacket);
             break;
         case unitTests::unitTest13:
-            myEFPReciever.unpack(subPacket,0);
+            info = myEFPReciever.unpack(subPacket,0);
+            if (info != EdgewareFrameMessages::noError) {
+                std::cout << "Error-> " << unsigned(info) << std::endl;
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            break;
+        case unitTests::unitTest14:
+            info = myEFPReciever.unpack(subPacket,0);
+            if (info != EdgewareFrameMessages::noError) {
+                std::cout << "Error-> " << unsigned(info) << std::endl;
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
             break;
         default:
             unitTestFailed = true;
@@ -240,6 +260,10 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
     //std::cout << "Got data size ->" << packet->frameSize << " Content type: " << unsigned(content) << " Broken->" << broken << std::endl;
 
     uint8_t vectorChecker = 0;
+    EdgewareFrameMessages info;
+    std::vector<std::vector<uint8_t>> embeddedData;
+    std::vector<uint8_t> embeddedContentFlag;
+    size_t payloadDataPosition = 0;
 
     switch (activeUnitTest) {
         case unitTests::unitTest2:
@@ -654,10 +678,100 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
             unitTestActive = false;
 
             break;
+        case unitTests::unitTest14:
+            unitTestPacketNumberReciever++;
+            if (broken) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+
+            if (code != 'ANXB') {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+
+            if (flags & INLINE_PAYLOAD) {
+                info=myEFPReciever.extractEmbeddedData(packet,&embeddedData,&embeddedContentFlag,&payloadDataPosition);
+
+                if (info != EdgewareFrameMessages::noError) {
+                    unitTestFailed = true;
+                    unitTestActive = false;
+                    break;
+                }
+
+                if (embeddedData.size() != 1 && embeddedContentFlag.size() != 1) {
+                    unitTestFailed = true;
+                    unitTestActive = false;
+                    break;
+                }
+
+
+                for (int x = 0; x<embeddedData.size();x++) {
+                    if(embeddedContentFlag[x] == EdgewareEmbeddedFrameContent::embeddedPrivateData) {
+                        std::vector<uint8_t> thisVector = embeddedData[x];
+                        PrivateData myPrivateData = *(PrivateData *) thisVector.data();
+                        if (myPrivateData.myPrivateInteger != 10 || myPrivateData.myPrivateUint8_t != 44) {
+                            unitTestFailed = true;
+                            unitTestActive = false;
+                            break;
+                        }
+                    } else {
+                        unitTestFailed = true;
+                        unitTestActive = false;
+                        break;
+                    }
+                }
+
+                for (int x = payloadDataPosition; x < packet->frameSize; x++) {
+                    if (packet->framedata[x] != vectorChecker++) {
+                        unitTestFailed = true;
+                        unitTestActive = false;
+                        break;
+                    }
+                }
+                if (unitTestPacketNumberReciever==15) {
+                    unitTestActive = false;
+                    activeUnitTest = unitTests::unitTestInactive;
+                    std::cout << "unitTest14 done" << std::endl;
+                }
+            } else {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            break;
         default:
             unitTestFailed = true;
             unitTestActive = false;
             std::cout << "Unknown unit test!" << std::endl;
+            break;
+        case unitTestInactive:
+            break;
+        case unitTest1:
+            break;
+        case unitTest15:
+            break;
+        case unitTest16:
+            break;
+        case unitTest17:
+            break;
+        case unitTest18:
+            break;
+        case unitTest19:
+            break;
+        case unitTest20:
+            break;
+        case unitTest21:
+            break;
+        case unitTest22:
+            break;
+        case unitTest23:
+            break;
+        case unitTest24:
+            break;
+        case unitTest25:
             break;
     }
 }
@@ -945,8 +1059,6 @@ int main() {
     //The result should be deliver packer 1,2,4,5 even though we gave the unpacker them in order 5,4,2,1.
     activeUnitTest = unitTests::unitTest13;
 
-    std::cout << "here1 " << std::endl;
-
     unitTestsSavedData2D.clear();
     unitTestsSavedData3D.clear();
     expectedPTS = 0;
@@ -969,6 +1081,34 @@ int main() {
         }
     }
 
+    if (waitForCompletion()) return EXIT_FAILURE;
+
+
+    //UnitTest14
+
+    activeUnitTest = unitTests::unitTest14;
+
+    unitTestsSavedData2D.clear();
+    unitTestsSavedData3D.clear();
+    expectedPTS = 0;
+    unitTestPacketNumberSender=0;
+    unitTestPacketNumberReciever = 0;
+
+    unitTestActive = true;
+    for (int packetNumber=0;packetNumber < 15; packetNumber++) {
+
+        mydata.clear();
+        mydata.resize(((MTU - myEFPPacker.geType1Size()) * 5) + 12);
+        std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
+        PrivateData myPrivateData;
+        myEFPPacker.addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData),EdgewareEmbeddedFrameContent::embeddedPrivateData,true);
+        result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 'ANXB', streamID, INLINE_PAYLOAD);
+        if (result != EdgewareFrameMessages::noError) {
+            std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
+                      << std::endl;
+            return EXIT_FAILURE;
+        }
+    }
     if (waitForCompletion()) return EXIT_FAILURE;
 
     std::cout << "Tests completed" << std::endl;

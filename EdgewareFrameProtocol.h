@@ -20,8 +20,14 @@
 #define CIRCULAR_BUFFER_SIZE 0b1111111111111 //must be a continious set of set bits from LSB to MSB
 //0b1111111111111 == 8191
 
+//flag defines
 #define NO_FLAGS 0b00000000
 #define INLINE_PAYLOAD 0b00010000
+
+//FOURCC codes are big-endian
+#define TO_FOURCC(a,b,c,d)     (((uint32_t)(d)) | ((uint32_t)(c)<<8) | ((uint32_t)(b)<<16) | ((uint32_t)(a)<<24))
+//IS_FOURCC, Is true if the codes match
+#define IS_FOURCC(a,b,c,d,e)   (((uint32_t)(d) == (e & 0x000000ff)) && ((uint32_t)(c)<<8 == (e & 0x0000ff00)) && ((uint32_t)(b)<<16 == (e & 0x00ff0000)) && ((uint32_t)(a)<<24 == (e & 0xff000000)))
 
 #define EFP_MAJOR_VERSION 1
 #define EFP_MINOR_VERSION 0
@@ -151,13 +157,18 @@ public:
     EdgewareFrameProtocol &operator=(EdgewareFrameProtocol &&) = delete;      // Move assign
 
     //Help methods ---------------------
-    EdgewareFrameMessages addEmbeddedData(std::vector<uint8_t> *packet, std::vector<uint8_t> &data, EdgewareEmbeddedFrameContent content = EdgewareEmbeddedFrameContent::illegal, bool isLast=false);
-    EdgewareFrameMessages extractEmbeddedData(std::vector<uint8_t> &packet, std::vector<std::vector<uint8_t>> *embeddedDataList, std::vector<EdgewareEmbeddedFrameContent> *dataContent ,size_t *payloadDataPosition);
+
+
+    EdgewareFrameMessages addEmbeddedData(std::vector<uint8_t> *packet, void  *privateData, size_t privateDataSize, EdgewareEmbeddedFrameContent content = EdgewareEmbeddedFrameContent::illegal, bool isLast=false);
+
+    EdgewareFrameMessages extractEmbeddedData(framePtr &packet, std::vector<std::vector<uint8_t>> *embeddedDataList,
+                                              std::vector<uint8_t> *dataContent, size_t *payloadDataPosition);
 
     //Used by unitTests ---------------------
 #ifdef UNIT_TESTS
     size_t geType1Size();
     size_t geType2Size();
+    size_t something();
 #endif
 
 private:
@@ -206,6 +217,7 @@ private:
     std::atomic_bool isThreadActive;
     std::atomic_bool threadActive;
     //Internal lists and variables ----- END ------
+
 };
 
 
