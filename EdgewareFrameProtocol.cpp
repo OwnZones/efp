@@ -103,7 +103,7 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
         thisBucket->fragmentSize = (subPacket.size() - sizeof(EdgewareFrameType1));
         size_t insertDataPointer = thisBucket->fragmentSize * type1Frame.fragmentNo;
         thisBucket->bucketData = std::make_shared<allignedFrameData>(
-                thisBucket->fragmentSize * (type1Frame.ofFragmentNo + 1));
+                thisBucket->fragmentSize * type1Frame.ofFragmentNo);
         thisBucket->bucketData->frameSize=thisBucket->fragmentSize * type1Frame.ofFragmentNo;
 
         if (thisBucket->bucketData->framedata == nullptr) {
@@ -157,8 +157,8 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
     return EdgewareFrameMessages::noError;
 }
 
-// Unpack method for type2 packets. Where we know there is also type 1 packets involved.
-// Type2 packets are parts of frames smaller than the MTU
+// Unpack method for type2 packets. Where we know there is also type 1 packets involved and possibly type3.
+// Type2 packets are also parts of frames smaller than the MTU
 // The data IS the last data of a sequence
 // See the comments from above.
 
@@ -166,8 +166,6 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vec
     std::lock_guard<std::mutex> lock(netMtx);
     EdgewareFrameType2 type2Frame = *(EdgewareFrameType2 *) subPacket.data();
     Bucket *thisBucket = &bucketList[type2Frame.superFrameNo & CIRCULAR_BUFFER_SIZE];
-
-    //LOGGER(false, LOGG_NOTIFY, "superFrameNo2-> " << unsigned(type2Frame.superFrameNo))
 
     if (!thisBucket->active) {
         uint64_t deliveryOrderCandidate = superFrameRecalculator(type2Frame.superFrameNo);
@@ -263,8 +261,8 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType3(const std::vector<uint8
 
     EdgewareFrameType3 type3Frame = *(EdgewareFrameType3 *) subPacket.data();
     Bucket *thisBucket = &bucketList[type3Frame.superFrameNo & CIRCULAR_BUFFER_SIZE];
-    //LOGGER(false, LOGG_NOTIFY, "superFrameNo3-> " << unsigned(type1Frame.superFrameNo))
 
+    //If there is a type3 frame it's the second last frame
     uint16_t thisFragmentNo=type3Frame.ofFragmentNo-1;
 
     //is this entry in the buffer active? If no, create a new else continue filling the bucket with data.
@@ -340,9 +338,6 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType3(const std::vector<uint8
     thisBucket->bucketData->frameSize =
             (thisBucket->fragmentSize * (type3Frame.ofFragmentNo - 1)) + (subPacket.size() - sizeof(EdgewareFrameType3));
 
-    size_t thisdebugValue= thisBucket->bucketData->frameSize;
-    size_t thisdebugvalue2 = thisBucket->fragmentSize;
-
     //move the data to the correct fragment position in the frame.
     //A bucket contains the frame data -> This is the internal data format
     // |bucket start|information about the frame|bucket end| in the bucket there is a pointer to the actual data named framePtr this is the structure there ->
@@ -354,7 +349,6 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType3(const std::vector<uint8
                 subPacket.size() - sizeof(EdgewareFrameType3));
     return EdgewareFrameMessages::noError;
 }
-
 
 // This is the thread going trough the buckets to see if they should be delivered to
 // the 'user'
@@ -584,9 +578,10 @@ EdgewareFrameMessages EdgewareFrameProtocol::stopUnpacker() {
 EdgewareFrameMessages EdgewareFrameProtocol::unpack(const std::vector<uint8_t> &subPacket, uint8_t fromSource) {
     //Type 0 packet. Discard and continue
     //Type 0 packets can be used to fill with user data outside efp protocol packets just put a uint8_t = Frametype::type0 at position 0 and then any data.
-    //Type 1 are packets larger than MTU
-    //Type 2 are packets smaller than MTU
+    //Type 1 are frames larger than MTU
+    //Type 2 are frames smaller than MTU
     //Type 2 packets are also used at the end of Type 1 packet superFrames
+    //Type 3 frames carry the reminder of data when it's too large for type2 to carry.
 
     if ((subPacket[0] & 0x0f) == Frametype::type0) {
         return EdgewareFrameMessages::noError;
@@ -676,25 +671,9 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
     size_t dataPayloadType2 = (uint16_t) (currentMTU - sizeof(EdgewareFrameType2));
 
     uint64_t dataPointer = 0;
-
-    //okey du måste subtrahera typ2 paketet här du ska ju
-    size_t type1size = sizeof(EdgewareFrameType1);
-    size_t type2size = sizeof(EdgewareFrameType2);
-    size_t type3Size= sizeof(EdgewareFrameType3);
-    size_t currmtusize=currentMTU;
-    size_t packetSize=packet.size();
-    size_t packetPayload=currmtusize-type1size;
-    size_t diffFrames = sizeof(EdgewareFrameType2) - sizeof(EdgewareFrameType1);
-
-
-    double thisValue =((double)(packet.size()) / (double)(currentMTU - sizeof(EdgewareFrameType1)));
-
-    uint16_t ofFragmentNo =
-            floor((double)(packet.size()) / (double)(currentMTU - sizeof(EdgewareFrameType1)));
-
+    uint16_t ofFragmentNo = floor((double)(packet.size()) / (double)(currentMTU - sizeof(EdgewareFrameType1)));
     uint16_t ofFragmentNoType1=ofFragmentNo;
     bool type3needed = false;
-
     size_t reminderData=packet.size()-(ofFragmentNo*dataPayloadType1);
     if(reminderData > dataPayloadType2) {
         //We need a type3 frame. The reminder is too large for a type2 frame
@@ -702,10 +681,8 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
         ofFragmentNo++;
     }
 
-
     type1Frame.ofFragmentNo = ofFragmentNo;
-
-    std::vector<uint8_t> finalPacketLoop(sizeof(EdgewareFrameType1)+dataPayloadType1);
+    std::vector<uint8_t> finalPacketLoop(sizeof(EdgewareFrameType1) + dataPayloadType1);
     while (fragmentNo < ofFragmentNoType1) {
         type1Frame.fragmentNo = fragmentNo++;
         std::copy((uint8_t *) &type1Frame,((uint8_t *) &type1Frame) + sizeof(EdgewareFrameType1), finalPacketLoop.begin());
@@ -734,6 +711,11 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
 
     //Create the last type2 packet
     size_t dataLeftToSend = packet.size() - dataPointer;
+
+    if (type3needed && dataLeftToSend != 0 ) {
+        return EdgewareFrameMessages::internalCalculationError;
+    }
+
     //Debug me for calculation errors
     if (dataLeftToSend + sizeof(EdgewareFrameType2) > currentMTU) {
         LOGGER(true, LOGG_FATAL, "Calculation bug.. Value that made me sink -> " << packet.size());

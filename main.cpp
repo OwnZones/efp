@@ -784,6 +784,15 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
                 break;
             }
 
+            if (unitTestPacketNumberReciever != pts) {
+                std::cout << "Got PTS -> " << unsigned(pts) << " Expected -> " << unsigned(unitTestPacketNumberReciever) << std::endl;
+                unitTestPacketNumberReciever = pts; //if you want to continue remove the lines under to the break
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+
+            }
+
             if (flags & INLINE_PAYLOAD) {
                 info = myEFPReciever.extractEmbeddedData(packet, &embeddedData, &embeddedContentFlag,
                                                          &payloadDataPosition);
@@ -921,7 +930,7 @@ int main() {
      */
 
     uint8_t streamID=1;
-/*
+
     //UnitTest1
     //Test sending a packet less than MTU + header - > Expected result is one type2 frame only sent
     activeUnitTest = unitTests::unitTest1;
@@ -1184,7 +1193,7 @@ int main() {
     //UnitTest14
     //Send 15 packets with embeddedPrivateData. odd packet numbers will have two embedded private data fields. Also check for not broken and correct fourcc code.
     //the reminder of the packet is a vector. Check it's integrity
-*/
+
     activeUnitTest = unitTests::unitTest14;
 
     unitTestsSavedData2D.clear();
@@ -1222,6 +1231,8 @@ int main() {
     //UnitTest15
     //This is the crazy-monkey test. We randomize size loss and content for 1000 packets
     activeUnitTest = unitTests::unitTest15;
+
+    unitTestPacketNumberReciever = 0;
 
     unitTestActive = true;
     for (int packetNumber=0;packetNumber < 1000; packetNumber++) {
