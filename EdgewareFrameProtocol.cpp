@@ -111,8 +111,10 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
             return EdgewareFrameMessages::memoryAllocationError;
         }
 
-        std::memcpy(thisBucket->bucketData->framedata + insertDataPointer,
-                    subPacket.data() + sizeof(EdgewareFrameType1), subPacket.size() - sizeof(EdgewareFrameType1));
+        std::copy(subPacket.begin() + sizeof(EdgewareFrameType1),subPacket.end(),thisBucket->bucketData->framedata + insertDataPointer);
+
+        //std::memcpy(thisBucket->bucketData->framedata + insertDataPointer,
+        //            subPacket.data() + sizeof(EdgewareFrameType1), subPacket.size() - sizeof(EdgewareFrameType1));
         return EdgewareFrameMessages::noError;
     }
 
@@ -152,8 +154,11 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
     // insertDataPointer will point to the fragment start above and fill with the incomming data
 
     size_t insertDataPointer = thisBucket->fragmentSize * type1Frame.fragmentNo;
-    std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType1),
-                subPacket.size() - sizeof(EdgewareFrameType1));
+
+    std::copy(subPacket.begin() + sizeof(EdgewareFrameType1),subPacket.end(),thisBucket->bucketData->framedata + insertDataPointer);
+
+    //std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType1),
+    //            subPacket.size() - sizeof(EdgewareFrameType1));
     return EdgewareFrameMessages::noError;
 }
 
@@ -201,8 +206,11 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vec
             return EdgewareFrameMessages::memoryAllocationError;
         }
         size_t insertDataPointer = type2Frame.type1PacketSize * type2Frame.fragmentNo;
-        std::memcpy(thisBucket->bucketData->framedata + insertDataPointer,
-                    subPacket.data() + sizeof(EdgewareFrameType2), subPacket.size() - sizeof(EdgewareFrameType2));
+
+        std::copy(subPacket.begin() + sizeof(EdgewareFrameType2),subPacket.end(),thisBucket->bucketData->framedata + insertDataPointer);
+
+        //std::memcpy(thisBucket->bucketData->framedata + insertDataPointer,
+        //            subPacket.data() + sizeof(EdgewareFrameType2), subPacket.size() - sizeof(EdgewareFrameType2));
         return EdgewareFrameMessages::noError;
     }
 
@@ -245,8 +253,10 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vec
                 (thisBucket->fragmentSize * type2Frame.ofFragmentNo) + (subPacket.size() - sizeof(EdgewareFrameType2));
         //Type 2 is always at the end and is always the highest number fragment
         size_t insertDataPointer = type2Frame.type1PacketSize * type2Frame.fragmentNo;
-        std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType2),
-                    subPacket.size() - sizeof(EdgewareFrameType2));
+
+        std::copy(subPacket.begin() + sizeof(EdgewareFrameType2),subPacket.end(),thisBucket->bucketData->framedata + insertDataPointer);
+        //std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType2),
+        //            subPacket.size() - sizeof(EdgewareFrameType2));
     }
 
 
@@ -301,8 +311,9 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType3(const std::vector<uint8
             return EdgewareFrameMessages::memoryAllocationError;
         }
 
-        std::memcpy(thisBucket->bucketData->framedata + insertDataPointer,
-                    subPacket.data() + sizeof(EdgewareFrameType3), subPacket.size() - sizeof(EdgewareFrameType3));
+        std::copy(subPacket.begin() + sizeof(EdgewareFrameType3),subPacket.end(),thisBucket->bucketData->framedata + insertDataPointer);
+        //std::memcpy(thisBucket->bucketData->framedata + insertDataPointer,
+        //            subPacket.data() + sizeof(EdgewareFrameType3), subPacket.size() - sizeof(EdgewareFrameType3));
         return EdgewareFrameMessages::noError;
     }
 
@@ -345,8 +356,9 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType3(const std::vector<uint8
     // insertDataPointer will point to the fragment start above and fill with the incomming data
 
     size_t insertDataPointer = thisBucket->fragmentSize * thisFragmentNo;
-    std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType3),
-                subPacket.size() - sizeof(EdgewareFrameType3));
+    std::copy(subPacket.begin() + sizeof(EdgewareFrameType3),subPacket.end(),thisBucket->bucketData->framedata + insertDataPointer);
+    //std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType3),
+    //            subPacket.size() - sizeof(EdgewareFrameType3));
     return EdgewareFrameMessages::noError;
 }
 
