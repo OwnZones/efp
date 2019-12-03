@@ -103,7 +103,7 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
         thisBucket->fragmentSize = (subPacket.size() - sizeof(EdgewareFrameType1));
         size_t insertDataPointer = thisBucket->fragmentSize * type1Frame.fragmentNo;
         thisBucket->bucketData = std::make_shared<allignedFrameData>(
-                thisBucket->fragmentSize * type1Frame.ofFragmentNo);
+                thisBucket->fragmentSize * (type1Frame.ofFragmentNo + 1));
         thisBucket->bucketData->frameSize=thisBucket->fragmentSize * type1Frame.ofFragmentNo;
 
         if (thisBucket->bucketData->framedata == nullptr) {

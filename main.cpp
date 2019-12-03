@@ -1227,7 +1227,6 @@ int main() {
     }
     if (waitForCompletion()) return EXIT_FAILURE;
 
-
     //UnitTest15
     //This is the crazy-monkey test. We randomize size loss and content for 1000 packets
     activeUnitTest = unitTests::unitTest15;
@@ -1240,8 +1239,8 @@ int main() {
 
        // std::cout << "bip " << unsigned(packetNumber) << std::endl;
 
-        size_t randSize = rand() % 1000000 + 1;
-        //size_t randSize = 282348 - (sizeof(PrivateData) + 4);
+        //size_t randSize = rand() % 1000000 + 1;
+        size_t randSize = 475250;
         //size_t randSize = (MTU*2-(myEFPPacker.geType1Size()*2)-(1+sizeof(PrivateData) + 4));
         mydata.resize(randSize);
         std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
