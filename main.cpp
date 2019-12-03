@@ -2,6 +2,7 @@
 #include "EdgewareFrameProtocol.h"
 
 #include <iostream>
+#include <cstdlib>
 
 #define MTU 1456 //SRT-max
 
@@ -50,6 +51,7 @@ EdgewareFrameProtocol myEFPPacker(MTU, EdgewareFrameProtocolModeNamespace::packe
 struct PrivateData {
     int myPrivateInteger = 10;
     uint8_t myPrivateUint8_t = 44;
+    size_t sizeOfData = 0;
 };
 
 void sendData(const std::vector<uint8_t> &subPacket) {
@@ -59,7 +61,7 @@ void sendData(const std::vector<uint8_t> &subPacket) {
 
     switch (activeUnitTest) {
         case unitTests::unitTest1:
-            if (subPacket[0] != 2) {
+            if ((subPacket[0] & 0x0f) != 2) {
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
@@ -71,7 +73,7 @@ void sendData(const std::vector<uint8_t> &subPacket) {
         case unitTests::unitTest2:
             info = myEFPReciever.unpack(subPacket,0);
             if (info != EdgewareFrameMessages::noError) {
-                std::cout << "Error-> " << unsigned(info) << std::endl;
+                std::cout << "Error-> " << signed(info) << std::endl;
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
@@ -80,7 +82,7 @@ void sendData(const std::vector<uint8_t> &subPacket) {
         case unitTests::unitTest3:
             info = myEFPReciever.unpack(subPacket,0);
             if (info != EdgewareFrameMessages::noError) {
-                std::cout << "Error-> " << unsigned(info) << std::endl;
+                std::cout << "Error-> " << signed(info) << std::endl;
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
@@ -231,7 +233,7 @@ void sendData(const std::vector<uint8_t> &subPacket) {
         case unitTests::unitTest13:
             info = myEFPReciever.unpack(subPacket,0);
             if (info != EdgewareFrameMessages::noError) {
-                std::cout << "Error-> " << unsigned(info) << std::endl;
+                std::cout << "Error-> " << signed(info) << std::endl;
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
@@ -240,7 +242,21 @@ void sendData(const std::vector<uint8_t> &subPacket) {
         case unitTests::unitTest14:
             info = myEFPReciever.unpack(subPacket,0);
             if (info != EdgewareFrameMessages::noError) {
-                std::cout << "Error-> " << unsigned(info) << std::endl;
+                std::cout << "Error-> " << signed(info) << std::endl;
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+            break;
+        case unitTests::unitTest15:
+
+            if ((subPacket[0] & 0x0f) == 3) {
+                std::cout << "Type3 seen here" << std::endl;
+            }
+
+            info = myEFPReciever.unpack(subPacket,0);
+            if (info != EdgewareFrameMessages::noError) {
+                std::cout << "Error-> " << signed(info) << std::endl;
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
@@ -654,11 +670,22 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
                 unitTestActive = false;
                 break;
             }
+
             unitTestPacketNumberReciever++;
 
             if (unitTestPacketNumberReciever != pts) {
-                std::cout << "bug got " << unsigned(pts) << " Expected " << unsigned(unitTestPacketNumberReciever) << std::endl;
-                unitTestPacketNumberReciever = pts;
+                std::cout << "Got PTS -> " << unsigned(pts) << " Expected -> " << unsigned(unitTestPacketNumberReciever) << std::endl;
+                unitTestPacketNumberReciever = pts; //if you want to continue remove the lines under to the break
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+
+            }
+
+            if (packet->frameSize != (((MTU - myEFPPacker.geType1Size()) * 5) + 12)) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
             }
 
             if (unitTestPacketNumberReciever < 100000) {
@@ -749,6 +776,72 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
                 break;
             }
             break;
+        case unitTests::unitTest15:
+            unitTestPacketNumberReciever++;
+            if (broken) {
+                unitTestFailed = true;
+                unitTestActive = false;
+                break;
+            }
+
+            if (flags & INLINE_PAYLOAD) {
+                info = myEFPReciever.extractEmbeddedData(packet, &embeddedData, &embeddedContentFlag,
+                                                         &payloadDataPosition);
+
+                if (info != EdgewareFrameMessages::noError) {
+                    unitTestFailed = true;
+                    unitTestActive = false;
+                    break;
+                }
+
+                for (int x = 0; x<embeddedData.size();x++) {
+                    if(embeddedContentFlag[x] == EdgewareEmbeddedFrameContent::embeddedPrivateData) {
+                        std::vector<uint8_t> thisVector = embeddedData[x];
+                        PrivateData myPrivateData = *(PrivateData *) thisVector.data();
+                        size_t thisStuff=sizeof(PrivateData);
+
+                        if (myPrivateData.sizeOfData != packet->frameSize) {
+                            unitTestFailed = true;
+                            unitTestActive = false;
+                            break;
+                        }
+
+                        if (myPrivateData.myPrivateInteger != 10 || myPrivateData.myPrivateUint8_t != 44) {
+                            unitTestFailed = true;
+                            unitTestActive = false;
+                            break;
+                        }
+
+                        for (int x = payloadDataPosition; x < packet->frameSize; x++) {
+                            if (packet->framedata[x] != vectorChecker++) {
+                                unitTestFailed = true;
+                                unitTestActive = false;
+                                break;
+                            }
+                        }
+                    } else {
+                        unitTestFailed = true;
+                        unitTestActive = false;
+                        break;
+                    }
+
+                }
+                if (unitTestPacketNumberReciever < 1000) {
+                    if (!(unitTestPacketNumberReciever % 100)) {
+                        std::cout << "Got packet number " << unsigned(unitTestPacketNumberReciever) << std::endl;
+                    }
+                    break;
+                }
+
+                if (unitTestPacketNumberReciever == 1000) {
+                    unitTestActive = false;
+                    activeUnitTest = unitTests::unitTestInactive;
+                    std::cout << "unitTest15 done" << std::endl;
+                    break;
+                }
+
+            }
+            break;
         default:
             unitTestFailed = true;
             unitTestActive = false;
@@ -757,8 +850,6 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
         case unitTestInactive:
             break;
         case unitTest1:
-            break;
-        case unitTest15:
             break;
         case unitTest16:
             break;
@@ -830,7 +921,7 @@ int main() {
      */
 
     uint8_t streamID=1;
-
+/*
     //UnitTest1
     //Test sending a packet less than MTU + header - > Expected result is one type2 frame only sent
     activeUnitTest = unitTests::unitTest1;
@@ -1093,7 +1184,7 @@ int main() {
     //UnitTest14
     //Send 15 packets with embeddedPrivateData. odd packet numbers will have two embedded private data fields. Also check for not broken and correct fourcc code.
     //the reminder of the packet is a vector. Check it's integrity
-
+*/
     activeUnitTest = unitTests::unitTest14;
 
     unitTestsSavedData2D.clear();
@@ -1121,6 +1212,40 @@ int main() {
         result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 'ANXB', streamID, INLINE_PAYLOAD);
         if (result != EdgewareFrameMessages::noError) {
             std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method"
+                      << std::endl;
+            return EXIT_FAILURE;
+        }
+    }
+    if (waitForCompletion()) return EXIT_FAILURE;
+
+
+    //UnitTest15
+    //This is the crazy-monkey test. We randomize size loss and content for 1000 packets
+    activeUnitTest = unitTests::unitTest15;
+
+    unitTestActive = true;
+    for (int packetNumber=0;packetNumber < 1000; packetNumber++) {
+        mydata.clear();
+
+       // std::cout << "bip " << unsigned(packetNumber) << std::endl;
+
+        size_t randSize = rand() % 1000000 + 1;
+        //size_t randSize = 282348 - (sizeof(PrivateData) + 4);
+        //size_t randSize = (MTU*2-(myEFPPacker.geType1Size()*2)-(1+sizeof(PrivateData) + 4));
+        mydata.resize(randSize);
+        std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
+
+        PrivateData myPrivateData;
+        myPrivateData.sizeOfData = mydata.size() + sizeof(PrivateData) + 4; //4 is the embedded frame header
+        myEFPPacker.addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData),EdgewareEmbeddedFrameContent::embeddedPrivateData,true);
+        if (myPrivateData.sizeOfData != mydata.size()) {
+            std::cout << "Packer error"
+                      << std::endl;
+        }
+
+        result = myEFPPacker.packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 'ANXB', streamID, INLINE_PAYLOAD);
+        if (result != EdgewareFrameMessages::noError) {
+            std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method " << signed(result) << " " << mydata.size() << " "
                       << std::endl;
             return EXIT_FAILURE;
         }

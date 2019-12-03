@@ -104,6 +104,7 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType1(const std::vector<uint8
         size_t insertDataPointer = thisBucket->fragmentSize * type1Frame.fragmentNo;
         thisBucket->bucketData = std::make_shared<allignedFrameData>(
                 thisBucket->fragmentSize * (type1Frame.ofFragmentNo + 1));
+        thisBucket->bucketData->frameSize=thisBucket->fragmentSize * type1Frame.ofFragmentNo;
 
         if (thisBucket->bucketData->framedata == nullptr) {
             thisBucket->active = false;
@@ -195,7 +196,7 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vec
         thisBucket->fragmentCounter = 0;
         thisBucket->fragmentSize = type2Frame.type1PacketSize;
         size_t reserveThis = ((thisBucket->fragmentSize * type2Frame.ofFragmentNo) +
-                              (subPacket.size() - sizeof(EdgewareFrameType2)));
+                              (type2Frame.sizeOfData));
         thisBucket->bucketData = std::make_shared<allignedFrameData>(reserveThis);
         if (thisBucket->bucketData->framedata == nullptr) {
             thisBucket->active = false;
@@ -239,14 +240,118 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType2LastFrame(const std::vec
     thisBucket->dataContent = thisStream->dataContent;
     thisBucket->code = thisStream->code;
 
-    //when the type2 frames are recieved only then is the actual size to be delivered known... Now set the real size for the bucketData
-    thisBucket->bucketData->frameSize =
-            (thisBucket->fragmentSize * type2Frame.ofFragmentNo) + (subPacket.size() - sizeof(EdgewareFrameType2));
 
-    //Type 2 is always at the end and is always the highest number fragment
-    size_t insertDataPointer = type2Frame.type1PacketSize * type2Frame.fragmentNo;
-    std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType2),
-                subPacket.size() - sizeof(EdgewareFrameType2));
+    //when the type2 frames are recieved only then is the actual size to be delivered known... Now set the real size for the bucketData
+    if (type2Frame.sizeOfData) {
+        thisBucket->bucketData->frameSize =
+                (thisBucket->fragmentSize * type2Frame.ofFragmentNo) + (subPacket.size() - sizeof(EdgewareFrameType2));
+        //Type 2 is always at the end and is always the highest number fragment
+        size_t insertDataPointer = type2Frame.type1PacketSize * type2Frame.fragmentNo;
+        std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType2),
+                    subPacket.size() - sizeof(EdgewareFrameType2));
+    }
+
+
+    return EdgewareFrameMessages::noError;
+}
+
+//Unpack method for type3 packets. Type3 packets are the parts of frames where the reminder data does not fit a type2 packet. Then a type 3 is added
+//in front of a type2 packet to catch the data overshoot.
+//Type 3 frames MUST be the same header size as type1 headers
+EdgewareFrameMessages EdgewareFrameProtocol::unpackType3(const std::vector<uint8_t> &subPacket, uint8_t fromSource) {
+    std::lock_guard<std::mutex> lock(netMtx);
+
+    EdgewareFrameType3 type3Frame = *(EdgewareFrameType3 *) subPacket.data();
+    Bucket *thisBucket = &bucketList[type3Frame.superFrameNo & CIRCULAR_BUFFER_SIZE];
+    //LOGGER(false, LOGG_NOTIFY, "superFrameNo3-> " << unsigned(type1Frame.superFrameNo))
+
+    uint16_t thisFragmentNo=type3Frame.ofFragmentNo-1;
+
+    //is this entry in the buffer active? If no, create a new else continue filling the bucket with data.
+    if (!thisBucket->active) {
+        //LOGGER(false,LOGG_NOTIFY,"Setting: " << unsigned(type1Frame.superFrameNo));
+        uint64_t deliveryOrderCandidate = superFrameRecalculator(type3Frame.superFrameNo);
+        //Is this a old fragment where we already delivered the superframe?
+        if (deliveryOrderCandidate == thisBucket->deliveryOrder) {
+            return EdgewareFrameMessages::tooOldFragment;
+        }
+        thisBucket->deliveryOrder = deliveryOrderCandidate;
+        thisBucket->active = true;
+
+        thisBucket->flags = type3Frame.frameType & 0xf0;
+
+        thisBucket->stream = type3Frame.stream;
+        Stream *thisStream = &streams[fromSource][type3Frame.stream];
+        thisBucket->dataContent = thisStream->dataContent;
+        thisBucket->code = thisStream->code;
+
+        thisBucket->savedSuperFrameNo = type3Frame.superFrameNo;
+        thisBucket->haveRecievedPacket.reset();
+        thisBucket->pts = UINT64_MAX;
+        thisBucket->haveRecievedPacket[thisFragmentNo] = 1;
+        thisBucket->timeout = bucketTimeout;
+        thisBucket->fragmentCounter = 0;
+        thisBucket->ofFragmentNo = type3Frame.ofFragmentNo;
+        thisBucket->fragmentSize = type3Frame.type1PacketSize;
+        size_t insertDataPointer = thisBucket->fragmentSize * thisFragmentNo;
+        size_t reserveThis = ((thisBucket->fragmentSize * (type3Frame.ofFragmentNo - 1)) +
+                              (subPacket.size() - sizeof(EdgewareFrameType3)));
+        thisBucket->bucketData = std::make_shared<allignedFrameData>(reserveThis);
+
+        if (thisBucket->bucketData->framedata == nullptr) {
+            thisBucket->active = false;
+            return EdgewareFrameMessages::memoryAllocationError;
+        }
+
+        std::memcpy(thisBucket->bucketData->framedata + insertDataPointer,
+                    subPacket.data() + sizeof(EdgewareFrameType3), subPacket.size() - sizeof(EdgewareFrameType3));
+        return EdgewareFrameMessages::noError;
+    }
+
+    //there is a gap in recieving the packets. Increase the bucket size list.. if the
+    //bucket size list is == X*UINT16_MAX you will no longer detect any buffer errors
+    if (type3Frame.superFrameNo != thisBucket->savedSuperFrameNo) {
+        return EdgewareFrameMessages::bufferOutOfResources;
+    }
+
+    //I'm getting a packet with data larger than the expected size
+    //this can be generated by wraparound in the bucket bucketList
+    //The notification about more than 50% buffer full level should already
+    //be triggered by now.
+    //I invalidate this bucket to save me but the user should be notified somehow about this state. FIXME
+
+    if (thisBucket->ofFragmentNo < thisFragmentNo || type3Frame.ofFragmentNo != thisBucket->ofFragmentNo) {
+        LOGGER(true, LOGG_FATAL, "bufferOutOfBounds");
+        thisBucket->active = false;
+        return EdgewareFrameMessages::bufferOutOfBounds;
+    }
+
+    //Have I already recieved this packet before? (duplicate?)
+    if (thisBucket->haveRecievedPacket[thisFragmentNo] == 1) {
+        return EdgewareFrameMessages::duplicatePacketRecieved;
+    } else {
+        thisBucket->haveRecievedPacket[thisFragmentNo] = 1;
+    }
+
+    //Let's re-set the timout and let also add +1 to the fragment counter
+    thisBucket->timeout = bucketTimeout;
+    thisBucket->fragmentCounter++;
+
+    thisBucket->bucketData->frameSize =
+            (thisBucket->fragmentSize * (type3Frame.ofFragmentNo - 1)) + (subPacket.size() - sizeof(EdgewareFrameType3));
+
+    size_t thisdebugValue= thisBucket->bucketData->frameSize;
+    size_t thisdebugvalue2 = thisBucket->fragmentSize;
+
+    //move the data to the correct fragment position in the frame.
+    //A bucket contains the frame data -> This is the internal data format
+    // |bucket start|information about the frame|bucket end| in the bucket there is a pointer to the actual data named framePtr this is the structure there ->
+    // linear array of -> |fragment start|fragment data|fragment end|
+    // insertDataPointer will point to the fragment start above and fill with the incomming data
+
+    size_t insertDataPointer = thisBucket->fragmentSize * thisFragmentNo;
+    std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(EdgewareFrameType3),
+                subPacket.size() - sizeof(EdgewareFrameType3));
     return EdgewareFrameMessages::noError;
 }
 
@@ -500,6 +605,11 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpack(const std::vector<uint8_t> &
         } else {
             return EdgewareFrameMessages::endOfPacketError;
         }
+    } else if ((subPacket[0] & 0x0f) == Frametype::type3) {
+        if (subPacket.size() < sizeof(EdgewareFrameType3)) {
+            return EdgewareFrameMessages::framesizeMismatch;
+        }
+        return unpackType3(subPacket, fromSource);
     }
 
     //did not catch anything I understand
@@ -510,6 +620,10 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpack(const std::vector<uint8_t> &
 EdgewareFrameMessages
 EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent, uint64_t pts,
                                    uint32_t code, uint8_t stream, uint8_t flags) {
+
+    if (sizeof(EdgewareFrameType1) != sizeof(EdgewareFrameType3)) {
+        return EdgewareFrameMessages::type1And3SizeError;
+    }
 
     //Malloc and use C-style memory management instead?
 
@@ -558,22 +672,64 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
     type1Frame.stream = stream;
     type1Frame.superFrameNo = superFrameNoGenerator;
     //The size is known for type1 packets no need to write it in any header.
-    size_t dataPayload = (uint16_t) (currentMTU - sizeof(EdgewareFrameType1));
+    size_t dataPayloadType1 = (uint16_t) (currentMTU - sizeof(EdgewareFrameType1));
+    size_t dataPayloadType2 = (uint16_t) (currentMTU - sizeof(EdgewareFrameType2));
 
     uint64_t dataPointer = 0;
 
+    //okey du måste subtrahera typ2 paketet här du ska ju
+    size_t type1size = sizeof(EdgewareFrameType1);
+    size_t type2size = sizeof(EdgewareFrameType2);
+    size_t type3Size= sizeof(EdgewareFrameType3);
+    size_t currmtusize=currentMTU;
+    size_t packetSize=packet.size();
+    size_t packetPayload=currmtusize-type1size;
     size_t diffFrames = sizeof(EdgewareFrameType2) - sizeof(EdgewareFrameType1);
+
+
+    double thisValue =((double)(packet.size()) / (double)(currentMTU - sizeof(EdgewareFrameType1)));
+
     uint16_t ofFragmentNo =
-            ceil((double) (packet.size() + diffFrames) / (double) (currentMTU - sizeof(EdgewareFrameType1))) - 1;
+            floor((double)(packet.size()) / (double)(currentMTU - sizeof(EdgewareFrameType1)));
+
+    uint16_t ofFragmentNoType1=ofFragmentNo;
+    bool type3needed = false;
+
+    size_t reminderData=packet.size()-(ofFragmentNo*dataPayloadType1);
+    if(reminderData > dataPayloadType2) {
+        //We need a type3 frame. The reminder is too large for a type2 frame
+        type3needed = true;
+        ofFragmentNo++;
+    }
+
+
     type1Frame.ofFragmentNo = ofFragmentNo;
 
-    std::vector<uint8_t> finalPacketLoop(sizeof(EdgewareFrameType1)+dataPayload);
-    for (; fragmentNo < ofFragmentNo; fragmentNo++) {
-        type1Frame.fragmentNo = fragmentNo;
+    std::vector<uint8_t> finalPacketLoop(sizeof(EdgewareFrameType1)+dataPayloadType1);
+    while (fragmentNo < ofFragmentNoType1) {
+        type1Frame.fragmentNo = fragmentNo++;
         std::copy((uint8_t *) &type1Frame,((uint8_t *) &type1Frame) + sizeof(EdgewareFrameType1), finalPacketLoop.begin());
-        std::copy(packet.begin() + dataPointer,packet.begin() + dataPointer + dataPayload, finalPacketLoop.begin() + sizeof(EdgewareFrameType1));
-        dataPointer += dataPayload;
+        std::copy(packet.begin() + dataPointer,packet.begin() + dataPointer + dataPayloadType1, finalPacketLoop.begin() + sizeof(EdgewareFrameType1));
+        dataPointer += dataPayloadType1;
         sendCallback(finalPacketLoop);
+    }
+
+    if (type3needed) {
+        fragmentNo++;
+        std::vector<uint8_t> type3PacketData(sizeof(EdgewareFrameType3)+reminderData);
+        EdgewareFrameType3 type3Frame;
+        type3Frame.frameType |= flags;
+        type3Frame.stream = type1Frame.stream;
+        type3Frame.ofFragmentNo = type1Frame.ofFragmentNo;
+        type3Frame.type1PacketSize = currentMTU - sizeof(EdgewareFrameType1);
+        type3Frame.superFrameNo = type1Frame.superFrameNo;
+        std::copy((uint8_t *) &type3Frame,((uint8_t *) &type3Frame) + sizeof(EdgewareFrameType3), type3PacketData.begin());
+        std::copy(packet.begin() + dataPointer,packet.begin() + dataPointer + reminderData, type3PacketData.begin() + sizeof(EdgewareFrameType3));
+        dataPointer += reminderData;
+        if (dataPointer != packet.size()) {
+            return EdgewareFrameMessages::internalCalculationError;
+        }
+        sendCallback(type3PacketData);
     }
 
     //Create the last type2 packet
@@ -583,6 +739,11 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
         LOGGER(true, LOGG_FATAL, "Calculation bug.. Value that made me sink -> " << packet.size());
         return EdgewareFrameMessages::internalCalculationError;
     }
+
+    if (ofFragmentNo != fragmentNo) {
+        return EdgewareFrameMessages::internalCalculationError;
+    }
+
     EdgewareFrameType2 type2Frame;
     type2Frame.frameType |= flags;
     type2Frame.superFrameNo = superFrameNoGenerator;
@@ -592,10 +753,12 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
     type2Frame.sizeOfData = (uint16_t) dataLeftToSend;
     type2Frame.pts = pts;
     type2Frame.code = code;
-    type2Frame.type1PacketSize = currentMTU - sizeof(type1Frame);
+    type2Frame.type1PacketSize = currentMTU - sizeof(EdgewareFrameType1);
     std::vector<uint8_t> finalPacket(sizeof(EdgewareFrameType2)+dataLeftToSend);
     std::copy((uint8_t *) &type2Frame, ((uint8_t *) &type2Frame) + sizeof(EdgewareFrameType2), finalPacket.begin());
-    std::copy(packet.begin() + dataPointer, packet.begin() + dataPointer + dataLeftToSend, finalPacket.begin() + sizeof(EdgewareFrameType2));
+    if (dataLeftToSend) {
+        std::copy(packet.begin() + dataPointer, packet.begin() + dataPointer + dataLeftToSend, finalPacket.begin() + sizeof(EdgewareFrameType2));
+    }
     sendCallback(finalPacket);
     superFrameNoGenerator++;
     return EdgewareFrameMessages::noError;
@@ -608,6 +771,7 @@ EdgewareFrameMessages EdgewareFrameProtocol::addEmbeddedData(std::vector<uint8_t
     if (privateDataSize>UINT16_MAX) {
         return EdgewareFrameMessages::tooLargeEmbeddedData;
     }
+
     EdgewareFrameContentNamespace::EdgewareEmbeddedHeader embeddedHeader;
     embeddedHeader.size = privateDataSize;
     embeddedHeader.embeddedFrameType = content;

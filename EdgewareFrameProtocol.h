@@ -90,6 +90,7 @@ namespace EdgewareFrameMessagesNamespace {
         reservedCodeValue,          //UINT32_MAX is a EFP reserved value
         memoryAllocationError,      //Failed allocating system memory. This is fatal and results in unknown behaviour.
         illegalEmbeddedData,        //illegal embedded data
+        type1And3SizeError,         //Type1 and Type3 must have the same header size
 
         noError = 0,
 
@@ -197,6 +198,7 @@ private:
     void gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
     EdgewareFrameMessages unpackType1(const std::vector<uint8_t> &subPacket, uint8_t fromSource);
     EdgewareFrameMessages unpackType2LastFrame(const std::vector<uint8_t> &subPacket, uint8_t fromSource);
+    EdgewareFrameMessages unpackType3(const std::vector<uint8_t> &subPacket, uint8_t fromSource);
     void unpackerWorker(uint32_t timeout);
     uint64_t superFrameRecalculator(uint16_t superFrame);
     //Private methods ----- END ------

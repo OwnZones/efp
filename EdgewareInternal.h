@@ -62,7 +62,7 @@ enum Frametype : uint8_t { //Only the 4 LSB are used
 
 /*
 * <uint8_t> frameType
-* - 0x00 private data -> return and skip the payload of the packet.
+* - 0x00 private packet.
 * - 0x01 frame is larger than MTU
 * - 0x02 frame is less than MTU
 * <uint16_t> sizeOfData (optional if frameType is 0x02)
@@ -75,19 +75,20 @@ enum Frametype : uint8_t { //Only the 4 LSB are used
 
 struct EdgewareFrameType0 {
     uint8_t frameType = Frametype::type0;
-    uint16_t sizeOfData = 0;
 };
 
 struct EdgewareFrameType1 {
     uint8_t frameType = Frametype::type1;
+    uint8_t  stream = 0;
     uint16_t superFrameNo = 0;
     uint16_t fragmentNo = 0;
     uint16_t ofFragmentNo = 0;
-    uint8_t  stream;
 };
 
 struct EdgewareFrameType2 {
     uint8_t frameType  = Frametype::type2;
+    uint8_t  stream;
+    EdgewareFrameContent dataContent = EdgewareFrameContent::unknown;
     uint16_t sizeOfData = 0;
     uint16_t superFrameNo = 0;
     uint16_t fragmentNo = 0;
@@ -95,13 +96,17 @@ struct EdgewareFrameType2 {
     uint16_t type1PacketSize = 0;
     uint64_t pts = UINT64_MAX;
     uint32_t code = UINT32_MAX;
-    EdgewareFrameContent dataContent = EdgewareFrameContent::unknown;
-    uint8_t  stream;
+
 };
 
 struct EdgewareFrameType3 {
-    uint8_t frameType  = Frametype::type3;
+    uint8_t frameType = Frametype::type3;
+    uint8_t  stream = 0;
+    uint16_t superFrameNo = 0;
+    uint16_t type1PacketSize = 0;
+    uint16_t ofFragmentNo = 0;
 };
+
 //Packet header part ----- END ------
 
 //Stream list ----- START ------
