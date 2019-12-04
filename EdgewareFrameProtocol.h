@@ -76,8 +76,8 @@ namespace EdgewareFrameContentNamespace {
 // Positive numbers are informative
 namespace EdgewareFrameMessagesNamespace {
     enum EdgewareFrameMessagesDefines : int16_t {
-        tooLargeFrame = -10000,      //The frame is to large for EFP packer to handle
-        tooLargeEmbeddedData,        //The embedded data frame is too large.
+        tooLargeFrame = -10000,     //The frame is to large for EFP packer to handle
+        tooLargeEmbeddedData,       //The embedded data frame is too large.
         unknownFrametype,           //The frame type is unknown by EFP unpacker
         framesizeMismatch,          //The unpacker recieved data less than the header size
         internalCalculationError,   //The packer encountered a condition it can't handle
@@ -91,6 +91,9 @@ namespace EdgewareFrameMessagesNamespace {
         memoryAllocationError,      //Failed allocating system memory. This is fatal and results in unknown behaviour.
         illegalEmbeddedData,        //illegal embedded data
         type1And3SizeError,         //Type1 and Type3 must have the same header size
+        wrongMode,                  //mode is set to unpacker when using the class as packer or the other way around
+        unpackerNotStarted,         //The EFP unpacker is not running
+
 
         noError = 0,
 
@@ -151,25 +154,22 @@ public:
     EdgewareFrameMessages unpack(const std::vector<uint8_t> &subPacket, uint8_t fromSource);
     std::function<void(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags)> recieveCallback = nullptr;
 
-    // delete copy and move constructors and assign operators
-    EdgewareFrameProtocol(EdgewareFrameProtocol const &) = delete;             // Copy construct
-    EdgewareFrameProtocol(EdgewareFrameProtocol &&) = delete;                  // Move construct
-    EdgewareFrameProtocol &operator=(EdgewareFrameProtocol const &) = delete;  // Copy assign
-    EdgewareFrameProtocol &operator=(EdgewareFrameProtocol &&) = delete;      // Move assign
+    //Delete copy and move constructors and assign operators
+    EdgewareFrameProtocol(EdgewareFrameProtocol const &) = delete;              // Copy construct
+    EdgewareFrameProtocol(EdgewareFrameProtocol &&) = delete;                   // Move construct
+    EdgewareFrameProtocol &operator=(EdgewareFrameProtocol const &) = delete;   // Copy assign
+    EdgewareFrameProtocol &operator=(EdgewareFrameProtocol &&) = delete;        // Move assign
 
-    //Help methods ---------------------
-
-
+    //Help methods ----------- START ----------
     EdgewareFrameMessages addEmbeddedData(std::vector<uint8_t> *packet, void  *privateData, size_t privateDataSize, EdgewareEmbeddedFrameContent content = EdgewareEmbeddedFrameContent::illegal, bool isLast=false);
-
     EdgewareFrameMessages extractEmbeddedData(framePtr &packet, std::vector<std::vector<uint8_t>> *embeddedDataList,
                                               std::vector<uint8_t> *dataContent, size_t *payloadDataPosition);
+    //Help methods ----------- END ----------
 
     //Used by unitTests ---------------------
 #ifdef UNIT_TESTS
     size_t geType1Size();
     size_t geType2Size();
-    size_t something();
 #endif
 
 private:
@@ -218,8 +218,10 @@ private:
     //Reciever thread management
     std::atomic_bool isThreadActive;
     std::atomic_bool threadActive;
+    std::mutex packkMtx; //Mutex protecting the pack part
+    std::mutex unpackMtx; //Mutex protecting the pack part
+    EdgewareFrameMode currentMode = EdgewareFrameMode::unknown;
     //Internal lists and variables ----- END ------
-
 };
 
 

@@ -9,15 +9,13 @@
 //Limit the MTU to uint16_t MAX and 255 min //The upper limit is hard
 // the lower limit is actually type2frameSize+1, keep it at 255 for now
 EdgewareFrameProtocol::EdgewareFrameProtocol(uint16_t setMTU, EdgewareFrameMode mode) {
-    if (setMTU > USHRT_MAX) {
-        LOGGER(true, LOGG_FATAL, "MTU Larger than " << unsigned(USHRT_MAX) << " MTU not supported");
-        currentMTU = USHRT_MAX;
-    } else if ((setMTU < UINT8_MAX) && mode != EdgewareFrameMode::unpacker) {
+    if ((setMTU < UINT8_MAX) && mode != EdgewareFrameMode::unpacker) {
         LOGGER(true, LOGG_FATAL, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.");
         currentMTU = UINT8_MAX;
     } else {
         currentMTU = setMTU;
     }
+    currentMode = mode;
     threadActive = false;
     isThreadActive = false;
     sendCallback = std::bind(&EdgewareFrameProtocol::sendData, this, std::placeholders::_1);
@@ -550,16 +548,21 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
 
 //Start reciever worker thread
 EdgewareFrameMessages EdgewareFrameProtocol::startUnpacker(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster) {
+
+    if (currentMode != EdgewareFrameMode::unpacker) {
+        return EdgewareFrameMessages::wrongMode;
+    }
+    
     if (isThreadActive) {
-        LOGGER(true, LOGG_FATAL, "Unpacker already working");
+        LOGGER(true, LOGG_WARN, "Unpacker already working");
         return EdgewareFrameMessages::unpackerAlreadyStarted;
     }
     if (bucketTimeoutMaster == 0) {
-        LOGGER(true, LOGG_FATAL, "bucketTimeoutMaster can't be 0");
+        LOGGER(true, LOGG_WARN, "bucketTimeoutMaster can't be 0");
         return EdgewareFrameMessages::parameterError;
     }
     if (holTimeoutMaster>=bucketTimeoutMaster) {
-        LOGGER(true, LOGG_FATAL, "holTimeoutMaster can't be less or equal to bucketTimeoutMaster");
+        LOGGER(true, LOGG_WARN, "holTimeoutMaster can't be less or equal to bucketTimeoutMaster");
         return EdgewareFrameMessages::parameterError;
     }
 
@@ -571,6 +574,13 @@ EdgewareFrameMessages EdgewareFrameProtocol::startUnpacker(uint32_t bucketTimeou
 
 //Stop reciever worker thread
 EdgewareFrameMessages EdgewareFrameProtocol::stopUnpacker() {
+    
+    std::lock_guard<std::mutex> lock(unpackMtx);
+
+    if (currentMode != EdgewareFrameMode::unpacker) {
+        return EdgewareFrameMessages::wrongMode;
+    }
+    
     //Set the semaphore to stop thread
     threadActive = false;
     uint32_t lockProtect = 1000;
@@ -594,6 +604,17 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpack(const std::vector<uint8_t> &
     //Type 2 are frames smaller than MTU
     //Type 2 packets are also used at the end of Type 1 packet superFrames
     //Type 3 frames carry the reminder of data when it's too large for type2 to carry.
+
+    std::lock_guard<std::mutex> lock(unpackMtx);
+
+    if (currentMode != EdgewareFrameMode::unpacker) {
+        return EdgewareFrameMessages::wrongMode;
+    }
+
+    if (!isThreadActive) {
+        LOGGER(true, LOGG_FATAL, "Unpacker not started");
+        return EdgewareFrameMessages::unpackerNotStarted;
+    }
 
     if ((subPacket[0] & 0x0f) == Frametype::type0) {
         return EdgewareFrameMessages::noError;
@@ -628,12 +649,16 @@ EdgewareFrameMessages
 EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent, uint64_t pts,
                                    uint32_t code, uint8_t stream, uint8_t flags) {
 
+    std::lock_guard<std::mutex> lock(packkMtx);
+
     if (sizeof(EdgewareFrameType1) != sizeof(EdgewareFrameType3)) {
         return EdgewareFrameMessages::type1And3SizeError;
     }
 
-    //Malloc and use C-style memory management instead?
-
+    if (currentMode != EdgewareFrameMode::packer) {
+        return EdgewareFrameMessages::wrongMode;
+    }
+    
     if (pts == UINT64_MAX) {
         return EdgewareFrameMessages::reservedPTSValue;
     }
@@ -641,6 +666,7 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
     if (code == UINT32_MAX) {
         return EdgewareFrameMessages::reservedCodeValue;
     }
+    
 
     flags &= 0xf0;
 

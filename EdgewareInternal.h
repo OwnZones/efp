@@ -50,28 +50,19 @@ struct sortDeliveryOrder
 
 //Packet header part ----- START ------
 
-//No version control.
 //Type 0,1,2 aso. are static from when defined. For new protocol functions/features add new types.
 //type15 is the maximum type number 4 bits used
-enum Frametype : uint8_t { //Only the 4 LSB are used
+//* - 0x00 private packet.
+//* - 0x01 frame is larger than MTU
+//* - 0x02 frame is less than MTU
+//* - 0x03 The reminder of the data does not fit a type2 packet
+//Type1 and Type3 must be the same size
+enum Frametype : uint8_t { //Only the 4 LSB are used!
     type0 = 0,
     type1,
     type2,
     type3
 };
-
-/*
-* <uint8_t> frameType
-* - 0x00 private packet.
-* - 0x01 frame is larger than MTU
-* - 0x02 frame is less than MTU
-* <uint16_t> sizeOfData (optional if frameType is 0x02)
-* <uint16_t> superFrameNo
-* <uint16_t> fragmentNo
-* <uint16_t> ofFragmentNo
-* <EdgewareFrameContent> dataContent
- * Where the datacontent is (uint8_t[])data
-*/
 
 struct EdgewareFrameType0 {
     uint8_t frameType = Frametype::type0;
@@ -96,7 +87,6 @@ struct EdgewareFrameType2 {
     uint16_t type1PacketSize = 0;
     uint64_t pts = UINT64_MAX;
     uint32_t code = UINT32_MAX;
-
 };
 
 struct EdgewareFrameType3 {
@@ -106,7 +96,6 @@ struct EdgewareFrameType3 {
     uint16_t type1PacketSize = 0;
     uint16_t ofFragmentNo = 0;
 };
-
 //Packet header part ----- END ------
 
 //Stream list ----- START ------
