@@ -249,11 +249,6 @@ void sendData(const std::vector<uint8_t> &subPacket) {
             }
             break;
         case unitTests::unitTest15:
-
-            if ((subPacket[0] & 0x0f) == 3) {
-                std::cout << "Type3 seen here" << std::endl;
-            }
-
             info = myEFPReciever.unpack(subPacket,0);
             if (info != EdgewareFrameMessages::noError) {
                 std::cout << "Error-> " << signed(info) << std::endl;
@@ -273,6 +268,7 @@ void sendData(const std::vector<uint8_t> &subPacket) {
 void
 gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts,
         uint32_t code, uint8_t stream, uint8_t flags) {
+    
     //std::cout << "Got data size ->" << packet->frameSize << " Content type: " << unsigned(content) << " Broken->" << broken << std::endl;
 
     uint8_t vectorChecker = 0;
@@ -886,7 +882,7 @@ gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, b
 bool waitForCompletion() {
     int breakOut = 0;
     while (unitTestActive) {
-        usleep(1000 * 500); //half a second
+        usleep(1000 * 250); //quarter of a second
         if (breakOut++ == 10) {
             std::cout << "waitForCompletion did wait for 5 seconds. fail the test." << std::endl;
             unitTestFailed = true;
@@ -1228,7 +1224,8 @@ int main() {
     if (waitForCompletion()) return EXIT_FAILURE;
 
     //UnitTest15
-    //This is the crazy-monkey test. We randomize size loss and content for 1000 packets
+    //This is the crazy-monkey test1. We randomize size 1000 packets. We embedd the size in a private struct and embedd it.
+    //wen we recieve the packet we check the size saved in the embedded data and also the linear vector in the payload.
     activeUnitTest = unitTests::unitTest15;
 
     unitTestPacketNumberReciever = 0;
@@ -1239,15 +1236,14 @@ int main() {
 
        // std::cout << "bip " << unsigned(packetNumber) << std::endl;
 
-        //size_t randSize = rand() % 1000000 + 1;
-        size_t randSize = 475250;
+        size_t randSize = rand() % 1000000 + 1;
         //size_t randSize = (MTU*2-(myEFPPacker.geType1Size()*2)-(1+sizeof(PrivateData) + 4));
         mydata.resize(randSize);
         std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
 
         PrivateData myPrivateData;
-        myPrivateData.sizeOfData = mydata.size() + sizeof(PrivateData) + 4; //4 is the embedded frame header
-        myEFPPacker.addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData),EdgewareEmbeddedFrameContent::embeddedPrivateData,true);
+        myPrivateData.sizeOfData = mydata.size() + sizeof(PrivateData) + 4; //4 is the embedded frame header size
+        myEFPPacker.addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData), EdgewareEmbeddedFrameContent::embeddedPrivateData, true);
         if (myPrivateData.sizeOfData != mydata.size()) {
             std::cout << "Packer error"
                       << std::endl;
