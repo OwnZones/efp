@@ -17,22 +17,19 @@
 
 #define UNIT_TESTS //Enable or disable the APIs used by the unit tests
 
-#define CIRCULAR_BUFFER_SIZE 0b1111111111111 //must be a continious set of set bits from LSB to MSB
-//0b1111111111111 == 8191
+#define CIRCULAR_BUFFER_SIZE 0b1111111111111 //Must be contiguous set bits defining the size  0b1111111111111 == 8191
 
 //flag defines
 #define NO_FLAGS 0b00000000
 #define INLINE_PAYLOAD 0b00010000
 
-//FOURCC codes are big-endian
-#define TO_FOURCC(a,b,c,d)     (((uint32_t)(d)) | ((uint32_t)(c)<<8) | ((uint32_t)(b)<<16) | ((uint32_t)(a)<<24))
-//IS_FOURCC, Is true if the codes match
-#define IS_FOURCC(a,b,c,d,e)   (((uint32_t)(d) == (e & 0x000000ff)) && ((uint32_t)(c)<<8 == (e & 0x0000ff00)) && ((uint32_t)(b)<<16 == (e & 0x00ff0000)) && ((uint32_t)(a)<<24 == (e & 0xff000000)))
-
-#define EFP_MAJOR_VERSION 1
-#define EFP_MINOR_VERSION 0
+//FIXME
+#define EFP_MAJOR_VERSION 0
+#define EFP_MINOR_VERSION 1
 
 namespace EdgewareFrameContentNamespace {
+
+    //Payload data defines ----- START ------
     enum EdgewareFrameContentDefines : uint8_t {
         unknown,                //Standard                      //code
         privateData,            //Any user defined format       //USER (not needed)
@@ -53,7 +50,7 @@ namespace EdgewareFrameContentNamespace {
     };
 
 
-    //Embedded data ----- START ------
+    //Embedded data defines ----- START ------
     enum EdgewareFrameEmbeddedContentDefines : uint8_t {
         illegal,                //may not be used
         embeddedPrivateData,    //private data
@@ -64,13 +61,14 @@ namespace EdgewareFrameContentNamespace {
         //defines below here do not allow following embedded data.
     };
 
+    //Embedded data header ----- START ------
     struct EdgewareEmbeddedHeader {
         uint8_t embeddedFrameType = EdgewareFrameEmbeddedContentDefines::illegal;
         uint16_t size = 0;
     };
-    //Embedded data header part ----- END ------
 }
 
+// EFP Messages
 // Negative numbers are errors
 // 0 == No error
 // Positive numbers are informative
@@ -104,9 +102,12 @@ namespace EdgewareFrameMessagesNamespace {
                                     //discarded and the tooOldFragment is triggered.
         unpackerAlreadyStarted,     //The EFP unpacker is already started no need to start it again. (Stop it and start it again to change parameters)
         failedStoppingUnpacker,     //The EFP unpacker failed stopping it's resources.
-        parameterError             //When starting the unpacker the parameters given where not valid.
+        parameterError,             //When starting the unpacker the parameters given where not valid.
+        type0Frame                  //Type0 frame
     };
 }
+
+//The mode set when constructing the class
 namespace EdgewareFrameProtocolModeNamespace {
     enum EdgewareFrameProtocolModeDefines : uint8_t {
         unknown,
@@ -122,9 +123,11 @@ using EdgewareFrameMode = EdgewareFrameProtocolModeNamespace::EdgewareFrameProto
 
 class EdgewareFrameProtocol {
 public:
+
+    //Reserve frame-data aligned 32-byte addresses in memory
     class allignedFrameData {
     public:
-        size_t frameSize = 0;         //Number of bytes in frame
+        size_t frameSize = 0;           //Number of bytes in frame
         uint8_t* framedata = nullptr;   //recieved frame data
 
         allignedFrameData(const allignedFrameData&) = delete;
@@ -145,10 +148,10 @@ public:
 
     EdgewareFrameProtocol(uint16_t setMTU = 0, EdgewareFrameMode mode = EdgewareFrameMode::unpacker);
     virtual ~EdgewareFrameProtocol();
-
+    //Segment and send
     EdgewareFrameMessages packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
     std::function<void(const std::vector<uint8_t> &subPacket)> sendCallback = nullptr;
-
+    //Create data from segments
     EdgewareFrameMessages startUnpacker(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster);
     EdgewareFrameMessages stopUnpacker();
     EdgewareFrameMessages unpack(const std::vector<uint8_t> &subPacket, uint8_t fromSource);
@@ -204,7 +207,6 @@ private:
     //Private methods ----- END ------
 
     //Internal lists and variables ----- START ------
-
     Bucket bucketList[CIRCULAR_BUFFER_SIZE + 1]; //Internal queue
     uint32_t bucketTimeout = 0; //time out passed to reciever
     uint32_t headOfLineBlockingTimeout = 0; //HOL time out passed to reciever
@@ -218,11 +220,11 @@ private:
     //Reciever thread management
     std::atomic_bool isThreadActive;
     std::atomic_bool threadActive;
+    //Mutex for thread safety
     std::mutex packkMtx; //Mutex protecting the pack part
     std::mutex unpackMtx; //Mutex protecting the pack part
     EdgewareFrameMode currentMode = EdgewareFrameMode::unknown;
     //Internal lists and variables ----- END ------
 };
-
 
 #endif //EFP_EDGEWAREFRAMEPROTOCOL_H

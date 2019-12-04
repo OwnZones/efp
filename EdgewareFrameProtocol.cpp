@@ -10,7 +10,7 @@
 // the lower limit is actually type2frameSize+1, keep it at 255 for now
 EdgewareFrameProtocol::EdgewareFrameProtocol(uint16_t setMTU, EdgewareFrameMode mode) {
     if ((setMTU < UINT8_MAX) && mode != EdgewareFrameMode::unpacker) {
-        LOGGER(true, LOGG_FATAL, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.");
+        LOGGER(true, LOGG_ERROR, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.");
         currentMTU = UINT8_MAX;
     } else {
         currentMTU = setMTU;
@@ -416,7 +416,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
                 }
                 //Are we cleaning out old buckets and did we found a head to timout?
                 if ((bucketList[i].deliveryOrder < headOfLineBlockingTail) && clearHeadOfLineBuckets) {
-                    LOGGER(true, LOGG_NOTIFY, "BOOM clear-> " << unsigned(bucketList[i].deliveryOrder))
+                    //LOGGER(true, LOGG_NOTIFY, "BOOM clear-> " << unsigned(bucketList[i].deliveryOrder))
                     bucketList[i].timeout = 1;
                 }
 
@@ -539,7 +539,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
 
         //Is more than 75% of the buffer used. //FIXME notify the user in some way
         if (activeCount > (CIRCULAR_BUFFER_SIZE / 4) * 3 ) {
-            LOGGER(true, LOGG_FATAL, "Current active buckets are more than half the circular buffer.");
+            LOGGER(true, LOGG_WARN, "Current active buckets are more than half the circular buffer.");
         }
 
     }
@@ -552,7 +552,7 @@ EdgewareFrameMessages EdgewareFrameProtocol::startUnpacker(uint32_t bucketTimeou
     if (currentMode != EdgewareFrameMode::unpacker) {
         return EdgewareFrameMessages::wrongMode;
     }
-    
+
     if (isThreadActive) {
         LOGGER(true, LOGG_WARN, "Unpacker already working");
         return EdgewareFrameMessages::unpackerAlreadyStarted;
@@ -574,13 +574,13 @@ EdgewareFrameMessages EdgewareFrameProtocol::startUnpacker(uint32_t bucketTimeou
 
 //Stop reciever worker thread
 EdgewareFrameMessages EdgewareFrameProtocol::stopUnpacker() {
-    
+
     std::lock_guard<std::mutex> lock(unpackMtx);
 
     if (currentMode != EdgewareFrameMode::unpacker) {
         return EdgewareFrameMessages::wrongMode;
     }
-    
+
     //Set the semaphore to stop thread
     threadActive = false;
     uint32_t lockProtect = 1000;
@@ -612,12 +612,12 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpack(const std::vector<uint8_t> &
     }
 
     if (!isThreadActive) {
-        LOGGER(true, LOGG_FATAL, "Unpacker not started");
+        LOGGER(true, LOGG_ERROR, "Unpacker not started");
         return EdgewareFrameMessages::unpackerNotStarted;
     }
 
     if ((subPacket[0] & 0x0f) == Frametype::type0) {
-        return EdgewareFrameMessages::noError;
+        return EdgewareFrameMessages::type0Frame;
     } else if ((subPacket[0] & 0x0f) == Frametype::type1) {
         if (subPacket.size() < sizeof(EdgewareFrameType1)) {
             return EdgewareFrameMessages::framesizeMismatch;
@@ -658,7 +658,7 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
     if (currentMode != EdgewareFrameMode::packer) {
         return EdgewareFrameMessages::wrongMode;
     }
-    
+
     if (pts == UINT64_MAX) {
         return EdgewareFrameMessages::reservedPTSValue;
     }
@@ -666,7 +666,7 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
     if (code == UINT32_MAX) {
         return EdgewareFrameMessages::reservedCodeValue;
     }
-    
+
 
     flags &= 0xf0;
 
