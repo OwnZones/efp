@@ -365,8 +365,6 @@ EdgewareFrameMessages EdgewareFrameProtocol::unpackType3(const std::vector<uint8
 // 1000 times per second is a bit aggressive, change to 100 times per second? FIXME, talk about what is realistic.. Settable? static? limits? why? for what reason?
 void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
     //Set the defaults. meaning the thread is running and there is no head of line blocking action going on.
-    threadActive = true;
-    isThreadActive = true;
     bool foundHeadOfLineBlocking = false;
     bool fistDelivery = headOfLineBlockingTimeout?false:true; //if hol is used then we must recieve at least two packets first to know where to start counting.
     uint32_t headOfLineBlockingCounter = 0;
@@ -460,7 +458,7 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
             //if we're waiting for a time out but all candidates are already to be delivered
 
             //for (auto &x: candidates) { //DEBUG-Keep for now
-            //    std::cout << ">>>" << unsigned(x.deliveryOrder) << " is broken " << x.broken << std::endl;
+            //    std::cout << ">>>" << unsigned(x.deliveryOrder) << std::endl;
             //}
 
             //So ok we have cleared the head send it all out
@@ -548,7 +546,6 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
 
 //Start reciever worker thread
 EdgewareFrameMessages EdgewareFrameProtocol::startUnpacker(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster) {
-
     if (currentMode != EdgewareFrameMode::unpacker) {
         return EdgewareFrameMessages::wrongMode;
     }
@@ -568,13 +565,14 @@ EdgewareFrameMessages EdgewareFrameProtocol::startUnpacker(uint32_t bucketTimeou
 
     bucketTimeout = bucketTimeoutMaster;
     headOfLineBlockingTimeout = holTimeoutMaster;
+    threadActive = true; //you must set these parameters here to avoid races. For example calling start then stop before the thread actually starts.
+    isThreadActive = true;
     std::thread(std::bind(&EdgewareFrameProtocol::unpackerWorker, this, bucketTimeoutMaster)).detach();
     return EdgewareFrameMessages::noError;
 }
 
 //Stop reciever worker thread
 EdgewareFrameMessages EdgewareFrameProtocol::stopUnpacker() {
-
     std::lock_guard<std::mutex> lock(unpackMtx);
 
     if (currentMode != EdgewareFrameMode::unpacker) {

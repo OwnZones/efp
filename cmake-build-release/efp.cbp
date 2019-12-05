@@ -133,6 +133,24 @@
 		<Unit filename="/Users/anderscedronius/git/efp/main.cpp">
 			<Option target="efptests"/>
 		</Unit>
+		<Unit filename="/Users/anderscedronius/git/efp/unitTestTemplate/UnitTestTemplate.cpp">
+			<Option target="efptests"/>
+		</Unit>
+		<Unit filename="/Users/anderscedronius/git/efp/unitTestTemplate/UnitTestTemplate.h">
+			<Option target="efptests"/>
+		</Unit>
+		<Unit filename="/Users/anderscedronius/git/efp/unitTests/UnitTest1.cpp">
+			<Option target="efptests"/>
+		</Unit>
+		<Unit filename="/Users/anderscedronius/git/efp/unitTests/UnitTest1.h">
+			<Option target="efptests"/>
+		</Unit>
+		<Unit filename="/Users/anderscedronius/git/efp/unitTests/UnitTest2.cpp">
+			<Option target="efptests"/>
+		</Unit>
+		<Unit filename="/Users/anderscedronius/git/efp/unitTests/UnitTest2.h">
+			<Option target="efptests"/>
+		</Unit>
 		<Unit filename="/Users/anderscedronius/git/efp/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\"/>
 		</Unit>

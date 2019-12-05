@@ -1,6 +1,9 @@
 
 #include "EdgewareFrameProtocol.h"
 
+#include "unitTests/UnitTest1.h"
+#include "unitTests/UnitTest2.h"
+
 #include <iostream>
 #include <cstdlib>
 
@@ -898,6 +901,16 @@ bool waitForCompletion() {
 
 int main() {
 
+    UnitTest1 unitTest1;
+    if (!unitTest1.startUnitTest()) {
+        std::cout << "Unit test 1 failed" << std::endl;
+    }
+    UnitTest2 unitTest2;
+    if (!unitTest2.startUnitTest()) {
+        std::cout << "Unit test 2 failed" << std::endl;
+    }
+
+    return 0 ;
     //Set unit tests status
     unitTestFailed = false;
 
@@ -927,8 +940,7 @@ int main() {
 
     uint8_t streamID=1;
 
-    //UnitTest1
-    //Test sending a packet less than MTU + header - > Expected result is one type2 frame only sent
+
     activeUnitTest = unitTests::unitTest1;
     mydata.clear();
     mydata.resize(MTU - myEFPPacker.geType2Size());
