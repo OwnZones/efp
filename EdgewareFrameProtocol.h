@@ -34,14 +34,15 @@ namespace EdgewareFrameContentNamespace {
         unknown,                //Standard                      //code
         privateData,            //Any user defined format       //USER (not needed)
         adts,                   //Mpeg-4 AAC ADTS framing       //ADTS (not needed)
-        mpegts,                 //ITU-T H.222 188byte TS        //MPEG (not needed)
+        mpegts,                 //ITU-T H.222 188byte TS        //TSDT (not needed)
         mpegpes,                //ITU-T H.222 PES packets       //MPES (not needed)
         jpeg2000,               //ITU-T T.800 Annex M           //J2KV (not needed)
         jpeg,                   //ITU-T.81                      //JPEG (not needed)
         jpegxs,                 //ISO/IEC 21122-3               //JPXS (not needed)
         pcmaudio,               //AES-3 framing                 //AES3 (not needed)
+        ndi,                    //*TBD*                         //NNDI (not needed)
 
-        //Formats defined below (MSB='1') may also use a code to define the data format in the superframe
+        //Formats defined below (MSB='1') must also use 'code' to define the data format in the superframe
 
         didsdid=0x80,           //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
         sdi,                    //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
@@ -54,8 +55,7 @@ namespace EdgewareFrameContentNamespace {
     enum EdgewareFrameEmbeddedContentDefines : uint8_t {
         illegal,                //may not be used
         embeddedPrivateData,    //private data
-        h222pat,                //pat from h222 pids should be trunkated to uint8_t leaving the LSB bits only
-        h222pmt,                //mmt from h222 pids should be trunkated to uint8_t leaving the LSB bits only
+        h222pmt,                //pmt from h222 pids should be trunkated to uint8_t leaving the LSB bits only then map to streams
         mp4FragBox,             //All boxes from a mp4 fragment excluding the payload
         lastEmbeddedContent = 0x80
         //defines below here do not allow following embedded data.
@@ -222,7 +222,7 @@ private:
     std::atomic_bool threadActive;
     //Mutex for thread safety
     std::mutex packkMtx; //Mutex protecting the pack part
-    std::mutex unpackMtx; //Mutex protecting the pack part
+    std::mutex unpackMtx; //Mutex protecting the unpack part
     EdgewareFrameMode currentMode = EdgewareFrameMode::unknown;
     //Internal lists and variables ----- END ------
 };
