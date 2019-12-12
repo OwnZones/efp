@@ -175,6 +175,12 @@
 		<Unit filename="/Users/anderscedronius/git/efp/unitTests/UnitTest15.h">
 			<Option target="efptests"/>
 		</Unit>
+		<Unit filename="/Users/anderscedronius/git/efp/unitTests/UnitTest16.cpp">
+			<Option target="efptests"/>
+		</Unit>
+		<Unit filename="/Users/anderscedronius/git/efp/unitTests/UnitTest16.h">
+			<Option target="efptests"/>
+		</Unit>
 		<Unit filename="/Users/anderscedronius/git/efp/unitTests/UnitTest2.cpp">
 			<Option target="efptests"/>
 		</Unit>

@@ -665,6 +665,10 @@ EdgewareFrameProtocol::packAndSend(const std::vector<uint8_t> &packet, EdgewareF
         return EdgewareFrameMessages::reservedCodeValue;
     }
 
+    if (stream == 0) {
+        return EdgewareFrameMessages::reservedStreamValue;
+    }
+
 
     flags &= 0xf0;
 

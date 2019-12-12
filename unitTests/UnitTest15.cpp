@@ -3,8 +3,8 @@
 //
 
 //UnitTest15
-//This is the crazy-monkey test1. We randomize size 1000 packets. We embedd the size in a private struct and embedd it.
-//wen we recieve the packet we check the size saved in the embedded data and also the linear vector in the payload.
+//This is the crazy-monkey test1. We randomize the size for 1000 packets. We store the size in a private struct and embedd it.
+//when we receive the packet we check the size saved in the embedded data and also the linear vector in the payload.
 
 #include "UnitTest15.h"
 

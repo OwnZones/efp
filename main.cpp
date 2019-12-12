@@ -15,13 +15,22 @@
 #include "unitTests/UnitTest13.h"
 #include "unitTests/UnitTest14.h"
 #include "unitTests/UnitTest15.h"
+#include "unitTests/UnitTest16.h"
 
 #include <iostream>
 
 int main() {
+/*
+    for (int i=0;i<1000;i++) {
+        size_t loss = rand() % 100 + 1;
+        std::cout << unsigned(loss) << std::endl;
+    }
+
+    return EXIT_SUCCESS;
+*/
 
     int returnCode=EXIT_SUCCESS;
-
+/*
     UnitTest1 unitTest1;
     if (!unitTest1.startUnitTest()) {
         std::cout << "Unit test 1 failed" << std::endl;
@@ -109,6 +118,12 @@ int main() {
     UnitTest15 unitTest15;
     if (!unitTest15.startUnitTest()) {
         std::cout << "Unit test 15 failed" << std::endl;
+        returnCode=EXIT_FAILURE;
+    }
+*/
+    UnitTest16 unitTest16;
+    if (!unitTest16.startUnitTest()) {
+        std::cout << "Unit test 16 failed" << std::endl;
         returnCode=EXIT_FAILURE;
     }
 

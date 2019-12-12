@@ -86,6 +86,7 @@ namespace EdgewareFrameMessagesNamespace {
                                     //then broken superframes will be buffered and new incoming data will claim buffers. When there are no more buffers to claim this error will be triggered.
         reservedPTSValue,           //UINT64_MAX is a EFP reserved value
         reservedCodeValue,          //UINT32_MAX is a EFP reserved value
+        reservedStreamValue,        //0 is a EFP reserved value for signaling manifests
         memoryAllocationError,      //Failed allocating system memory. This is fatal and results in unknown behaviour.
         illegalEmbeddedData,        //illegal embedded data
         type1And3SizeError,         //Type1 and Type3 must have the same header size
