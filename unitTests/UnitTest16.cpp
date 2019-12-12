@@ -112,14 +112,14 @@ UnitTest16::gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameConten
 
     unitTestPacketNumberReciever++;
 
-    /*
+
     debugPrintMutex.lock();
     std::cout << "Got -> " << unsigned(pts);
     std::cout << " broken " << broken;
     std::cout << " code " << code;
     std::cout << std::endl;
     debugPrintMutex.unlock();
-*/
+
 }
 
 bool UnitTest16::waitForCompletion() {
@@ -192,7 +192,7 @@ bool UnitTest16::startUnitTest() {
             myTestProps.reorder = true;
         }
 
-        /*
+
         debugPrintMutex.lock();
         std::cout << "Send -> " << unsigned(packetNumber);
         std::cout << " broken " << myTestProps.broken;
@@ -201,7 +201,7 @@ bool UnitTest16::startUnitTest() {
         std::cout << " size " << unsigned(mydata.size());
         std::cout << std::endl;
         debugPrintMutex.unlock();
-*/
+
         myTestProps.pts = packetNumber;
 
         testData.emplace_back(myTestProps);

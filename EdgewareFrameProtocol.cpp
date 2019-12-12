@@ -461,11 +461,30 @@ void EdgewareFrameProtocol::unpackerWorker(uint32_t timeout) {
             //    std::cout << ">>>" << unsigned(x.deliveryOrder) << std::endl;
             //}
 
+
+
             //So ok we have cleared the head send it all out
             if (clearHeadOfLineBuckets) {
                 //LOGGER(true, LOGG_NOTIFY, "FLUSH HEAD!")
+
+                uint64_t andTheNextIs=candidates[0].deliveryOrder;
+
                 for (auto &x: candidates) {
                     if (oldestFrameDelivered <= x.deliveryOrder) {
+
+                        //Here we introduce a new concept..
+                        //If we are cleaning out the HOL. Only go soo far to either a gap (counter) or packet "non time out".
+                        //If you remove the if below HOL will clean out all superframes from the top of the buffer to the bottom of the buffer no matter the
+                        //Status of the packets in between. So HOL cleaning just wipes out all waiting. This might be a wanted behaviour to avoid time-stall
+                        //However packets in queue are lost since they will 'falsely' be seen as coming late and then discarded.
+                        if (andTheNextIs!=x.deliveryOrder) {
+                            //we did not expect this. is the bucket timed out .. then continue...
+                            if (bucketList[x.bucket].timeout > 1) {
+                                break;
+                            }
+                        }
+                        andTheNextIs = x.deliveryOrder + 1;
+
                         oldestFrameDelivered = headOfLineBlockingTimeout?x.deliveryOrder:0;
                         recieveCallback(bucketList[x.bucket].bucketData, bucketList[x.bucket].dataContent,bucketList[x.bucket].fragmentCounter != bucketList[x.bucket].ofFragmentNo,
                                         bucketList[x.bucket].pts,
