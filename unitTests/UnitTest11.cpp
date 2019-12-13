@@ -36,7 +36,7 @@ void UnitTest11::sendData(const std::vector<uint8_t> &subPacket) {
     unitTestsSavedData2D.push_back(subPacket);
 }
 
-void UnitTest11::gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
+void UnitTest11::gotData(EdgewareFrameProtocol::pFramePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
     if (!unitTestActive) return;
 
     if (broken) {

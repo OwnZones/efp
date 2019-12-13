@@ -121,11 +121,11 @@ int main() {
         returnCode=EXIT_FAILURE;
     }
 
-    UnitTest16 unitTest16;
-    if (!unitTest16.startUnitTest()) {
-        std::cout << "Unit test 16 failed" << std::endl;
-        returnCode=EXIT_FAILURE;
-    }
+    //UnitTest16 unitTest16;
+    //if (!unitTest16.startUnitTest()) {
+    //    std::cout << "Unit test 16 failed" << std::endl;
+    //    returnCode=EXIT_FAILURE;
+    //}
 
     return returnCode;
 }

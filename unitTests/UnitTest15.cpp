@@ -17,7 +17,7 @@ void UnitTest15::sendData(const std::vector<uint8_t> &subPacket) {
     }
 }
 
-void UnitTest15::gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
+void UnitTest15::gotData(EdgewareFrameProtocol::pFramePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
     EdgewareFrameMessages info;
     std::vector<std::vector<uint8_t>> embeddedData;
     std::vector<uint8_t> embeddedContentFlag;

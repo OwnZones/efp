@@ -126,37 +126,37 @@ class EdgewareFrameProtocol {
 public:
 
     //Reserve frame-data aligned 32-byte addresses in memory
-    class allignedFrameData {
+    class AllignedFrameData {
     public:
         size_t frameSize = 0;           //Number of bytes in frame
         uint8_t* framedata = nullptr;   //recieved frame data
 
-        allignedFrameData(const allignedFrameData&) = delete;
-        allignedFrameData & operator=(const allignedFrameData &) = delete;
+        AllignedFrameData(const AllignedFrameData&) = delete;
+        AllignedFrameData & operator=(const AllignedFrameData &) = delete;
 
-        allignedFrameData(size_t memAllocSize) {
+        AllignedFrameData(size_t memAllocSize) {
             posix_memalign((void**)&framedata, 32, memAllocSize);   //32 byte memory alignment for AVX2 processing //Winboze needs some other code.
             if (framedata) frameSize = memAllocSize;
         }
 
-        virtual ~allignedFrameData() {
+        virtual ~AllignedFrameData() {
             //Free if ever allocated
             if (framedata) free(framedata);
         }
     };
 
-    using framePtr = std::shared_ptr<allignedFrameData>;
+    using pFramePtr = std::shared_ptr<AllignedFrameData>;
 
     EdgewareFrameProtocol(uint16_t setMTU = 0, EdgewareFrameMode mode = EdgewareFrameMode::unpacker);
     virtual ~EdgewareFrameProtocol();
     //Segment and send
-    EdgewareFrameMessages packAndSend(const std::vector<uint8_t> &packet, EdgewareFrameContent dataContent, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
-    std::function<void(const std::vector<uint8_t> &subPacket)> sendCallback = nullptr;
+    EdgewareFrameMessages packAndSend(const std::vector<uint8_t> &rPacket, EdgewareFrameContent dataContent, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
+    std::function<void(const std::vector<uint8_t> &rSubPacket)> sendCallback = nullptr;
     //Create data from segments
     EdgewareFrameMessages startUnpacker(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster);
     EdgewareFrameMessages stopUnpacker();
-    EdgewareFrameMessages unpack(const std::vector<uint8_t> &subPacket, uint8_t fromSource);
-    std::function<void(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags)> recieveCallback = nullptr;
+    EdgewareFrameMessages unpack(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
+    std::function<void(EdgewareFrameProtocol::pFramePtr &rPacket, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags)> recieveCallback = nullptr;
 
     //Delete copy and move constructors and assign operators
     EdgewareFrameProtocol(EdgewareFrameProtocol const &) = delete;              // Copy construct
@@ -166,7 +166,7 @@ public:
 
     //Help methods ----------- START ----------
     EdgewareFrameMessages addEmbeddedData(std::vector<uint8_t> *packet, void  *privateData, size_t privateDataSize, EdgewareEmbeddedFrameContent content = EdgewareEmbeddedFrameContent::illegal, bool isLast=false);
-    EdgewareFrameMessages extractEmbeddedData(framePtr &packet, std::vector<std::vector<uint8_t>> *embeddedDataList,
+    EdgewareFrameMessages extractEmbeddedData(pFramePtr &rPacket, std::vector<std::vector<uint8_t>> *embeddedDataList,
                                               std::vector<uint8_t> *dataContent, size_t *payloadDataPosition);
     //Help methods ----------- END ----------
 
@@ -180,51 +180,51 @@ private:
     //Bucket  ----- START ------
     class Bucket {
     public:
-        bool active = false;
-        EdgewareFrameContent dataContent = EdgewareFrameContent::unknown;
-        uint16_t savedSuperFrameNo = 0; //the SuperFrameNumber using this bucket.
-        uint32_t timeout = 0;
-        uint16_t fragmentCounter = 0;
-        uint16_t ofFragmentNo = 0;
-        uint64_t deliveryOrder = UINT64_MAX;
-        size_t fragmentSize = 0;
-        uint64_t pts = UINT64_MAX;
-        uint32_t code = UINT32_MAX;
-        uint8_t stream;
-        uint8_t flags;
-        std::bitset<UINT16_MAX> haveRecievedPacket;
-        framePtr bucketData = nullptr;
+        bool mActive = false;
+        EdgewareFrameContent mDataContent = EdgewareFrameContent::unknown;
+        uint16_t mSavedSuperFrameNo = 0; //the SuperFrameNumber using this bucket.
+        uint32_t mTimeout = 0;
+        uint16_t mFragmentCounter = 0;
+        uint16_t mOfFragmentNo = 0;
+        uint64_t mDeliveryOrder = UINT64_MAX;
+        size_t mFragmentSize = 0;
+        uint64_t mPts = UINT64_MAX;
+        uint32_t mCode = UINT32_MAX;
+        uint8_t mStream;
+        uint8_t mFlags;
+        std::bitset<UINT16_MAX> mHaveRecievedPacket;
+        pFramePtr mBucketData = nullptr;
     };
     //Bucket ----- END ------
 
     //Private methods ----- START ------
-    void sendData(const std::vector<uint8_t> &subPacket);
-    void gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
-    EdgewareFrameMessages unpackType1(const std::vector<uint8_t> &subPacket, uint8_t fromSource);
-    EdgewareFrameMessages unpackType2LastFrame(const std::vector<uint8_t> &subPacket, uint8_t fromSource);
-    EdgewareFrameMessages unpackType3(const std::vector<uint8_t> &subPacket, uint8_t fromSource);
+    void sendData(const std::vector<uint8_t> &rSubPacket);
+    void gotData(EdgewareFrameProtocol::pFramePtr &rPacket, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
+    EdgewareFrameMessages unpackType1(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
+    EdgewareFrameMessages unpackType2LastFrame(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
+    EdgewareFrameMessages unpackType3(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
     void unpackerWorker(uint32_t timeout);
     uint64_t superFrameRecalculator(uint16_t superFrame);
     //Private methods ----- END ------
 
     //Internal lists and variables ----- START ------
-    Bucket bucketList[CIRCULAR_BUFFER_SIZE + 1]; //Internal queue
-    uint32_t bucketTimeout = 0; //time out passed to reciever
-    uint32_t headOfLineBlockingTimeout = 0; //HOL time out passed to reciever
-    std::mutex netMtx; //Mutex protecting the queue
-    uint32_t currentMTU = 0; //current MTU used by the packer
+    Bucket mBucketList[CIRCULAR_BUFFER_SIZE + 1]; //Internal queue
+    uint32_t mBucketTimeout = 0; //time out passed to reciever
+    uint32_t mHeadOfLineBlockingTimeout = 0; //HOL time out passed to reciever
+    std::mutex mNetMtx; //Mutex protecting the queue
+    uint32_t mCurrentMTU = 0; //current MTU used by the packer
     //various counters to keep track of the different frames
-    uint16_t superFrameNoGenerator = 0;
-    uint16_t oldSuperframeNumber = 0;
-    uint64_t superFrameRecalc = 0;
-    bool superFrameFirstTime = true;
+    uint16_t mSuperFrameNoGenerator = 0;
+    uint16_t mOldSuperframeNumber = 0;
+    uint64_t mSuperFrameRecalc = 0;
+    bool mSuperFrameFirstTime = true;
     //Reciever thread management
-    std::atomic_bool isThreadActive;
-    std::atomic_bool threadActive;
+    std::atomic_bool mIsThreadActive;
+    std::atomic_bool mThreadActive;
     //Mutex for thread safety
-    std::mutex packkMtx; //Mutex protecting the pack part
-    std::mutex unpackMtx; //Mutex protecting the unpack part
-    EdgewareFrameMode currentMode = EdgewareFrameMode::unknown;
+    std::mutex mPackkMtx; //Mutex protecting the pack part
+    std::mutex mUnpackMtx; //Mutex protecting the unpack part
+    EdgewareFrameMode mCurrentMode = EdgewareFrameMode::unknown;
     //Internal lists and variables ----- END ------
 };
 

@@ -14,7 +14,7 @@ public:
     bool startUnitTest();
 private:
     void sendData(const std::vector<uint8_t> &subPacket);
-    void gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
+    void gotData(EdgewareFrameProtocol::pFramePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
     bool waitForCompletion();
     EdgewareFrameProtocol *myEFPReciever = nullptr;
     EdgewareFrameProtocol *myEFPPacker = nullptr;

@@ -16,7 +16,9 @@
 
 void UnitTest16::sendData(const std::vector<uint8_t> &subPacket) {
 
+    testDataMtx.lock();
     TestProps currentProps = testData.back();
+    testDataMtx.unlock();
 
     if (currentProps.loss) {
         return;
@@ -95,8 +97,19 @@ void UnitTest16::sendData(const std::vector<uint8_t> &subPacket) {
 }
 
 void
-UnitTest16::gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts,
+UnitTest16::gotData(EdgewareFrameProtocol::pFramePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts,
                     uint32_t code, uint8_t stream, uint8_t flags) {
+
+    testDataMtx.lock();
+    bool isLoss = false;
+    do {
+        TestProps currentProps = testData[unitTestPacketNumberReciever];
+        isLoss = currentProps.loss;
+        unitTestPacketNumberReciever++;
+    } while (isLoss);
+
+    testDataMtx.unlock();
+
 
     if (!broken) {
         uint8_t vectorChecker = 0;
@@ -204,7 +217,9 @@ bool UnitTest16::startUnitTest() {
 
         myTestProps.pts = packetNumber;
 
+        testDataMtx.lock();
         testData.emplace_back(myTestProps);
+        testDataMtx.unlock();
 
         brokenCounter = 0;
         reorderBuffer.clear();

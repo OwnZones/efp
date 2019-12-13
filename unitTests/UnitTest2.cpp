@@ -18,7 +18,7 @@ void UnitTest2::sendData(const std::vector<uint8_t> &subPacket) {
     }
 }
 
-void UnitTest2::gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
+void UnitTest2::gotData(EdgewareFrameProtocol::pFramePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
 
     if (pts != 1 || code != 2) {
         unitTestFailed = true;

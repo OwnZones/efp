@@ -18,7 +18,7 @@ private:
     std::mutex debugPrintMutex;
 
     void sendData(const std::vector<uint8_t> &subPacket);
-    void gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
+    void gotData(EdgewareFrameProtocol::pFramePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
     bool waitForCompletion();
     EdgewareFrameProtocol *myEFPReciever = nullptr;
     EdgewareFrameProtocol *myEFPPacker = nullptr;
@@ -39,6 +39,8 @@ private:
         bool broken = false;
     };
     uint64_t counter293=0;
+
+    std::mutex testDataMtx;
     std::vector<TestProps>testData;
 };
 

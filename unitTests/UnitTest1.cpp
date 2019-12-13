@@ -17,7 +17,7 @@ void UnitTest1::sendData(const std::vector<uint8_t> &subPacket) {
     std::cout << "UnitTest " << unsigned(activeUnitTest) << " done." << std::endl;
 }
 
-void UnitTest1::gotData(EdgewareFrameProtocol::framePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
+void UnitTest1::gotData(EdgewareFrameProtocol::pFramePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
 
 }
 
