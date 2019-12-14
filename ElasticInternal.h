@@ -2,8 +2,8 @@
 // Created by Anders Cedronius on 2019-11-19.
 //
 
-#ifndef EFP_ElasticINTERNAL_H
-#define EFP_ElasticINTERNAL_H
+#ifndef EFP_ELASTICINTERNAL_H
+#define EFP_ELASTICINTERNAL_H
 
 // GLobal Logger -- Start
 #define LOGG_NOTIFY 1
@@ -99,4 +99,4 @@ struct ElasticFrameType3 {
 //Packet header part ----- END ------
 
 
-#endif //EFP_ElasticINTERNAL_H
+#endif //EFP_ELASTICINTERNAL_H

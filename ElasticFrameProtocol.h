@@ -10,8 +10,8 @@
 //l local scope
 
 
-#ifndef EFP_ElasticFRAMEPROTOCOL_H
-#define EFP_ElasticFRAMEPROTOCOL_H
+#ifndef EFP_ELASTICFRAMEPROTOCOL_H
+#define EFP_ELASTICFRAMEPROTOCOL_H
 
 #include <cstdint>
 #include <vector>
@@ -244,4 +244,4 @@ private:
     //Internal lists and variables ----- END ------
 };
 
-#endif //EFP_ElasticFRAMEPROTOCOL_H
+#endif //EFP_ELASTICFRAMEPROTOCOL_H
