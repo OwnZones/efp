@@ -5,7 +5,7 @@
 #ifndef EFP_UNITTEST16_H
 #define EFP_UNITTEST16_H
 
-#include "../EdgewareFrameProtocol.h"
+#include "../ElasticFrameProtocol.h"
 #include <random>
 
 #define MTU 1456 //SRT-max
@@ -18,10 +18,10 @@ private:
     std::mutex debugPrintMutex;
 
     void sendData(const std::vector<uint8_t> &subPacket);
-    void gotData(EdgewareFrameProtocol::pFramePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
+    void gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
     bool waitForCompletion();
-    EdgewareFrameProtocol *myEFPReciever = nullptr;
-    EdgewareFrameProtocol *myEFPPacker = nullptr;
+    ElasticFrameProtocol *myEFPReciever = nullptr;
+    ElasticFrameProtocol *myEFPPacker = nullptr;
     std::atomic_bool unitTestActive;
     std::atomic_bool unitTestFailed;
     int activeUnitTest = 16;

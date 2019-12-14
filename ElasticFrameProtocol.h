@@ -2,8 +2,16 @@
 // Created by Anders Cedronius on 2019-11-11.
 //
 
-#ifndef EFP_EDGEWAREFRAMEPROTOCOL_H
-#define EFP_EDGEWAREFRAMEPROTOCOL_H
+//Prefixes used
+//m class member
+//p pointer (*)
+//r reference (&)
+//h part of header
+//l local scope
+
+
+#ifndef EFP_ElasticFRAMEPROTOCOL_H
+#define EFP_ElasticFRAMEPROTOCOL_H
 
 #include <cstdint>
 #include <vector>
@@ -27,10 +35,10 @@
 #define EFP_MAJOR_VERSION 0
 #define EFP_MINOR_VERSION 1
 
-namespace EdgewareFrameContentNamespace {
+namespace ElasticFrameContentNamespace {
 
     //Payload data defines ----- START ------
-    enum EdgewareFrameContentDefines : uint8_t {
+    enum ElasticFrameContentDefines : uint8_t {
         unknown,                //Standard                      //code
         privateData,            //Any user defined format       //USER (not needed)
         adts,                   //Mpeg-4 AAC ADTS framing       //ADTS (not needed)
@@ -52,7 +60,7 @@ namespace EdgewareFrameContentNamespace {
 
 
     //Embedded data defines ----- START ------
-    enum EdgewareFrameEmbeddedContentDefines : uint8_t {
+    enum ElasticFrameEmbeddedContentDefines : uint8_t {
         illegal,                //may not be used
         embeddedPrivateData,    //private data
         h222pmt,                //pmt from h222 pids should be trunkated to uint8_t leaving the LSB bits only then map to streams
@@ -62,8 +70,8 @@ namespace EdgewareFrameContentNamespace {
     };
 
     //Embedded data header ----- START ------
-    struct EdgewareEmbeddedHeader {
-        uint8_t embeddedFrameType = EdgewareFrameEmbeddedContentDefines::illegal;
+    struct ElasticEmbeddedHeader {
+        uint8_t embeddedFrameType = ElasticFrameEmbeddedContentDefines::illegal;
         uint16_t size = 0;
     };
 }
@@ -72,8 +80,8 @@ namespace EdgewareFrameContentNamespace {
 // Negative numbers are errors
 // 0 == No error
 // Positive numbers are informative
-namespace EdgewareFrameMessagesNamespace {
-    enum EdgewareFrameMessagesDefines : int16_t {
+namespace ElasticFrameMessagesNamespace {
+    enum ElasticFrameMessagesDefines : int16_t {
         tooLargeFrame = -10000,     //The frame is to large for EFP packer to handle
         tooLargeEmbeddedData,       //The embedded data frame is too large.
         unknownFrametype,           //The frame type is unknown by EFP unpacker
@@ -109,20 +117,20 @@ namespace EdgewareFrameMessagesNamespace {
 }
 
 //The mode set when constructing the class
-namespace EdgewareFrameProtocolModeNamespace {
-    enum EdgewareFrameProtocolModeDefines : uint8_t {
+namespace ElasticFrameProtocolModeNamespace {
+    enum ElasticFrameProtocolModeDefines : uint8_t {
         unknown,
         packer,
         unpacker,
     };
 }
 
-using EdgewareFrameMessages = EdgewareFrameMessagesNamespace::EdgewareFrameMessagesDefines;
-using EdgewareFrameContent = EdgewareFrameContentNamespace::EdgewareFrameContentDefines;
-using EdgewareEmbeddedFrameContent = EdgewareFrameContentNamespace::EdgewareFrameEmbeddedContentDefines;
-using EdgewareFrameMode = EdgewareFrameProtocolModeNamespace::EdgewareFrameProtocolModeDefines;
+using ElasticFrameMessages = ElasticFrameMessagesNamespace::ElasticFrameMessagesDefines;
+using ElasticFrameContent = ElasticFrameContentNamespace::ElasticFrameContentDefines;
+using ElasticEmbeddedFrameContent = ElasticFrameContentNamespace::ElasticFrameEmbeddedContentDefines;
+using ElasticFrameMode = ElasticFrameProtocolModeNamespace::ElasticFrameProtocolModeDefines;
 
-class EdgewareFrameProtocol {
+class ElasticFrameProtocol {
 public:
 
     //Reserve frame-data aligned 32-byte addresses in memory
@@ -147,27 +155,27 @@ public:
 
     using pFramePtr = std::shared_ptr<AllignedFrameData>;
 
-    EdgewareFrameProtocol(uint16_t setMTU = 0, EdgewareFrameMode mode = EdgewareFrameMode::unpacker);
-    virtual ~EdgewareFrameProtocol();
+    ElasticFrameProtocol(uint16_t setMTU = 0, ElasticFrameMode mode = ElasticFrameMode::unpacker);
+    virtual ~ElasticFrameProtocol();
     //Segment and send
-    EdgewareFrameMessages packAndSend(const std::vector<uint8_t> &rPacket, EdgewareFrameContent dataContent, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
+    ElasticFrameMessages packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
     std::function<void(const std::vector<uint8_t> &rSubPacket)> sendCallback = nullptr;
     //Create data from segments
-    EdgewareFrameMessages startUnpacker(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster);
-    EdgewareFrameMessages stopUnpacker();
-    EdgewareFrameMessages unpack(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
-    std::function<void(EdgewareFrameProtocol::pFramePtr &rPacket, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags)> recieveCallback = nullptr;
+    ElasticFrameMessages startUnpacker(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster);
+    ElasticFrameMessages stopUnpacker();
+    ElasticFrameMessages unpack(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
+    std::function<void(ElasticFrameProtocol::pFramePtr &rPacket, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags)> recieveCallback = nullptr;
 
     //Delete copy and move constructors and assign operators
-    EdgewareFrameProtocol(EdgewareFrameProtocol const &) = delete;              // Copy construct
-    EdgewareFrameProtocol(EdgewareFrameProtocol &&) = delete;                   // Move construct
-    EdgewareFrameProtocol &operator=(EdgewareFrameProtocol const &) = delete;   // Copy assign
-    EdgewareFrameProtocol &operator=(EdgewareFrameProtocol &&) = delete;        // Move assign
+    ElasticFrameProtocol(ElasticFrameProtocol const &) = delete;              // Copy construct
+    ElasticFrameProtocol(ElasticFrameProtocol &&) = delete;                   // Move construct
+    ElasticFrameProtocol &operator=(ElasticFrameProtocol const &) = delete;   // Copy assign
+    ElasticFrameProtocol &operator=(ElasticFrameProtocol &&) = delete;        // Move assign
 
     //Help methods ----------- START ----------
-    EdgewareFrameMessages addEmbeddedData(std::vector<uint8_t> *packet, void  *privateData, size_t privateDataSize, EdgewareEmbeddedFrameContent content = EdgewareEmbeddedFrameContent::illegal, bool isLast=false);
-    EdgewareFrameMessages extractEmbeddedData(pFramePtr &rPacket, std::vector<std::vector<uint8_t>> *embeddedDataList,
-                                              std::vector<uint8_t> *dataContent, size_t *payloadDataPosition);
+    ElasticFrameMessages addEmbeddedData(std::vector<uint8_t> *pPacket, void  *pPrivateData, size_t privateDataSize, ElasticEmbeddedFrameContent content = ElasticEmbeddedFrameContent::illegal, bool isLast=false);
+    ElasticFrameMessages extractEmbeddedData(pFramePtr &rPacket, std::vector<std::vector<uint8_t>> *pEmbeddedDataList,
+                                              std::vector<uint8_t> *pDataContent, size_t *pPayloadDataPosition);
     //Help methods ----------- END ----------
 
     //Used by unitTests ---------------------
@@ -181,7 +189,7 @@ private:
     class Bucket {
     public:
         bool mActive = false;
-        EdgewareFrameContent mDataContent = EdgewareFrameContent::unknown;
+        ElasticFrameContent mDataContent = ElasticFrameContent::unknown;
         uint16_t mSavedSuperFrameNo = 0; //the SuperFrameNumber using this bucket.
         uint32_t mTimeout = 0;
         uint16_t mFragmentCounter = 0;
@@ -197,17 +205,25 @@ private:
     };
     //Bucket ----- END ------
 
+    //Stream list ----- START ------
+    struct Stream {
+        uint32_t code = UINT32_MAX;
+        ElasticFrameContent dataContent = ElasticFrameContent::unknown;
+    };
+    //Stream list ----- END ------
+
     //Private methods ----- START ------
     void sendData(const std::vector<uint8_t> &rSubPacket);
-    void gotData(EdgewareFrameProtocol::pFramePtr &rPacket, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
-    EdgewareFrameMessages unpackType1(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
-    EdgewareFrameMessages unpackType2LastFrame(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
-    EdgewareFrameMessages unpackType3(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
+    void gotData(ElasticFrameProtocol::pFramePtr &rPacket, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
+    ElasticFrameMessages unpackType1(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
+    ElasticFrameMessages unpackType2LastFrame(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
+    ElasticFrameMessages unpackType3(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
     void unpackerWorker(uint32_t timeout);
     uint64_t superFrameRecalculator(uint16_t superFrame);
     //Private methods ----- END ------
 
     //Internal lists and variables ----- START ------
+    Stream mStreams[UINT8_MAX][UINT8_MAX];
     Bucket mBucketList[CIRCULAR_BUFFER_SIZE + 1]; //Internal queue
     uint32_t mBucketTimeout = 0; //time out passed to reciever
     uint32_t mHeadOfLineBlockingTimeout = 0; //HOL time out passed to reciever
@@ -224,8 +240,8 @@ private:
     //Mutex for thread safety
     std::mutex mPackkMtx; //Mutex protecting the pack part
     std::mutex mUnpackMtx; //Mutex protecting the unpack part
-    EdgewareFrameMode mCurrentMode = EdgewareFrameMode::unknown;
+    ElasticFrameMode mCurrentMode = ElasticFrameMode::unknown;
     //Internal lists and variables ----- END ------
 };
 
-#endif //EFP_EDGEWAREFRAMEPROTOCOL_H
+#endif //EFP_ElasticFRAMEPROTOCOL_H

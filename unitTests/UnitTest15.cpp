@@ -9,16 +9,16 @@
 #include "UnitTest15.h"
 
 void UnitTest15::sendData(const std::vector<uint8_t> &subPacket) {
-    EdgewareFrameMessages info = myEFPReciever->unpack(subPacket,0);
-    if (info != EdgewareFrameMessages::noError) {
+    ElasticFrameMessages info = myEFPReciever->unpack(subPacket,0);
+    if (info != ElasticFrameMessages::noError) {
         std::cout << "Error-> " << signed(info) << std::endl;
         unitTestFailed = true;
         unitTestActive = false;
     }
 }
 
-void UnitTest15::gotData(EdgewareFrameProtocol::pFramePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
-    EdgewareFrameMessages info;
+void UnitTest15::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
+    ElasticFrameMessages info;
     std::vector<std::vector<uint8_t>> embeddedData;
     std::vector<uint8_t> embeddedContentFlag;
     size_t payloadDataPosition = 0;
@@ -43,14 +43,14 @@ void UnitTest15::gotData(EdgewareFrameProtocol::pFramePtr &packet, EdgewareFrame
         info = myEFPReciever->extractEmbeddedData(packet, &embeddedData, &embeddedContentFlag,
                                                  &payloadDataPosition);
 
-        if (info != EdgewareFrameMessages::noError) {
+        if (info != ElasticFrameMessages::noError) {
             unitTestFailed = true;
             unitTestActive = false;
             return;
         }
 
         for (int x = 0; x<embeddedData.size();x++) {
-            if(embeddedContentFlag[x] == EdgewareEmbeddedFrameContent::embeddedPrivateData) {
+            if(embeddedContentFlag[x] == ElasticEmbeddedFrameContent::embeddedPrivateData) {
                 std::vector<uint8_t> thisVector = embeddedData[x];
                 PrivateData myPrivateData = *(PrivateData *) thisVector.data();
                 size_t thisStuff=sizeof(PrivateData);
@@ -118,11 +118,11 @@ bool UnitTest15::waitForCompletion() {
 bool UnitTest15::startUnitTest() {
     unitTestFailed = false;
     unitTestActive = false;
-    EdgewareFrameMessages result;
+    ElasticFrameMessages result;
     std::vector<uint8_t> mydata;
     uint8_t streamID=1;
-    myEFPReciever = new (std::nothrow) EdgewareFrameProtocol();
-    myEFPPacker = new (std::nothrow) EdgewareFrameProtocol(MTU, EdgewareFrameProtocolModeNamespace::packer);
+    myEFPReciever = new (std::nothrow) ElasticFrameProtocol();
+    myEFPPacker = new (std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameProtocolModeNamespace::packer);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;
         if (myEFPPacker) delete myEFPPacker;
@@ -148,14 +148,14 @@ bool UnitTest15::startUnitTest() {
 
         PrivateData myPrivateData;
         myPrivateData.sizeOfData = mydata.size() + sizeof(PrivateData) + 4; //4 is the embedded frame header size
-        myEFPPacker->addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData), EdgewareEmbeddedFrameContent::embeddedPrivateData, true);
+        myEFPPacker->addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData), ElasticEmbeddedFrameContent::embeddedPrivateData, true);
         if (myPrivateData.sizeOfData != mydata.size()) {
             std::cout << "Packer error"
                       << std::endl;
         }
 
-        result = myEFPPacker->packAndSend(mydata, EdgewareFrameContent::h264, packetNumber+1, 'ANXB', streamID, INLINE_PAYLOAD);
-        if (result != EdgewareFrameMessages::noError) {
+        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber+1, 'ANXB', streamID, INLINE_PAYLOAD);
+        if (result != ElasticFrameMessages::noError) {
             std::cout << "Unit test number: " << unsigned(activeUnitTest)
                       << " Failed in the packAndSend method. Error-> " << signed(result)
                       << std::endl;

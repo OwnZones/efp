@@ -122,11 +122,11 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/Users/anderscedronius/git/efp/EdgewareFrameProtocol.cpp">
+		<Unit filename="/Users/anderscedronius/git/efp/ElasticFrameProtocol.cpp">
 			<Option target="efptests"/>
 			<Option target="efp"/>
 		</Unit>
-		<Unit filename="/Users/anderscedronius/git/efp/EdgewareFrameProtocol.h">
+		<Unit filename="/Users/anderscedronius/git/efp/ElasticFrameProtocol.h">
 			<Option target="efptests"/>
 			<Option target="efp"/>
 		</Unit>

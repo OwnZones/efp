@@ -8,20 +8,20 @@
 #include "UnitTest10.h"
 
 void UnitTest10::sendData(const std::vector<uint8_t> &subPacket) {
-    EdgewareFrameMessages info;
+    ElasticFrameMessages info;
     if (unitTestPacketNumberSender == 0) {
         unitTestsSavedData = subPacket;
     }
 
     if (unitTestPacketNumberSender == 1) {
         info = myEFPReciever->unpack(subPacket,0);
-        if (info != EdgewareFrameMessages::noError) {
+        if (info != ElasticFrameMessages::noError) {
             std::cout << "Error-> " << signed(info) << std::endl;
             unitTestFailed = true;
             unitTestActive = false;
         }
         info = myEFPReciever->unpack(unitTestsSavedData,0);
-        if (info != EdgewareFrameMessages::noError) {
+        if (info != ElasticFrameMessages::noError) {
             std::cout << "Error-> " << signed(info) << std::endl;
             unitTestFailed = true;
             unitTestActive = false;
@@ -35,7 +35,7 @@ void UnitTest10::sendData(const std::vector<uint8_t> &subPacket) {
     unitTestPacketNumberSender++;
 }
 
-void UnitTest10::gotData(EdgewareFrameProtocol::pFramePtr &packet, EdgewareFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
+void UnitTest10::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
     if (!unitTestActive) return;
 
     unitTestPacketNumberReciever++;
@@ -81,11 +81,11 @@ bool UnitTest10::waitForCompletion() {
 bool UnitTest10::startUnitTest() {
     unitTestFailed = false;
     unitTestActive = false;
-    EdgewareFrameMessages result;
+    ElasticFrameMessages result;
     std::vector<uint8_t> mydata;
     uint8_t streamID=1;
-    myEFPReciever = new (std::nothrow) EdgewareFrameProtocol();
-    myEFPPacker = new (std::nothrow) EdgewareFrameProtocol(MTU, EdgewareFrameProtocolModeNamespace::packer);
+    myEFPReciever = new (std::nothrow) ElasticFrameProtocol();
+    myEFPPacker = new (std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameProtocolModeNamespace::packer);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;
         if (myEFPPacker) delete myEFPPacker;
@@ -101,8 +101,8 @@ bool UnitTest10::startUnitTest() {
     mydata.clear();
     mydata.resize(MTU-myEFPPacker->geType2Size());
     unitTestActive = true;
-    result = myEFPPacker->packAndSend(mydata, EdgewareFrameContent::h264,1,0,streamID,NO_FLAGS);
-    if (result != EdgewareFrameMessages::noError) {
+    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264,1,0,streamID,NO_FLAGS);
+    if (result != ElasticFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method. Error-> " << signed(result)
                   << std::endl;
         myEFPReciever->stopUnpacker();
@@ -111,8 +111,8 @@ bool UnitTest10::startUnitTest() {
         return false;
     }
 
-    result = myEFPPacker->packAndSend(mydata, EdgewareFrameContent::h264,2,0,streamID,NO_FLAGS);
-    if (result != EdgewareFrameMessages::noError) {
+    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264,2,0,streamID,NO_FLAGS);
+    if (result != ElasticFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method. Error-> " << signed(result)
                   << std::endl;
         myEFPReciever->stopUnpacker();

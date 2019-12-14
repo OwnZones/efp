@@ -2,8 +2,8 @@
 // Created by Anders Cedronius on 2019-11-19.
 //
 
-#ifndef EFP_EDGEWAREINTERNAL_H
-#define EFP_EDGEWAREINTERNAL_H
+#ifndef EFP_ElasticINTERNAL_H
+#define EFP_ElasticINTERNAL_H
 
 // GLobal Logger -- Start
 #define LOGG_NOTIFY 1
@@ -64,46 +64,39 @@ enum Frametype : uint8_t { //Only the 4 LSB are used!
     type3
 };
 
-struct EdgewareFrameType0 {
-    uint8_t frameType = Frametype::type0;
+struct ElasticFrameType0 {
+    uint8_t hFrameType = Frametype::type0;
 };
 
-struct EdgewareFrameType1 {
-    uint8_t frameType = Frametype::type1;
-    uint8_t  stream = 0;
-    uint16_t superFrameNo = 0;
-    uint16_t fragmentNo = 0;
-    uint16_t ofFragmentNo = 0;
+struct ElasticFrameType1 {
+    uint8_t hFrameType = Frametype::type1;
+    uint8_t  hStream = 0;
+    uint16_t hSuperFrameNo = 0;
+    uint16_t hFragmentNo = 0;
+    uint16_t hOfFragmentNo = 0;
 };
 
-struct EdgewareFrameType2 {
-    uint8_t frameType  = Frametype::type2;
-    uint8_t  stream;
-    EdgewareFrameContent dataContent = EdgewareFrameContent::unknown;
-    uint16_t sizeOfData = 0;
-    uint16_t superFrameNo = 0;
-    uint16_t fragmentNo = 0;
-    uint16_t ofFragmentNo = 0;
-    uint16_t type1PacketSize = 0;
-    uint64_t pts = UINT64_MAX;
-    uint32_t code = UINT32_MAX;
+struct ElasticFrameType2 {
+    uint8_t hFrameType  = Frametype::type2;
+    uint8_t  hStream;
+    ElasticFrameContent hDataContent = ElasticFrameContent::unknown;
+    uint16_t hSizeOfData = 0;
+    uint16_t hSuperFrameNo = 0;
+    uint16_t hFragmentNo = 0;
+    uint16_t hOfFragmentNo = 0;
+    uint16_t hType1PacketSize = 0;
+    uint64_t hPts = UINT64_MAX;
+    uint32_t hCode = UINT32_MAX;
 };
 
-struct EdgewareFrameType3 {
-    uint8_t frameType = Frametype::type3;
-    uint8_t  stream = 0;
-    uint16_t superFrameNo = 0;
-    uint16_t type1PacketSize = 0;
-    uint16_t ofFragmentNo = 0;
+struct ElasticFrameType3 {
+    uint8_t hFrameType = Frametype::type3;
+    uint8_t  hStream = 0;
+    uint16_t hSuperFrameNo = 0;
+    uint16_t hType1PacketSize = 0;
+    uint16_t hOfFragmentNo = 0;
 };
 //Packet header part ----- END ------
 
-//Stream list ----- START ------
-struct Stream {
-    uint32_t code = UINT32_MAX;
-    EdgewareFrameContent dataContent = EdgewareFrameContent::unknown;
-};
-Stream streams[UINT8_MAX][UINT8_MAX];
-//Stream list ----- END ------
 
-#endif //EFP_EDGEWAREINTERNAL_H
+#endif //EFP_ElasticINTERNAL_H
