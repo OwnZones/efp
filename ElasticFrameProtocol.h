@@ -22,6 +22,11 @@
 #include <math.h>
 #include <thread>
 #include <unistd.h>
+#include <functional>
+#include <bitset>
+#include <mutex>
+#include <atomic>
+#include <algorithm>
 
 #define UNIT_TESTS //Enable or disable the APIs used by the unit tests
 
