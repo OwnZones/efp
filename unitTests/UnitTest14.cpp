@@ -9,7 +9,7 @@
 #include "UnitTest14.h"
 
 void UnitTest14::sendData(const std::vector<uint8_t> &subPacket) {
-    ElasticFrameMessages info = myEFPReciever->unpack(subPacket,0);
+    ElasticFrameMessages info = myEFPReciever->receiveFragment(subPacket,0);
     if (info != ElasticFrameMessages::noError) {
         std::cout << "Error-> " << signed(info) << std::endl;
         unitTestFailed = true;
@@ -78,7 +78,7 @@ void UnitTest14::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCo
 
         uint8_t vectorChecker = 0;
         for (int x = payloadDataPosition; x < packet->frameSize; x++) {
-            if (packet->framedata[x] != vectorChecker++) {
+            if (packet->frameData[x] != vectorChecker++) {
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
@@ -119,16 +119,16 @@ bool UnitTest14::startUnitTest() {
     std::vector<uint8_t> mydata;
     uint8_t streamID=1;
     myEFPReciever = new (std::nothrow) ElasticFrameProtocol();
-    myEFPPacker = new (std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameProtocolModeNamespace::packer);
+    myEFPPacker = new (std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameProtocolModeNamespace::sender);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;
         if (myEFPPacker) delete myEFPPacker;
         return false;
     }
     myEFPPacker->sendCallback = std::bind(&UnitTest14::sendData, this, std::placeholders::_1);
-    myEFPReciever->recieveCallback = std::bind(&UnitTest14::gotData, this, std::placeholders::_1, std::placeholders::_2,
+    myEFPReciever->receiveCallback = std::bind(&UnitTest14::gotData, this, std::placeholders::_1, std::placeholders::_2,
                                               std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7);
-    myEFPReciever->startUnpacker(5, 2);
+    myEFPReciever->startReceiver(5, 2);
 
     unitTestsSavedData2D.clear();
     unitTestsSavedData3D.clear();
@@ -157,7 +157,7 @@ bool UnitTest14::startUnitTest() {
             std::cout << "Unit test number: " << unsigned(activeUnitTest)
                       << " Failed in the packAndSend method. Error-> " << signed(result)
                       << std::endl;
-            myEFPReciever->stopUnpacker();
+            myEFPReciever->stopReceiver();
             delete myEFPReciever;
             delete myEFPPacker;
             return false;
@@ -165,12 +165,12 @@ bool UnitTest14::startUnitTest() {
     }
 
     if (waitForCompletion()){
-        myEFPReciever->stopUnpacker();
+        myEFPReciever->stopReceiver();
         delete myEFPReciever;
         delete myEFPPacker;
         return false;
     } else {
-        myEFPReciever->stopUnpacker();
+        myEFPReciever->stopReceiver();
         delete myEFPReciever;
         delete myEFPPacker;
         return true;

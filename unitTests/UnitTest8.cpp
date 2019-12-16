@@ -12,7 +12,7 @@ void UnitTest8::sendData(const std::vector<uint8_t> &subPacket) {
     unitTestPacketNumberSender++;
     if (subPacket[0] == 2) {
         unitTestPacketNumberSender = 0;
-        info=myEFPReciever->unpack(subPacket,0);
+        info=myEFPReciever->receiveFragment(subPacket,0);
         if (info != ElasticFrameMessages::noError) {
             std::cout << "Error-> " << signed(info) << std::endl;
             unitTestFailed = true;
@@ -23,20 +23,20 @@ void UnitTest8::sendData(const std::vector<uint8_t> &subPacket) {
                 unitTestsSavedData = x;
             } else if (unitTestPacketNumberSender == 2) {
                 unitTestPacketNumberSender++;
-                info=myEFPReciever->unpack(x,0);
+                info=myEFPReciever->receiveFragment(x,0);
                 if (info != ElasticFrameMessages::noError) {
                     std::cout << "Error-> " << signed(info) << std::endl;
                     unitTestFailed = true;
                     unitTestActive = false;
                 }
-                info=myEFPReciever->unpack(unitTestsSavedData,0);
+                info=myEFPReciever->receiveFragment(unitTestsSavedData,0);
                 if (info != ElasticFrameMessages::noError) {
                     std::cout << "Error-> " << signed(info) << std::endl;
                     unitTestFailed = true;
                     unitTestActive = false;
                 }
             } else {
-                info=myEFPReciever->unpack(x,0);
+                info=myEFPReciever->receiveFragment(x,0);
                 if (info != ElasticFrameMessages::noError) {
                     std::cout << "Error-> " << signed(info) << std::endl;
                     unitTestFailed = true;
@@ -72,7 +72,7 @@ void UnitTest8::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCon
 
     uint8_t vectorChecker = 0;
     for (int x = 0; x < packet->frameSize; x++) {
-        if (packet->framedata[x] != vectorChecker++) {
+        if (packet->frameData[x] != vectorChecker++) {
 
             unitTestFailed = true;
             unitTestActive = false;
@@ -108,16 +108,16 @@ bool UnitTest8::startUnitTest() {
     std::vector<uint8_t> mydata;
     uint8_t streamID=1;
     myEFPReciever = new (std::nothrow) ElasticFrameProtocol();
-    myEFPPacker = new (std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameProtocolModeNamespace::packer);
+    myEFPPacker = new (std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameProtocolModeNamespace::sender);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;
         if (myEFPPacker) delete myEFPPacker;
         return false;
     }
     myEFPPacker->sendCallback = std::bind(&UnitTest8::sendData, this, std::placeholders::_1);
-    myEFPReciever->recieveCallback = std::bind(&UnitTest8::gotData, this, std::placeholders::_1, std::placeholders::_2,
+    myEFPReciever->receiveCallback = std::bind(&UnitTest8::gotData, this, std::placeholders::_1, std::placeholders::_2,
                                               std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7);
-    myEFPReciever->startUnpacker(5, 2);
+    myEFPReciever->startReceiver(5, 2);
     unitTestPacketNumberSender = 0;
     unitTestsSavedData.clear();
     mydata.resize(((MTU - myEFPPacker->geType1Size()) * 5) + 12);
@@ -127,19 +127,19 @@ bool UnitTest8::startUnitTest() {
     if (result != ElasticFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method. Error-> " << signed(result)
                   << std::endl;
-        myEFPReciever->stopUnpacker();
+        myEFPReciever->stopReceiver();
         delete myEFPReciever;
         delete myEFPPacker;
         return false;
     }
 
     if (waitForCompletion()){
-        myEFPReciever->stopUnpacker();
+        myEFPReciever->stopReceiver();
         delete myEFPReciever;
         delete myEFPPacker;
         return false;
     } else {
-        myEFPReciever->stopUnpacker();
+        myEFPReciever->stopReceiver();
         delete myEFPReciever;
         delete myEFPPacker;
         return true;

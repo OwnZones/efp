@@ -9,7 +9,7 @@
 //Limit the MTU to uint16_t MAX and 255 min //The upper limit is hard
 // the lower limit is actually type2frameSize+1, keep it at 255 for now
 ElasticFrameProtocol::ElasticFrameProtocol(uint16_t setMTU, ElasticFrameMode mode) {
-    if ((setMTU < UINT8_MAX) && mode != ElasticFrameMode::unpacker) {
+    if ((setMTU < UINT8_MAX) && mode != ElasticFrameMode::receiver) {
         LOGGER(true, LOGG_ERROR, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.");
         mCurrentMTU = UINT8_MAX;
     } else {
@@ -19,7 +19,7 @@ ElasticFrameProtocol::ElasticFrameProtocol(uint16_t setMTU, ElasticFrameMode mod
     mThreadActive = false;
     mIsThreadActive = false;
     sendCallback = std::bind(&ElasticFrameProtocol::sendData, this, std::placeholders::_1);
-    recieveCallback = std::bind(&ElasticFrameProtocol::gotData,
+    receiveCallback = std::bind(&ElasticFrameProtocol::gotData,
                                 this,
                                 std::placeholders::_1,
                                 std::placeholders::_2,
@@ -34,7 +34,7 @@ ElasticFrameProtocol::ElasticFrameProtocol(uint16_t setMTU, ElasticFrameMode mod
 ElasticFrameProtocol::~ElasticFrameProtocol() {
     //If my worker is active we need to stop it.
     if (mThreadActive) {
-        stopUnpacker();
+        stopReceiver();
     }
     LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol destruct");
 }
@@ -54,15 +54,15 @@ void ElasticFrameProtocol::gotData(ElasticFrameProtocol::pFramePtr &rPacket, Ela
 //counter. The maximum loss / hole this calculator can handle is (INT16_MAX)
 uint64_t ElasticFrameProtocol::superFrameRecalculator(uint16_t superFrame) {
     if (mSuperFrameFirstTime) {
-        mOldSuperframeNumber = superFrame;
+        mOldSuperFrameNumber = superFrame;
         mSuperFrameRecalc = superFrame;
         mSuperFrameFirstTime = false;
         return mSuperFrameRecalc;
     }
 
-    int16_t lChangeValue = (int16_t) superFrame - (int16_t) mOldSuperframeNumber;
+    int16_t lChangeValue = (int16_t) superFrame - (int16_t) mOldSuperFrameNumber;
     int64_t lCval = (int64_t) lChangeValue;
-    mOldSuperframeNumber = superFrame;
+    mOldSuperFrameNumber = superFrame;
 
     if (lCval > INT16_MAX) {
         lCval -= (UINT16_MAX - 1);
@@ -100,9 +100,9 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
         pThisBucket->mCode = pThisStream->code;
 
         pThisBucket->mSavedSuperFrameNo = lType1Frame.hSuperFrameNo;
-        pThisBucket->mHaveRecievedPacket.reset();
+        pThisBucket->mHaveReceivedPacket.reset();
         pThisBucket->mPts = UINT64_MAX;
-        pThisBucket->mHaveRecievedPacket[lType1Frame.hFragmentNo] = 1;
+        pThisBucket->mHaveReceivedPacket[lType1Frame.hFragmentNo] = 1;
         pThisBucket->mTimeout = mBucketTimeout;
         pThisBucket->mFragmentCounter = 0;
         pThisBucket->mOfFragmentNo = lType1Frame.hOfFragmentNo;
@@ -112,14 +112,14 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
                 pThisBucket->mFragmentSize * (lType1Frame.hOfFragmentNo + 1));
         pThisBucket->mBucketData->frameSize = pThisBucket->mFragmentSize * lType1Frame.hOfFragmentNo;
 
-        if (pThisBucket->mBucketData->framedata == nullptr) {
+        if (pThisBucket->mBucketData->frameData == nullptr) {
             pThisBucket->mActive = false;
             return ElasticFrameMessages::memoryAllocationError;
         }
 
         std::copy(rSubPacket.begin() + sizeof(ElasticFrameType1),
                   rSubPacket.end(),
-                  pThisBucket->mBucketData->framedata + lInsertDataPointer);
+                  pThisBucket->mBucketData->frameData + lInsertDataPointer);
 
         //std::memcpy(thisBucket->bucketData->framedata + insertDataPointer,
         //            subPacket.data() + sizeof(ElasticFrameType1), subPacket.size() - sizeof(ElasticFrameType1));
@@ -145,10 +145,10 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
     }
 
     //Have I already recieved this packet before? (duplicate?)
-    if (pThisBucket->mHaveRecievedPacket[lType1Frame.hFragmentNo] == 1) {
-        return ElasticFrameMessages::duplicatePacketRecieved;
+    if (pThisBucket->mHaveReceivedPacket[lType1Frame.hFragmentNo] == 1) {
+        return ElasticFrameMessages::duplicatePacketReceived;
     } else {
-        pThisBucket->mHaveRecievedPacket[lType1Frame.hFragmentNo] = 1;
+        pThisBucket->mHaveReceivedPacket[lType1Frame.hFragmentNo] = 1;
     }
 
     //Let's re-set the timout and let also add +1 to the fragment counter
@@ -165,7 +165,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
 
     std::copy(rSubPacket.begin() + sizeof(ElasticFrameType1),
               rSubPacket.end(),
-              pThisBucket->mBucketData->framedata + insertDataPointer);
+              pThisBucket->mBucketData->frameData + insertDataPointer);
 
     //std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(ElasticFrameType1),
     //            subPacket.size() - sizeof(ElasticFrameType1));
@@ -202,9 +202,9 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
         pThisBucket->mCode = pThisStream->code;
 
         pThisBucket->mSavedSuperFrameNo = lType2Frame.hSuperFrameNo;
-        pThisBucket->mHaveRecievedPacket.reset();
+        pThisBucket->mHaveReceivedPacket.reset();
         pThisBucket->mPts = lType2Frame.hPts;
-        pThisBucket->mHaveRecievedPacket[lType2Frame.hFragmentNo] = 1;
+        pThisBucket->mHaveReceivedPacket[lType2Frame.hFragmentNo] = 1;
         pThisBucket->mTimeout = mBucketTimeout;
         pThisBucket->mOfFragmentNo = lType2Frame.hOfFragmentNo;
         pThisBucket->mFragmentCounter = 0;
@@ -212,7 +212,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
         size_t lReserveThis = ((pThisBucket->mFragmentSize * lType2Frame.hOfFragmentNo) +
                               (lType2Frame.hSizeOfData));
         pThisBucket->mBucketData = std::make_shared<AllignedFrameData>(lReserveThis);
-        if (pThisBucket->mBucketData->framedata == nullptr) {
+        if (pThisBucket->mBucketData->frameData == nullptr) {
             pThisBucket->mActive = false;
             return ElasticFrameMessages::memoryAllocationError;
         }
@@ -220,7 +220,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
 
         std::copy(rSubPacket.begin() + sizeof(ElasticFrameType2),
                   rSubPacket.end(),
-                  pThisBucket->mBucketData->framedata + lInsertDataPointer);
+                  pThisBucket->mBucketData->frameData + lInsertDataPointer);
 
         //std::memcpy(thisBucket->bucketData->framedata + insertDataPointer,
         //            subPacket.data() + sizeof(ElasticFrameType2), subPacket.size() - sizeof(ElasticFrameType2));
@@ -237,10 +237,10 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
         return ElasticFrameMessages::bufferOutOfBounds;
     }
 
-    if (pThisBucket->mHaveRecievedPacket[lType2Frame.hFragmentNo] == 1) {
-        return ElasticFrameMessages::duplicatePacketRecieved;
+    if (pThisBucket->mHaveReceivedPacket[lType2Frame.hFragmentNo] == 1) {
+        return ElasticFrameMessages::duplicatePacketReceived;
     } else {
-        pThisBucket->mHaveRecievedPacket[lType2Frame.hFragmentNo] = 1;
+        pThisBucket->mHaveReceivedPacket[lType2Frame.hFragmentNo] = 1;
     }
 
     //Type 2 frames contains the pts and code. If for some reason the type2 packet is missing or the frame is delivered
@@ -268,7 +268,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
 
         std::copy(rSubPacket.begin() + sizeof(ElasticFrameType2),
                   rSubPacket.end(),
-                  pThisBucket->mBucketData->framedata + lInsertDataPointer);
+                  pThisBucket->mBucketData->frameData + lInsertDataPointer);
     }
 
     return ElasticFrameMessages::noError;
@@ -305,9 +305,9 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
         pThisBucket->mCode = thisStream->code;
 
         pThisBucket->mSavedSuperFrameNo = lType3Frame.hSuperFrameNo;
-        pThisBucket->mHaveRecievedPacket.reset();
+        pThisBucket->mHaveReceivedPacket.reset();
         pThisBucket->mPts = UINT64_MAX;
-        pThisBucket->mHaveRecievedPacket[lThisFragmentNo] = 1;
+        pThisBucket->mHaveReceivedPacket[lThisFragmentNo] = 1;
         pThisBucket->mTimeout = mBucketTimeout;
         pThisBucket->mFragmentCounter = 0;
         pThisBucket->mOfFragmentNo = lType3Frame.hOfFragmentNo;
@@ -317,14 +317,14 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
                               (rSubPacket.size() - sizeof(ElasticFrameType3)));
         pThisBucket->mBucketData = std::make_shared<AllignedFrameData>(lReserveThis);
 
-        if (pThisBucket->mBucketData->framedata == nullptr) {
+        if (pThisBucket->mBucketData->frameData == nullptr) {
             pThisBucket->mActive = false;
             return ElasticFrameMessages::memoryAllocationError;
         }
 
         std::copy(rSubPacket.begin() + sizeof(ElasticFrameType3),
                   rSubPacket.end(),
-                  pThisBucket->mBucketData->framedata + lInsertDataPointer);
+                  pThisBucket->mBucketData->frameData + lInsertDataPointer);
         return ElasticFrameMessages::noError;
     }
 
@@ -347,10 +347,10 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
     }
 
     //Have I already recieved this packet before? (duplicate?)
-    if (pThisBucket->mHaveRecievedPacket[lThisFragmentNo] == 1) {
-        return ElasticFrameMessages::duplicatePacketRecieved;
+    if (pThisBucket->mHaveReceivedPacket[lThisFragmentNo] == 1) {
+        return ElasticFrameMessages::duplicatePacketReceived;
     } else {
-        pThisBucket->mHaveRecievedPacket[lThisFragmentNo] = 1;
+        pThisBucket->mHaveReceivedPacket[lThisFragmentNo] = 1;
     }
 
     //Let's re-set the timout and let also add +1 to the fragment counter
@@ -370,7 +370,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
     size_t insertDataPointer = pThisBucket->mFragmentSize * lThisFragmentNo;
     std::copy(rSubPacket.begin() + sizeof(ElasticFrameType3),
               rSubPacket.end(),
-              pThisBucket->mBucketData->framedata + insertDataPointer);
+              pThisBucket->mBucketData->frameData + insertDataPointer);
     //std::memcpy(thisBucket->bucketData->framedata + insertDataPointer, subPacket.data() + sizeof(ElasticFrameType3),
     //            subPacket.size() - sizeof(ElasticFrameType3));
     return ElasticFrameMessages::noError;
@@ -379,7 +379,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
 // This is the thread going trough the buckets to see if they should be delivered to
 // the 'user'
 // 1000 times per second is a bit aggressive, change to 100 times per second? FIXME, talk about what is realistic.. Settable? static? limits? why? for what reason?
-void ElasticFrameProtocol::unpackerWorker(uint32_t timeout) {
+void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
     //Set the defaults. meaning the thread is running and there is no head of line blocking action going on.
     bool lFoundHeadOfLineBlocking = false;
     bool lFistDelivery = mHeadOfLineBlockingTimeout ? false
@@ -507,7 +507,7 @@ void ElasticFrameProtocol::unpackerWorker(uint32_t timeout) {
                         lAndTheNextIs = x.deliveryOrder + 1;
 
                         lOldestFrameDelivered = mHeadOfLineBlockingTimeout ? x.deliveryOrder : 0;
-                        recieveCallback(mBucketList[x.bucket].mBucketData,
+                        receiveCallback(mBucketList[x.bucket].mBucketData,
                                         mBucketList[x.bucket].mDataContent,
                                         mBucketList[x.bucket].mFragmentCounter != mBucketList[x.bucket].mOfFragmentNo,
                                         mBucketList[x.bucket].mPts,
@@ -564,7 +564,7 @@ void ElasticFrameProtocol::unpackerWorker(uint32_t timeout) {
                         //std::cout << unsigned(oldestFrameDelivered) << " " << unsigned(x.deliveryOrder) << std::endl;
                         if (lOldestFrameDelivered <= x.deliveryOrder) {
                             lOldestFrameDelivered = mHeadOfLineBlockingTimeout ? x.deliveryOrder : 0;
-                            recieveCallback(mBucketList[x.bucket].mBucketData,
+                            receiveCallback(mBucketList[x.bucket].mBucketData,
                                             mBucketList[x.bucket].mDataContent,
                                             mBucketList[x.bucket].mFragmentCounter != mBucketList[x.bucket].mOfFragmentNo,
                                             mBucketList[x.bucket].mPts,
@@ -591,14 +591,14 @@ void ElasticFrameProtocol::unpackerWorker(uint32_t timeout) {
 }
 
 //Start reciever worker thread
-ElasticFrameMessages ElasticFrameProtocol::startUnpacker(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster) {
-    if (mCurrentMode != ElasticFrameMode::unpacker) {
+ElasticFrameMessages ElasticFrameProtocol::startReceiver(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster){
+    if (mCurrentMode != ElasticFrameMode::receiver) {
         return ElasticFrameMessages::wrongMode;
     }
 
     if (mIsThreadActive) {
         LOGGER(true, LOGG_WARN, "Unpacker already working");
-        return ElasticFrameMessages::unpackerAlreadyStarted;
+        return ElasticFrameMessages::receiverAlreadyStarted;
     }
     if (bucketTimeoutMaster == 0) {
         LOGGER(true, LOGG_WARN, "bucketTimeoutMaster can't be 0");
@@ -614,15 +614,15 @@ ElasticFrameMessages ElasticFrameProtocol::startUnpacker(uint32_t bucketTimeoutM
     mThreadActive =
             true; //you must set these parameters here to avoid races. For example calling start then stop before the thread actually starts.
     mIsThreadActive = true;
-    std::thread(std::bind(&ElasticFrameProtocol::unpackerWorker, this, bucketTimeoutMaster)).detach();
+    std::thread(std::bind(&ElasticFrameProtocol::receiverWorker, this, bucketTimeoutMaster)).detach();
     return ElasticFrameMessages::noError;
 }
 
 //Stop reciever worker thread
-ElasticFrameMessages ElasticFrameProtocol::stopUnpacker() {
-    std::lock_guard<std::mutex> lock(mUnpackMtx);
+ElasticFrameMessages ElasticFrameProtocol::stopReceiver(){
+    std::lock_guard<std::mutex> lock(mReceiveMtx);
 
-    if (mCurrentMode != ElasticFrameMode::unpacker) {
+    if (mCurrentMode != ElasticFrameMode::receiver) {
         return ElasticFrameMessages::wrongMode;
     }
 
@@ -635,14 +635,14 @@ ElasticFrameMessages ElasticFrameProtocol::stopUnpacker() {
         if (!--lLockProtect) {
             //we gave it a second now exit anyway
             LOGGER(true, LOGG_FATAL, "unpackerWorker thread not stopping. Quitting anyway");
-            return ElasticFrameMessages::failedStoppingUnpacker;
+            return ElasticFrameMessages::failedStoppingReceiver;
         }
     }
     return ElasticFrameMessages::noError;
 }
 
 //Unpack method. We recieved a fragment of data or a full frame. Lets unpack it
-ElasticFrameMessages ElasticFrameProtocol::unpack(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource) {
+ElasticFrameMessages ElasticFrameProtocol::receiveFragment(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource) {
     //Type 0 packet. Discard and continue
     //Type 0 packets can be used to fill with user data outside efp protocol packets just put a uint8_t = Frametype::type0 at position 0 and then any data.
     //Type 1 are frames larger than MTU
@@ -650,27 +650,27 @@ ElasticFrameMessages ElasticFrameProtocol::unpack(const std::vector<uint8_t> &rS
     //Type 2 packets are also used at the end of Type 1 packet superFrames
     //Type 3 frames carry the reminder of data when it's too large for type2 to carry.
 
-    std::lock_guard<std::mutex> lock(mUnpackMtx);
+    std::lock_guard<std::mutex> lock(mReceiveMtx);
 
-    if (mCurrentMode != ElasticFrameMode::unpacker) {
+    if (mCurrentMode != ElasticFrameMode::receiver) {
         return ElasticFrameMessages::wrongMode;
     }
 
     if (!mIsThreadActive) {
-        LOGGER(true, LOGG_ERROR, "Unpacker not started");
-        return ElasticFrameMessages::unpackerNotStarted;
+        LOGGER(true, LOGG_ERROR, "Receiver not running");
+        return ElasticFrameMessages::receiverNotRunning;
     }
 
     if ((rSubPacket[0] & 0x0f) == Frametype::type0) {
         return ElasticFrameMessages::type0Frame;
     } else if ((rSubPacket[0] & 0x0f) == Frametype::type1) {
         if (rSubPacket.size() < sizeof(ElasticFrameType1)) {
-            return ElasticFrameMessages::framesizeMismatch;
+            return ElasticFrameMessages::frameSizeMismatch;
         }
         return unpackType1(rSubPacket, fromSource);
     } else if ((rSubPacket[0] & 0x0f) == Frametype::type2) {
         if (rSubPacket.size() < sizeof(ElasticFrameType2)) {
-            return ElasticFrameMessages::framesizeMismatch;
+            return ElasticFrameMessages::frameSizeMismatch;
         }
         ElasticFrameType2 lType2Frame = *(ElasticFrameType2 *) rSubPacket.data();
         if (lType2Frame.hOfFragmentNo == lType2Frame.hFragmentNo) {
@@ -680,13 +680,13 @@ ElasticFrameMessages ElasticFrameProtocol::unpack(const std::vector<uint8_t> &rS
         }
     } else if ((rSubPacket[0] & 0x0f) == Frametype::type3) {
         if (rSubPacket.size() < sizeof(ElasticFrameType3)) {
-            return ElasticFrameMessages::framesizeMismatch;
+            return ElasticFrameMessages::frameSizeMismatch;
         }
         return unpackType3(rSubPacket, fromSource);
     }
 
     //did not catch anything I understand
-    return ElasticFrameMessages::unknownFrametype;
+    return ElasticFrameMessages::unknownFrameType;
 }
 
 //Pack data method. Fragments the data and calls the sendCallback method at the host level.
@@ -694,13 +694,13 @@ ElasticFrameMessages
 ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts,
                                    uint32_t code, uint8_t stream, uint8_t flags) {
 
-    std::lock_guard<std::mutex> lock(mPackkMtx);
+    std::lock_guard<std::mutex> lock(mSendMtx);
 
     if (sizeof(ElasticFrameType1) != sizeof(ElasticFrameType3)) {
         return ElasticFrameMessages::type1And3SizeError;
     }
 
-    if (mCurrentMode != ElasticFrameMode::packer) {
+    if (mCurrentMode != ElasticFrameMode::sender) {
         return ElasticFrameMessages::wrongMode;
     }
 
@@ -873,14 +873,14 @@ ElasticFrameMessages ElasticFrameProtocol::extractEmbeddedData(ElasticFrameProto
     size_t headerSize = sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader);
     do {
         ElasticFrameContentNamespace::ElasticEmbeddedHeader lEmbeddedHeader =
-                *(ElasticFrameContentNamespace::ElasticEmbeddedHeader *) (rPacket->framedata + *pPayloadDataPosition);
+                *(ElasticFrameContentNamespace::ElasticEmbeddedHeader *) (rPacket->frameData + *pPayloadDataPosition);
         if (lEmbeddedHeader.embeddedFrameType == ElasticEmbeddedFrameContent::illegal) {
             return ElasticFrameMessages::illegalEmbeddedData;
         }
         pDataContent->emplace_back((lEmbeddedHeader.embeddedFrameType & 0x7f));
         std::vector<uint8_t> embeddedData(lEmbeddedHeader.size);
-        std::copy(rPacket->framedata + headerSize + *pPayloadDataPosition,
-                  rPacket->framedata + headerSize + *pPayloadDataPosition + lEmbeddedHeader.size,
+        std::copy(rPacket->frameData + headerSize + *pPayloadDataPosition,
+                  rPacket->frameData + headerSize + *pPayloadDataPosition + lEmbeddedHeader.size,
                   embeddedData.begin());
         pEmbeddedDataList->emplace_back(embeddedData);
         lMoreData = lEmbeddedHeader.embeddedFrameType & 0x80;
@@ -900,6 +900,7 @@ size_t ElasticFrameProtocol::geType1Size() {
 size_t ElasticFrameProtocol::geType2Size() {
     return sizeof(ElasticFrameType2);
 }
+
 
 
 

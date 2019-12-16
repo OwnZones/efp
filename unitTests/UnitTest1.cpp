@@ -45,35 +45,35 @@ bool UnitTest1::startUnitTest() {
     std::vector<uint8_t> mydata;
     uint8_t streamID=1;
     myEFPReciever = new (std::nothrow) ElasticFrameProtocol;
-    myEFPPacker = new (std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameProtocolModeNamespace::packer);
+    myEFPPacker = new (std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameProtocolModeNamespace::sender);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;
         if (myEFPPacker) delete myEFPPacker;
         return false;
     }
     myEFPPacker->sendCallback = std::bind(&UnitTest1::sendData, this, std::placeholders::_1);
-    myEFPReciever->recieveCallback = std::bind(&UnitTest1::gotData, this, std::placeholders::_1, std::placeholders::_2,
+    myEFPReciever->receiveCallback = std::bind(&UnitTest1::gotData, this, std::placeholders::_1, std::placeholders::_2,
                                               std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7);
-    myEFPReciever->startUnpacker(5, 2);
+    myEFPReciever->startReceiver(5, 2);
     mydata.resize(MTU - myEFPPacker->geType2Size());
     unitTestActive = true;
     result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::adts,1,2,streamID,NO_FLAGS);
     if (result != ElasticFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method. Error-> " << signed(result)
                   << std::endl;
-        myEFPReciever->stopUnpacker();
+        myEFPReciever->stopReceiver();
         delete myEFPReciever;
         delete myEFPPacker;
         return false;
     }
 
     if (waitForCompletion()){
-        myEFPReciever->stopUnpacker();
+        myEFPReciever->stopReceiver();
         delete myEFPReciever;
         delete myEFPPacker;
         return false;
     } else {
-        myEFPReciever->stopUnpacker();
+        myEFPReciever->stopReceiver();
         delete myEFPReciever;
         delete myEFPPacker;
         return true;

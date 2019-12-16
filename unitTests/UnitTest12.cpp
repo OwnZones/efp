@@ -21,7 +21,7 @@ void UnitTest12::sendData(const std::vector<uint8_t> &subPacket) {
                 std::vector<std::vector<uint8_t>> unitTestsSavedData2DLocal=unitTestsSavedData3D[item-1];
                 for (int fragment=unitTestsSavedData2DLocal.size();fragment > 0;fragment--) {
                     if (item != 3) {
-                        info =myEFPReciever->unpack(unitTestsSavedData2DLocal[fragment-1],0);
+                        info =myEFPReciever->receiveFragment(unitTestsSavedData2DLocal[fragment-1],0);
                     }
                 }
             }
@@ -133,16 +133,16 @@ bool UnitTest12::startUnitTest() {
     std::vector<uint8_t> mydata;
     uint8_t streamID=1;
     myEFPReciever = new (std::nothrow) ElasticFrameProtocol();
-    myEFPPacker = new (std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameProtocolModeNamespace::packer);
+    myEFPPacker = new (std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameProtocolModeNamespace::sender);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;
         if (myEFPPacker) delete myEFPPacker;
         return false;
     }
     myEFPPacker->sendCallback = std::bind(&UnitTest12::sendData, this, std::placeholders::_1);
-    myEFPReciever->recieveCallback = std::bind(&UnitTest12::gotData, this, std::placeholders::_1, std::placeholders::_2,
+    myEFPReciever->receiveCallback = std::bind(&UnitTest12::gotData, this, std::placeholders::_1, std::placeholders::_2,
                                               std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7);
-    myEFPReciever->startUnpacker(5, 2);
+    myEFPReciever->startReceiver(5, 2);
     mydata.clear();
     unitTestsSavedData2D.clear();
     unitTestsSavedData3D.clear();
@@ -158,7 +158,7 @@ bool UnitTest12::startUnitTest() {
             std::cout << "Unit test number: " << unsigned(activeUnitTest)
                       << " Failed in the packAndSend method. Error-> " << signed(result)
                       << std::endl;
-            myEFPReciever->stopUnpacker();
+            myEFPReciever->stopReceiver();
             delete myEFPReciever;
             delete myEFPPacker;
             return false;
@@ -166,12 +166,12 @@ bool UnitTest12::startUnitTest() {
     }
 
     if (waitForCompletion()){
-        myEFPReciever->stopUnpacker();
+        myEFPReciever->stopReceiver();
         delete myEFPReciever;
         delete myEFPPacker;
         return false;
     } else {
-        myEFPReciever->stopUnpacker();
+        myEFPReciever->stopReceiver();
         delete myEFPReciever;
         delete myEFPPacker;
         return true;

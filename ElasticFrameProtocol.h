@@ -1,5 +1,5 @@
 //
-// Created by Anders Cedronius on 2019-11-11.
+// Created by UnitX on 2019-11-11.
 //
 
 //Prefixes used
@@ -8,7 +8,6 @@
 //r reference (&)
 //h part of header
 //l local scope
-
 
 #ifndef EFP_ELASTICFRAMEPROTOCOL_H
 #define EFP_ELASTICFRAMEPROTOCOL_H
@@ -47,17 +46,17 @@ namespace ElasticFrameContentNamespace {
         unknown,                //Standard                      //code
         privateData,            //Any user defined format       //USER (not needed)
         adts,                   //Mpeg-4 AAC ADTS framing       //ADTS (not needed)
-        mpegts,                 //ITU-T H.222 188byte TS        //TSDT (not needed)
-        mpegpes,                //ITU-T H.222 PES packets       //MPES (not needed)
+        mpegTS,                 //ITU-T H.222 188byte TS        //TSDT (not needed)
+        mpegPES,                //ITU-T H.222 PES packets       //MPES (not needed)
         jpeg2000,               //ITU-T T.800 Annex M           //J2KV (not needed)
         jpeg,                   //ITU-T.81                      //JPEG (not needed)
-        jpegxs,                 //ISO/IEC 21122-3               //JPXS (not needed)
-        pcmaudio,               //AES-3 framing                 //AES3 (not needed)
-        ndi,                    //*TBD*                         //NNDI (not needed)
+        jpegXS,                 //ISO/IEC 21122-3               //JPXS (not needed)
+        pcmAudio,               //AES-3 framing                 //AES3 (not needed)
+        NDI,                    //*TBD*                         //NNDI (not needed)
 
         //Formats defined below (MSB='1') must also use 'code' to define the data format in the superframe
 
-        didsdid=0x80,           //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
+        didSdid=0x80,           //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
         sdi,                    //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
         h264,                   //ITU-T H.264                   //ANXB = Annex B framing / AVCC = AVCC framing
         h265                    //ITU-T H.265                   //ANXB = Annex B framing / AVCC = AVCC framing
@@ -68,7 +67,7 @@ namespace ElasticFrameContentNamespace {
     enum ElasticFrameEmbeddedContentDefines : uint8_t {
         illegal,                //may not be used
         embeddedPrivateData,    //private data
-        h222pmt,                //pmt from h222 pids should be trunkated to uint8_t leaving the LSB bits only then map to streams
+        h222PMT,                //pmt from h222 pids should be truncated to uint8_t leaving the LSB bits only then map to streams
         mp4FragBox,             //All boxes from a mp4 fragment excluding the payload
         lastEmbeddedContent = 0x80
         //defines below here do not allow following embedded data.
@@ -87,36 +86,36 @@ namespace ElasticFrameContentNamespace {
 // Positive numbers are informative
 namespace ElasticFrameMessagesNamespace {
     enum ElasticFrameMessagesDefines : int16_t {
-        tooLargeFrame = -10000,     //The frame is to large for EFP packer to handle
+        tooLargeFrame = -10000,     //The frame is to large for EFP sender to handle
         tooLargeEmbeddedData,       //The embedded data frame is too large.
-        unknownFrametype,           //The frame type is unknown by EFP unpacker
-        framesizeMismatch,          //The unpacker recieved data less than the header size
-        internalCalculationError,   //The packer encountered a condition it can't handle
-        endOfPacketError,           //The unpacker recieved a type2 fragment not saying it was the last
-        bufferOutOfBounds,          //The unpackers circular buffer has wrapped around and all data in the buffer is from now untrusted also data prior to this may have been wrong.
-                                    //This error can be triggered if there is a super high data rate data coming in with a large gap/loss of the incomming fragments in the flow
+        unknownFrameType,           //The frame type is unknown by EFP receiver
+        frameSizeMismatch,          //The receiver received data less than the header size
+        internalCalculationError,   //The sender encountered a condition it can't handle
+        endOfPacketError,           //The receiver received a type2 fragment not saying it was the last
+        bufferOutOfBounds,          //The receiver circular buffer has wrapped around and all data in the buffer is from now untrusted also data prior to this may have been wrong.
+                                    //This error can be triggered if there is a super high data rate data coming in with a large gap/loss of the incoming fragments in the flow
         bufferOutOfResources,       //This error is indicating there are no more buffer resources. In the unlikely event where all frames miss fragment(s) and the timeout is set high
-                                    //then broken superframes will be buffered and new incoming data will claim buffers. When there are no more buffers to claim this error will be triggered.
+                                    //then broken superFrames will be buffered and new incoming data will claim buffers. When there are no more buffers to claim this error will be triggered.
         reservedPTSValue,           //UINT64_MAX is a EFP reserved value
         reservedCodeValue,          //UINT32_MAX is a EFP reserved value
         reservedStreamValue,        //0 is a EFP reserved value for signaling manifests
         memoryAllocationError,      //Failed allocating system memory. This is fatal and results in unknown behaviour.
         illegalEmbeddedData,        //illegal embedded data
         type1And3SizeError,         //Type1 and Type3 must have the same header size
-        wrongMode,                  //mode is set to unpacker when using the class as packer or the other way around
-        unpackerNotStarted,         //The EFP unpacker is not running
+        wrongMode,                  //mode is set to receiver when using the class as sender or the other way around
+        receiverNotRunning,         //The EFP receiver is not running
 
 
         noError = 0,
 
         notImplemented,             //feature/function/level/method/system aso. not implemented.
-        duplicatePacketRecieved,    //If the underlying infrastructure is handing EFP duplicate segments the second packet of the duplicate will generate this error if the
-                                    //the superframe is still not delivered to the host system. if it has then tooOldFragment will be returned instead.
-        tooOldFragment,             //if the superframe has been delivered 100% complete or fragments of it due to a timeout and a fragment belongning to the superframe arrives then it's
+        duplicatePacketReceived,    //If the underlying infrastructure is handing EFP duplicate segments the second packet of the duplicate will generate this error if the
+                                    //the superFrame is still not delivered to the host system. if it has then tooOldFragment will be returned instead.
+        tooOldFragment,             //if the superFrame has been delivered 100% complete or fragments of it due to a timeout and a fragment belonging to the superFrame arrives then it's
                                     //discarded and the tooOldFragment is triggered.
-        unpackerAlreadyStarted,     //The EFP unpacker is already started no need to start it again. (Stop it and start it again to change parameters)
-        failedStoppingUnpacker,     //The EFP unpacker failed stopping it's resources.
-        parameterError,             //When starting the unpacker the parameters given where not valid.
+        receiverAlreadyStarted,     //The EFP receiver is already started no need to start it again. (Stop it and start it again to change parameters)
+        failedStoppingReceiver,     //The EFP receiver failed stopping it's resources.
+        parameterError,             //When starting the receiver the parameters given where not valid.
         type0Frame                  //Type0 frame
     };
 }
@@ -125,8 +124,8 @@ namespace ElasticFrameMessagesNamespace {
 namespace ElasticFrameProtocolModeNamespace {
     enum ElasticFrameProtocolModeDefines : uint8_t {
         unknown,
-        packer,
-        unpacker,
+        sender,
+        receiver,
     };
 }
 
@@ -142,34 +141,34 @@ public:
     class AllignedFrameData {
     public:
         size_t frameSize = 0;           //Number of bytes in frame
-        uint8_t* framedata = nullptr;   //recieved frame data
+        uint8_t* frameData = nullptr;   //received frame data
 
         AllignedFrameData(const AllignedFrameData&) = delete;
         AllignedFrameData & operator=(const AllignedFrameData &) = delete;
 
         AllignedFrameData(size_t memAllocSize) {
-            posix_memalign((void**)&framedata, 32, memAllocSize);   //32 byte memory alignment for AVX2 processing //Winboze needs some other code.
-            if (framedata) frameSize = memAllocSize;
+            posix_memalign((void**)&frameData, 32, memAllocSize);   //32 byte memory alignment for AVX2 processing //Winboze needs some other code.
+            if (frameData) frameSize = memAllocSize;
         }
 
         virtual ~AllignedFrameData() {
-            //Free if ever allocated
-            if (framedata) free(framedata);
+            //Free if allocated
+            if (frameData) free(frameData);
         }
     };
 
     using pFramePtr = std::shared_ptr<AllignedFrameData>;
 
-    ElasticFrameProtocol(uint16_t setMTU = 0, ElasticFrameMode mode = ElasticFrameMode::unpacker);
+    ElasticFrameProtocol(uint16_t setMTU = 0, ElasticFrameMode mode = ElasticFrameMode::receiver);
     virtual ~ElasticFrameProtocol();
     //Segment and send
     ElasticFrameMessages packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
     std::function<void(const std::vector<uint8_t> &rSubPacket)> sendCallback = nullptr;
     //Create data from segments
-    ElasticFrameMessages startUnpacker(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster);
-    ElasticFrameMessages stopUnpacker();
-    ElasticFrameMessages unpack(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
-    std::function<void(ElasticFrameProtocol::pFramePtr &rPacket, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags)> recieveCallback = nullptr;
+    ElasticFrameMessages startReceiver(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster);
+    ElasticFrameMessages stopReceiver();
+    ElasticFrameMessages receiveFragment(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
+    std::function<void(ElasticFrameProtocol::pFramePtr &rPacket, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags)> receiveCallback = nullptr;
 
     //Delete copy and move constructors and assign operators
     ElasticFrameProtocol(ElasticFrameProtocol const &) = delete;              // Copy construct
@@ -205,7 +204,7 @@ private:
         uint32_t mCode = UINT32_MAX;
         uint8_t mStream;
         uint8_t mFlags;
-        std::bitset<UINT16_MAX> mHaveRecievedPacket;
+        std::bitset<UINT16_MAX> mHaveReceivedPacket;
         pFramePtr mBucketData = nullptr;
     };
     //Bucket ----- END ------
@@ -223,28 +222,28 @@ private:
     ElasticFrameMessages unpackType1(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
     ElasticFrameMessages unpackType2LastFrame(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
     ElasticFrameMessages unpackType3(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
-    void unpackerWorker(uint32_t timeout);
+    void receiverWorker(uint32_t timeout);
     uint64_t superFrameRecalculator(uint16_t superFrame);
     //Private methods ----- END ------
 
     //Internal lists and variables ----- START ------
     Stream mStreams[UINT8_MAX][UINT8_MAX];
     Bucket mBucketList[CIRCULAR_BUFFER_SIZE + 1]; //Internal queue
-    uint32_t mBucketTimeout = 0; //time out passed to reciever
-    uint32_t mHeadOfLineBlockingTimeout = 0; //HOL time out passed to reciever
+    uint32_t mBucketTimeout = 0; //time out passed to receiver
+    uint32_t mHeadOfLineBlockingTimeout = 0; //HOL time out passed to receiver
     std::mutex mNetMtx; //Mutex protecting the queue
-    uint32_t mCurrentMTU = 0; //current MTU used by the packer
+    uint32_t mCurrentMTU = 0; //current MTU used by the sender
     //various counters to keep track of the different frames
     uint16_t mSuperFrameNoGenerator = 0;
-    uint16_t mOldSuperframeNumber = 0;
+    uint16_t mOldSuperFrameNumber = 0;
     uint64_t mSuperFrameRecalc = 0;
     bool mSuperFrameFirstTime = true;
-    //Reciever thread management
+    //Receiver thread management
     std::atomic_bool mIsThreadActive;
     std::atomic_bool mThreadActive;
     //Mutex for thread safety
-    std::mutex mPackkMtx; //Mutex protecting the pack part
-    std::mutex mUnpackMtx; //Mutex protecting the unpack part
+    std::mutex mSendMtx; //Mutex protecting the pack part
+    std::mutex mReceiveMtx; //Mutex protecting the unpack part
     ElasticFrameMode mCurrentMode = ElasticFrameMode::unknown;
     //Internal lists and variables ----- END ------
 };
