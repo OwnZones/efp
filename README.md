@@ -2,19 +2,35 @@
 
 # ElasticFrameProtocol
 
-TODO: Write a project description
+The ElasticFrameProtocol is acting as a bridge between elementary data and the underlying transport protocol.
+
+```
+---------------------------------------------------------   /\
+| Data type 1 | Data type 2 | Data type 3 | Data type 4 |  /  \
+---------------------------------------------------------   ||
+|                   ElasticFrameProtocol                |   ||
+---------------------------------------------------------   ||
+| Network layer: UDP, TCP, SRT, RIST aso.               |  \  /
+---------------------------------------------------------   \/
+
+```
+
+The elasticity comes from the protocols ability to adapt to incoming frame size, type, number of concurrent streams and underlying infrastructure. Due to it’s elastic behavior the layer between the transport layer and producers/consumers of the data can be kept thin without driving overhead, complexity and delay. 
+
 
 ## Installation
 
 Requires cmake version >= **3.10** and **C++11**
 
-###Release
+**Release:**
+
 ```sh
 cmake -DCMAKE_BUILD_TYPE=Release
 make
 ```
 
-###Debug
+***Debug:***
+
 ```sh
 cmake -DCMAKE_BUILD_TYPE=Debug
 make
@@ -36,19 +52,19 @@ The static EFP library
 
 By us on MacOS using C-Lion.
 
-Pleas help us build other platforms. 
+Please help us build other platforms. 
 
 ---
 
 
 ## Usage
 
-The EFP class can be made a reciever or sender. This is configured during creation as decribed below.
+The EFP class/library can be made a reciever or sender. This is configured during creation as decribed below.
 
-##Sender
+**Sender:**
 
 ```cpp
-// The callback function referenced as 'data sender'
+// The callback function referenced as 'sendCallback'
 void sendData(const std::vector<uint8_t> &subPacket) {
 //send the subPacket data 
 //UDP.send(subPacket);
@@ -76,11 +92,11 @@ myEFPSender.packAndSend(myData, ElasticFrameContent::adts, 0, 'ANXB', 2, NO_FLAG
 
 ```
 
-##Reciever
+**Reciever:**
 
 ```cpp
 
-// The callback function referenced as 'data reciever'
+// The callback function referenced as 'receiveCallback'
 // This callback will be called from a separate thread owned by EFP
 // rPacket contains a pointer to the data and the size of the data
 // content is containing the content descriptor
@@ -131,7 +147,16 @@ myEFPReceiver.stopReciever();
 
 ## History
 
-TODO: Write history
+When working with media workflows both live and non-live we use different framing protocols such as MP4 and MPEG-TS, often transported over HTTP (TCP). Some of the protocols used for media transport are also tied to a certain underlying transport mechanism (RTMP, HLS, WebRTC…) , some are agnostic (MP4, MPEG-TS…). The protocols tied to an underlying transport mechanism forces the user to the behavior of that protocol’s properties, for example TCP when using RTMP. 
+If you use MP4 as framing that is agnostic to the underlying transport and then select a protocol that delivers the data with low latency where you might lose data and the delivery might be out of order there is no mechanism to correct for that in the MP4-box domain. 
+
+MPEG-TS is a common multiplexing standard for media. MPEG-TS on the other hand was designed in the mid 90’s for transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems present in the 1990’s world. 
+However, MPEG-TS has not changed since then, and do not match modern IP protocols MTU well. Some more modern underlying transport protocols also loses data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behavior.
+
+Now with the rise of protocols such as RIST and SRT we wanted to fully utilize the transport containers with as little overhead as possible, we also implemented a thin network adaptation layer so that we can easily use the different transport protocols where they make most sense and maintain a well-defined data delivery to and from the data producers/consumers.
+
+That’s why we developed the ElasticFrameProtocol. Please feel free to clone/fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks.
+
 
 ## Credits
 
