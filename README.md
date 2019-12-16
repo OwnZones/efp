@@ -108,7 +108,7 @@ myEFPSender.packAndSend(myData, ElasticFrameContent::adts, 0, 'ANXB', 2, NO_FLAG
 void gotData(ElasticFrameProtocol::pFramePtr &rPacket, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
 // use the data in your application
 // if you spend too long time here you log the queue between EFP and you. This can lead to data loss
-if EFP runs out of buffer space. 
+//if EFP runs out of buffer space. 
 }
 
 // Create your receiver
@@ -151,11 +151,13 @@ When working with media workflows both live and non-live we use different framin
 If you use MP4 as framing that is agnostic to the underlying transport and then select a protocol that delivers the data with low latency where you might lose data and the delivery might be out of order there is no mechanism to correct for that in the MP4-box domain. 
 
 MPEG-TS is a common multiplexing standard for media. MPEG-TS on the other hand was designed in the mid 90’s for transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems present in the 1990’s world. 
-However, MPEG-TS has not changed since then, and do not match modern IP protocols MTU well. Some more modern underlying transport protocols also loses data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behavior.
+However, MPEG-TS has not changed since then, and do not match modern IP protocols MTU well and has a high payload overhead. Some more modern underlying transport protocols also loses data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behavior.
 
-Now with the rise of protocols such as RIST and SRT we wanted to fully utilize the transport containers with as little overhead as possible, we also implemented a thin network adaptation layer so that we can easily use the different transport protocols where they make most sense and maintain a well-defined data delivery to and from the data producers/consumers.
+A common solution to cover for a protocols shortcoming is to stack protocols and framing structures on top of each other. That is one solution, however it drives complexity to the solution, ads overhead and sometimes delay. Many implementations are closed source and if not they could be of license types not wanted in your project.
 
-That’s why we developed the ElasticFrameProtocol. Please feel free to clone/fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks.
+Now with the rise of protocols such as RIST and SRT we wanted to fully utilize the transport containers with as little overhead as possible, we also implemented a thin network adaptation layer so that we can easily use the different transport protocols where they make most sense and maintain a well-defined data delivery pipeline to and from the data producers/consumers.
+
+That’s why we developed the ElasticFrameProtocol. Please feel free to clone / fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks.
 
 
 ## Credits

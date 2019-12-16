@@ -96,6 +96,7 @@ struct ElasticFrameType3 {
     uint16_t hType1PacketSize = 0;
     uint16_t hOfFragmentNo = 0;
 };
+
 //Packet header part ----- END ------
 
 
