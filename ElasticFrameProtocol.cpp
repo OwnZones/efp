@@ -156,13 +156,13 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
     // A bucket contains the frame data -> This is the internal data format
     // |bucket start|information about the frame|bucket end| in the bucket there is a pointer to the actual data named framePtr this is the structure there ->
     // linear array of -> |fragment start|fragment data|fragment end|
-    // insertDataPointer will point to the fragment start above and fill with the incomming data
+    // lInsertDataPointer will point to the fragment start above and fill with the incomming data
 
-    size_t insertDataPointer = pThisBucket->mFragmentSize * lType1Frame.hFragmentNo;
+    size_t lInsertDataPointer = pThisBucket->mFragmentSize * lType1Frame.hFragmentNo;
 
     std::copy(rSubPacket.begin() + sizeof(ElasticFrameType1),
               rSubPacket.end(),
-              pThisBucket->mBucketData->frameData + insertDataPointer);
+              pThisBucket->mBucketData->frameData + lInsertDataPointer);
 
     return ElasticFrameMessages::noError;
 }
@@ -357,12 +357,12 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
     // A bucket contains the frame data -> This is the internal data format
     // |bucket start|information about the frame|bucket end| in the bucket there is a pointer to the actual data named framePtr this is the structure there ->
     // linear array of -> |fragment start|fragment data|fragment end|
-    // insertDataPointer will point to the fragment start above and fill with the incomming data
+    // lInsertDataPointer will point to the fragment start above and fill with the incomming data
 
-    size_t insertDataPointer = pThisBucket->mFragmentSize * lThisFragmentNo;
+    size_t lInsertDataPointer = pThisBucket->mFragmentSize * lThisFragmentNo;
     std::copy(rSubPacket.begin() + sizeof(ElasticFrameType3),
               rSubPacket.end(),
-              pThisBucket->mBucketData->frameData + insertDataPointer);
+              pThisBucket->mBucketData->frameData + lInsertDataPointer);
     return ElasticFrameMessages::noError;
 }
 
@@ -857,7 +857,7 @@ ElasticFrameMessages ElasticFrameProtocol::extractEmbeddedData(ElasticFrameProto
                                                                  std::vector<uint8_t> *pDataContent,
                                                                  size_t *pPayloadDataPosition) {
     bool lMoreData = true;
-    size_t headerSize = sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader);
+    size_t lHeaderSize = sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader);
     do {
         ElasticFrameContentNamespace::ElasticEmbeddedHeader lEmbeddedHeader =
                 *(ElasticFrameContentNamespace::ElasticEmbeddedHeader *) (rPacket->frameData + *pPayloadDataPosition);
@@ -865,13 +865,13 @@ ElasticFrameMessages ElasticFrameProtocol::extractEmbeddedData(ElasticFrameProto
             return ElasticFrameMessages::illegalEmbeddedData;
         }
         pDataContent->emplace_back((lEmbeddedHeader.embeddedFrameType & 0x7f));
-        std::vector<uint8_t> embeddedData(lEmbeddedHeader.size);
-        std::copy(rPacket->frameData + headerSize + *pPayloadDataPosition,
-                  rPacket->frameData + headerSize + *pPayloadDataPosition + lEmbeddedHeader.size,
-                  embeddedData.begin());
-        pEmbeddedDataList->emplace_back(embeddedData);
+        std::vector<uint8_t> lEmbeddedData(lEmbeddedHeader.size);
+        std::copy(rPacket->frameData + lHeaderSize + *pPayloadDataPosition,
+                  rPacket->frameData + lHeaderSize + *pPayloadDataPosition + lEmbeddedHeader.size,
+                  lEmbeddedData.begin());
+        pEmbeddedDataList->emplace_back(lEmbeddedData);
         lMoreData = lEmbeddedHeader.embeddedFrameType & 0x80;
-        *pPayloadDataPosition += (lEmbeddedHeader.size + headerSize);
+        *pPayloadDataPosition += (lEmbeddedHeader.size + lHeaderSize);
         if (*pPayloadDataPosition >= rPacket->frameSize) {
             return ElasticFrameMessages::bufferOutOfBounds;
         }

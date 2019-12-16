@@ -68,8 +68,8 @@ The EFP class/library can be made a reciever or sender. This is configured durin
 ```cpp
 // The callback function referenced as 'sendCallback'
 void sendData(const std::vector<uint8_t> &subPacket) {
-//send the subPacket data 
-//UDP.send(subPacket);
+// Send the subPacket data 
+// UDP.send(subPacket);
 }
 
 // The data to be sent
@@ -115,9 +115,9 @@ void gotData(ElasticFrameProtocol::pFramePtr &rPacket,
 			uint8_t stream,
 			uint8_t flags
 			) {
-			// use the data in your application
-			// if you spend too long time here you log the queue between EFP and you. This can lead to data loss
-			//if EFP runs out of buffer space. 
+			// Use the data in your application
+			// If you spend too long time here you log the queue between EFP and you. This can lead to data loss
+			// if EFP runs out of buffer space. 
 }
 
 // Create your receiver
@@ -139,7 +139,7 @@ myEFPReceiver.startReceiver(5, 2);
 // Receive a EFP fragment
 myEFPReceiver.receiveFragment(subPacket,0);
 
-//When done stop the worker
+// When done stop the worker
 myEFPReceiver.stopReciever();
 
 ```
