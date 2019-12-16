@@ -90,7 +90,7 @@ myEFPSender.sendCallback = std::bind(&sendData, std::placeholders::_1);
 // See the header file detailing what CODE should be set to
 // param5 = Stream number (uint8_t) a unique value for that EFP-Stream
 // param6 = FLAGS (used for various signaling in the protocol) 
-myEFPSender.packAndSend(myData, ElasticFrameContent::adts, 0, 'ANXB', 2, NO_FLAGS);
+myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 'ANXB', 2, NO_FLAGS);
 
 ```
 
@@ -107,10 +107,17 @@ myEFPSender.packAndSend(myData, ElasticFrameContent::adts, 0, 'ANXB', 2, NO_FLAG
 // code contains the code sent (if used)
 // stream is the stream number to associate to the data
 // flags contains the flags used by the superFrame
-void gotData(ElasticFrameProtocol::pFramePtr &rPacket, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
-// use the data in your application
-// if you spend too long time here you log the queue between EFP and you. This can lead to data loss
-//if EFP runs out of buffer space. 
+void gotData(ElasticFrameProtocol::pFramePtr &rPacket, 
+			ElasticFrameContent content,
+			bool broken,
+			uint64_t pts,
+			uint32_t code,
+			uint8_t stream,
+			uint8_t flags
+			) {
+			// use the data in your application
+			// if you spend too long time here you log the queue between EFP and you. This can lead to data loss
+			//if EFP runs out of buffer space. 
 }
 
 // Create your receiver
@@ -170,11 +177,10 @@ Please read -> **ElasticFrameProtocol.pdf** for more information.
 ## Next steps
 
 * Add version information
-* Comment code
 * Fix lock in worker thread callback
 * Compensate for timing missmatch in worker-thread
 * Write examples
-* Write unit-tests
+* Write more unit-tests
 
 ## Credits
 
