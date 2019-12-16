@@ -1,5 +1,5 @@
 //
-// Created by Anders Cedronius on 2019-11-11.
+// Created by UnitX Edgeware AB 2019
 //
 
 #include "ElasticFrameProtocol.h"

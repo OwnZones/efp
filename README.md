@@ -17,6 +17,8 @@ The ElasticFrameProtocol is acting as a bridge between elementary data and the u
 
 The elasticity comes from the protocols ability to adapt to incoming frame size, type, number of concurrent streams and underlying infrastructure. Due to it’s elastic behavior the layer between the transport layer and producers/consumers of the data can be kept thin without driving overhead, complexity and delay. 
 
+Please read -> **ElasticFrameProtocol.pdf** for more information.
+
 
 ## Installation
 
@@ -159,6 +161,20 @@ Now with the rise of protocols such as RIST and SRT we wanted to fully utilize t
 
 That’s why we developed the ElasticFrameProtocol. Please feel free to clone / fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks.
 
+---
+
+Please read -> **ElasticFrameProtocol.pdf** for more information.
+
+---
+
+## Next steps
+
+* Add version information
+* Comment code
+* Fix lock in worker thread callback
+* Compensate for timing missmatch in worker-thread
+* Write examples
+* Write unit-tests
 
 ## Credits
 
