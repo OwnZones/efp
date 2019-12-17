@@ -19,6 +19,11 @@
 
 #include <iostream>
 
+void gotData(ElasticFrameProtocol::pFramePtr &frame) {
+
+}
+
+
 int main() {
 /*
     for (int i=0;i<1000;i++) {
@@ -31,7 +36,6 @@ int main() {
 
     int returnCode=EXIT_SUCCESS;
 
-    
     UnitTest1 unitTest1;
     if (!unitTest1.startUnitTest()) {
         std::cout << "Unit test 1 failed" << std::endl;
