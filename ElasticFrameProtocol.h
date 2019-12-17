@@ -28,6 +28,7 @@
 #include <atomic>
 #include <algorithm>
 #include <deque>
+#include <condition_variable>
 
 ///Enable or disable the APIs used by the unit tests
 #define UNIT_TESTS

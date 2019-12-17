@@ -176,6 +176,7 @@ Please read -> **ElasticFrameProtocol.pdf** for more information.
 
 ## Next steps
 
+* DTS has been requested.. Is it needed? Should we implement it?
 * Fix lock in worker thread callback WIP
 * Compensate for timing missmatch in worker-thread
 * Write examples
