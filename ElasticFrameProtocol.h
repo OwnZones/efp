@@ -27,6 +27,7 @@
 #include <mutex>
 #include <atomic>
 #include <algorithm>
+#include <deque>
 
 ///Enable or disable the APIs used by the unit tests
 #define UNIT_TESTS
@@ -38,7 +39,6 @@
 #define NO_FLAGS 0b00000000
 #define INLINE_PAYLOAD 0b00010000
 
-//FIXME - Not used
 #define EFP_MAJOR_VERSION 0
 #define EFP_MINOR_VERSION 1
 
@@ -49,19 +49,19 @@ namespace ElasticFrameContentNamespace {
     //Payload data defines ----- START ------
     enum ElasticFrameContentDefines : uint8_t {
         unknown,                //Standard                      //code
-        privateData,            //Any user defined format       //USER (not needed)
+        privatedata,            //Any user defined format       //USER (not needed)
         adts,                   //Mpeg-4 AAC ADTS framing       //ADTS (not needed)
-        mpegTS,                 //ITU-T H.222 188byte TS        //TSDT (not needed)
-        mpegPES,                //ITU-T H.222 PES packets       //MPES (not needed)
+        mpegts,                 //ITU-T H.222 188byte TS        //TSDT (not needed)
+        mpegpes,                //ITU-T H.222 PES packets       //MPES (not needed)
         jpeg2000,               //ITU-T T.800 Annex M           //J2KV (not needed)
         jpeg,                   //ITU-T.81                      //JPEG (not needed)
-        jpegXS,                 //ISO/IEC 21122-3               //JPXS (not needed)
-        pcmAudio,               //AES-3 framing                 //AES3 (not needed)
-        NDI,                    //*TBD*                         //NNDI (not needed)
+        jpegxs,                 //ISO/IEC 21122-3               //JPXS (not needed)
+        pcmaudio,               //AES-3 framing                 //AES3 (not needed)
+        ndi,                    //*TBD*                         //NNDI (not needed)
 
         //Formats defined below (MSB='1') must also use 'code' to define the data format in the superframe
 
-        didSdid = 0x80,           //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
+        didsdid = 0x80,           //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
         sdi,                    //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
         h264,                   //ITU-T H.264                   //ANXB = Annex B framing / AVCC = AVCC framing
         h265                    //ITU-T H.265                   //ANXB = Annex B framing / AVCC = AVCC framing
@@ -71,10 +71,10 @@ namespace ElasticFrameContentNamespace {
     //Embedded data defines ----- START ------
     enum ElasticFrameEmbeddedContentDefines : uint8_t {
         illegal,                //may not be used
-        embeddedPrivateData,    //private data
-        h222PMT,                //pmt from h222 pids should be truncated to uint8_t leaving the LSB bits only then map to streams
-        mp4FragBox,             //All boxes from a mp4 fragment excluding the payload
-        lastEmbeddedContent = 0x80
+        embeddedprivatedata,    //private data
+        h222pmt,                //pmt from h222 pids should be truncated to uint8_t leaving the LSB bits only then map to streams
+        mp4fragbox,             //All boxes from a mp4 fragment excluding the payload
+        lastembeddedcontent = 0x80
         //defines below here do not allow following embedded data.
     };
 
@@ -156,35 +156,44 @@ using ElasticFrameMode = ElasticFrameProtocolModeNamespace::ElasticFrameProtocol
 class ElasticFrameProtocol {
 public:
     /**
-    * \class AllignedFrameData
+    * \class SuperFrame
     *
     * \brief Reserve frame-data aligned 32-byte addresses in memory
     */
-    class AllignedFrameData {
+    class SuperFrame {
     public:
-        size_t frameSize = 0;           //Number of bytes in frame
-        uint8_t *frameData = nullptr;   //received frame data
+        size_t mFrameSize = 0;           // Number of bytes in frame
+        uint8_t *pFrameData = nullptr;   // Received frame data
+        ElasticFrameContent mDataContent = ElasticFrameContent::unknown; // Superframe type
+        bool broken = true;
+        uint64_t pts = UINT64_MAX;
+        uint32_t code = UINT32_MAX;
+        uint8_t stream = 0;
+        uint8_t flags = NO_FLAGS;
 
-        AllignedFrameData(const AllignedFrameData &) = delete;
-        AllignedFrameData &operator=(const AllignedFrameData &) = delete;
+        SuperFrame(const SuperFrame &) = delete;
+        SuperFrame &operator=(const SuperFrame &) = delete;
 
-        AllignedFrameData(size_t memAllocSize) {
-            posix_memalign((void **) &frameData, 32,
+        SuperFrame(size_t memAllocSize) {
+            posix_memalign((void **) &pFrameData, 32,
                            memAllocSize);   //32 byte memory alignment for AVX2 processing //Winboze needs some other code.
-            if (frameData) frameSize = memAllocSize;
+            if (pFrameData) mFrameSize = memAllocSize;
         }
-        virtual ~AllignedFrameData() {
+        virtual ~SuperFrame() {
             //Free if allocated
-            if (frameData) free(frameData);
+            if (pFrameData) free(pFrameData);
         }
     };
 
-    using pFramePtr = std::shared_ptr<AllignedFrameData>;
+    using pFramePtr = std::shared_ptr<SuperFrame>;
 
     ///Constructor
     ElasticFrameProtocol(uint16_t setMTU = 0, ElasticFrameMode mode = ElasticFrameMode::receiver);
     ///Destructor
     virtual ~ElasticFrameProtocol();
+
+    ///Return the version of the current implementation
+    uint16_t getVersion() {return (EFP_MAJOR_VERSION << 8) | EFP_MINOR_VERSION;}
 
     /**
     * Segments data and calls the send callback
@@ -318,42 +327,58 @@ private:
     //Stream list ----- END ------
 
     //Private methods ----- START ------
+
+    // Dummy callback
     void sendData(const std::vector<uint8_t> &rSubPacket);
 
+    // Dummy callback
     void gotData(ElasticFrameProtocol::pFramePtr &rPacket, ElasticFrameContent content, bool broken, uint64_t pts,
                  uint32_t code, uint8_t stream, uint8_t flags);
 
+    // Method dissecting Type1 fragments
     ElasticFrameMessages unpackType1(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
 
+    // Method dissecting Type2 fragments
     ElasticFrameMessages unpackType2LastFrame(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
 
+    // Method dissecting Type3 fragments
     ElasticFrameMessages unpackType3(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
 
+    // The worker thread assembling fragments and delivering the superFrames
     void receiverWorker(uint32_t timeout);
 
-    uint64_t superFrameRecalculator(uint16_t superFrame);
-    //Private methods ----- END ------
+    void deliveryWorker();
 
-    //Internal lists and variables ----- START ------
-    Stream mStreams[UINT8_MAX][UINT8_MAX];
-    Bucket mBucketList[CIRCULAR_BUFFER_SIZE + 1]; //Internal queue
-    uint32_t mBucketTimeout = 0; //time out passed to receiver
-    uint32_t mHeadOfLineBlockingTimeout = 0; //HOL time out passed to receiver
-    std::mutex mNetMtx; //Mutex protecting the queue
+    // Recalculate the 16-bit vector to a 64-bit vector
+    uint64_t superFrameRecalculator(uint16_t superFrame);
+    // Private methods ----- END ------
+
+    // Internal lists and variables ----- START ------
+    Stream mStreams[UINT8_MAX][UINT8_MAX]; //EFP-Stream information store
+    Bucket mBucketList[CIRCULAR_BUFFER_SIZE + 1]; // Internal queue where all fragments are stored and superframes delivered from
+    uint32_t mBucketTimeout = 0; // Time out passed to receiver
+    uint32_t mHeadOfLineBlockingTimeout = 0; // HOL time out passed to receiver
+    std::mutex mNetMtx; //Mutex protecting the bucket queue
     uint32_t mCurrentMTU = 0; //current MTU used by the sender
-    //various counters to keep track of the different frames
+    // Various counters to keep track of the different frames
     uint16_t mSuperFrameNoGenerator = 0;
     uint16_t mOldSuperFrameNumber = 0;
     uint64_t mSuperFrameRecalc = 0;
     bool mSuperFrameFirstTime = true;
-    //Receiver thread management
+    // Receiver thread management
     std::atomic_bool mIsThreadActive;
     std::atomic_bool mThreadActive;
-    //Mutex for thread safety
-    std::mutex mSendMtx; //Mutex protecting the pack part
-    std::mutex mReceiveMtx; //Mutex protecting the unpack part
+    // Mutex for thread safety
+    std::mutex mSendMtx; //Mutex protecting the send part
+    std::mutex mReceiveMtx; //Mutex protecting the recieve part
+    // Current mode
     ElasticFrameMode mCurrentMode = ElasticFrameMode::unknown;
-    //Internal lists and variables ----- END ------
+    //
+    std::deque<pFramePtr>mSuperFrameQueue;
+    std::mutex mSuperFrameMtx;
+    std::condition_variable mSuperFrameDeliveryConditionVariable;
+    bool mSuperFrameReady = false;
+    // Internal lists and variables ----- END ------
 };
 
 #endif //EFP_ELASTICFRAMEPROTOCOL_H

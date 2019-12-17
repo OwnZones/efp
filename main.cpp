@@ -31,6 +31,7 @@ int main() {
 
     int returnCode=EXIT_SUCCESS;
 
+    
     UnitTest1 unitTest1;
     if (!unitTest1.startUnitTest()) {
         std::cout << "Unit test 1 failed" << std::endl;

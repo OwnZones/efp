@@ -37,7 +37,7 @@ void UnitTest9::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCon
 
     uint8_t vectorChecker = 0;
     for (int x = 0; x < ((MTU - myEFPPacker->geType1Size()) * 5); x++) {
-        if (packet->frameData[x] != vectorChecker++) {
+        if (packet->pFrameData[x] != vectorChecker++) {
 
             unitTestFailed = true;
             unitTestActive = false;

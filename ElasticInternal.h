@@ -52,12 +52,12 @@ struct sortDeliveryOrder
 
 //Type 0,1,2 aso. are static from when defined. For new protocol functions/features add new types.
 //type15 is the maximum type number 4 bits used
-//* - 0x00 private packet.
+//* - 0x00 private fragment
 //* - 0x01 frame is larger than MTU
 //* - 0x02 frame is less than MTU
 //* - 0x03 The reminder of the data does not fit a type2 packet
 //Type1 and Type3 must be the same size
-enum Frametype : uint8_t { //Only the 4 LSB are used!
+enum Frametype : uint8_t { //The 4 LSB are used!
     type0 = 0,
     type1,
     type2,
@@ -82,7 +82,6 @@ struct ElasticFrameType2 {
     ElasticFrameContent hDataContent = ElasticFrameContent::unknown;
     uint16_t hSizeOfData = 0;
     uint16_t hSuperFrameNo = 0;
-    uint16_t hFragmentNo = 0;
     uint16_t hOfFragmentNo = 0;
     uint16_t hType1PacketSize = 0;
     uint64_t hPts = UINT64_MAX;
@@ -96,7 +95,6 @@ struct ElasticFrameType3 {
     uint16_t hType1PacketSize = 0;
     uint16_t hOfFragmentNo = 0;
 };
-
 //Packet header part ----- END ------
 
 

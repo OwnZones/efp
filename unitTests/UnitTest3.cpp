@@ -29,7 +29,7 @@ void UnitTest3::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCon
         unitTestActive = false;
         return;
     }
-    if (packet->frameData[0] != 0xaa) {
+    if (packet->pFrameData[0] != 0xaa) {
         unitTestFailed = true;
         unitTestActive = false;
         return;

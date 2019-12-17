@@ -176,8 +176,7 @@ Please read -> **ElasticFrameProtocol.pdf** for more information.
 
 ## Next steps
 
-* Add version information
-* Fix lock in worker thread callback
+* Fix lock in worker thread callback WIP
 * Compensate for timing missmatch in worker-thread
 * Write examples
 * Write more unit-tests

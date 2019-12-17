@@ -113,8 +113,8 @@ UnitTest16::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameContent
 
     if (!broken) {
         uint8_t vectorChecker = 0;
-        for (int x = 0; x < packet->frameSize; x++) {
-            if (packet->frameData[x] != vectorChecker++) {
+        for (int x = 0; x < packet->mFrameSize; x++) {
+            if (packet->pFrameData[x] != vectorChecker++) {
                 std::cout << "Vector failed for packet " << unsigned(pts) << std::endl;
                 unitTestFailed = true;
                 unitTestActive = false;

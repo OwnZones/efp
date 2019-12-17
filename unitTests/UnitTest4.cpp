@@ -59,7 +59,7 @@ void UnitTest4::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCon
         unitTestActive = false;
         return;
     }
-    if (packet->frameSize != (MTU - myEFPPacker->geType1Size()) + 1) {
+    if (packet->mFrameSize != (MTU - myEFPPacker->geType1Size()) + 1) {
         unitTestFailed = true;
         unitTestActive = false;
         return;

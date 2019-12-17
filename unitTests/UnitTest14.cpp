@@ -60,7 +60,7 @@ void UnitTest14::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCo
         }
 
         for (int x = 0; x<embeddedData.size();x++) {
-            if(embeddedContentFlag[x] == ElasticEmbeddedFrameContent::embeddedPrivateData) {
+            if(embeddedContentFlag[x] == ElasticEmbeddedFrameContent::embeddedprivatedata) {
                 std::vector<uint8_t> thisVector = embeddedData[x];
                 PrivateData myPrivateData = *(PrivateData *) thisVector.data();
                 if (myPrivateData.myPrivateInteger != 10 || myPrivateData.myPrivateUint8_t != 44) {
@@ -77,8 +77,8 @@ void UnitTest14::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCo
         }
 
         uint8_t vectorChecker = 0;
-        for (int x = payloadDataPosition; x < packet->frameSize; x++) {
-            if (packet->frameData[x] != vectorChecker++) {
+        for (int x = payloadDataPosition; x < packet->mFrameSize; x++) {
+            if (packet->pFrameData[x] != vectorChecker++) {
                 unitTestFailed = true;
                 unitTestActive = false;
                 break;
@@ -145,10 +145,10 @@ bool UnitTest14::startUnitTest() {
         PrivateData myPrivateData;
         PrivateData myPrivateDataExtra;
         if(!(packetNumber & 1)) {
-            myEFPPacker->addEmbeddedData(&mydata, &myPrivateDataExtra, sizeof(myPrivateDataExtra),ElasticEmbeddedFrameContent::embeddedPrivateData,true);
-            myEFPPacker->addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData),ElasticEmbeddedFrameContent::embeddedPrivateData,false);
+            myEFPPacker->addEmbeddedData(&mydata, &myPrivateDataExtra, sizeof(myPrivateDataExtra),ElasticEmbeddedFrameContent::embeddedprivatedata,true);
+            myEFPPacker->addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData),ElasticEmbeddedFrameContent::embeddedprivatedata,false);
         } else {
-            myEFPPacker->addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData),ElasticEmbeddedFrameContent::embeddedPrivateData,true);
+            myEFPPacker->addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData),ElasticEmbeddedFrameContent::embeddedprivatedata,true);
         }
 
 

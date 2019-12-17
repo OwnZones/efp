@@ -50,12 +50,12 @@ void UnitTest15::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCo
         }
 
         for (int x = 0; x<embeddedData.size();x++) {
-            if(embeddedContentFlag[x] == ElasticEmbeddedFrameContent::embeddedPrivateData) {
+            if(embeddedContentFlag[x] == ElasticEmbeddedFrameContent::embeddedprivatedata) {
                 std::vector<uint8_t> thisVector = embeddedData[x];
                 PrivateData myPrivateData = *(PrivateData *) thisVector.data();
                 size_t thisStuff=sizeof(PrivateData);
 
-                if (myPrivateData.sizeOfData != packet->frameSize) {
+                if (myPrivateData.sizeOfData != packet->mFrameSize) {
                     unitTestFailed = true;
                     unitTestActive = false;
                     return;
@@ -68,8 +68,8 @@ void UnitTest15::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCo
                 }
 
                 uint8_t vectorChecker = 0;
-                for (int x = payloadDataPosition; x < packet->frameSize; x++) {
-                    if (packet->frameData[x] != vectorChecker++) {
+                for (int x = payloadDataPosition; x < packet->mFrameSize; x++) {
+                    if (packet->pFrameData[x] != vectorChecker++) {
                         unitTestFailed = true;
                         unitTestActive = false;
                         return;
@@ -148,7 +148,7 @@ bool UnitTest15::startUnitTest() {
 
         PrivateData myPrivateData;
         myPrivateData.sizeOfData = mydata.size() + sizeof(PrivateData) + 4; //4 is the embedded frame header size
-        myEFPPacker->addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData), ElasticEmbeddedFrameContent::embeddedPrivateData, true);
+        myEFPPacker->addEmbeddedData(&mydata, &myPrivateData, sizeof(PrivateData), ElasticEmbeddedFrameContent::embeddedprivatedata, true);
         if (myPrivateData.sizeOfData != mydata.size()) {
             std::cout << "Packer error"
                       << std::endl;

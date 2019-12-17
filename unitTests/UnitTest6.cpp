@@ -27,7 +27,7 @@ void UnitTest6::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCon
         return;
     }
     //One block of MTU should be gone
-    if (packet->frameSize != (((MTU - myEFPPacker->geType1Size()) * 2) + 12)) {
+    if (packet->mFrameSize != (((MTU - myEFPPacker->geType1Size()) * 2) + 12)) {
         unitTestFailed = true;
         unitTestActive = false;
         return;
@@ -39,8 +39,8 @@ void UnitTest6::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCon
         return;
     }
     uint8_t vectorChecker = (MTU - myEFPPacker->geType1Size()) % 256;
-    for (int x = (MTU - myEFPPacker->geType1Size()); x < packet->frameSize; x++) {
-        if (packet->frameData[x] != vectorChecker++) {
+    for (int x = (MTU - myEFPPacker->geType1Size()); x < packet->mFrameSize; x++) {
+        if (packet->pFrameData[x] != vectorChecker++) {
             unitTestFailed = true;
             unitTestActive = false;
             return;

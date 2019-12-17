@@ -64,15 +64,15 @@ void UnitTest8::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCon
         unitTestActive = false;
         return;
     }
-    if (packet->frameSize != (((MTU - myEFPPacker->geType1Size()) * 5) + 12)) {
+    if (packet->mFrameSize != (((MTU - myEFPPacker->geType1Size()) * 5) + 12)) {
         unitTestFailed = true;
         unitTestActive = false;
         return;
     }
 
     uint8_t vectorChecker = 0;
-    for (int x = 0; x < packet->frameSize; x++) {
-        if (packet->frameData[x] != vectorChecker++) {
+    for (int x = 0; x < packet->mFrameSize; x++) {
+        if (packet->pFrameData[x] != vectorChecker++) {
 
             unitTestFailed = true;
             unitTestActive = false;
