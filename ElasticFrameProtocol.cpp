@@ -21,13 +21,8 @@ ElasticFrameProtocol::ElasticFrameProtocol(uint16_t setMTU, ElasticFrameMode mod
     sendCallback = std::bind(&ElasticFrameProtocol::sendData, this, std::placeholders::_1);
     receiveCallback = std::bind(&ElasticFrameProtocol::gotData,
                                 this,
-                                std::placeholders::_1,
-                                std::placeholders::_2,
-                                std::placeholders::_3,
-                                std::placeholders::_4,
-                                std::placeholders::_5,
-                                std::placeholders::_6,
-                                std::placeholders::_7);
+                                std::placeholders::_1);
+
     LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol constructed");
 }
 
@@ -48,8 +43,7 @@ void ElasticFrameProtocol::sendData(const std::vector<uint8_t> &rSubPacket) {
 }
 
 // Dummy callback for reciever
-void ElasticFrameProtocol::gotData(ElasticFrameProtocol::pFramePtr &rPacket, ElasticFrameContent content, bool broken,
-                                    uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
+void ElasticFrameProtocol::gotData(ElasticFrameProtocol::pFramePtr &rPacket) {
     LOGGER(true, LOGG_ERROR, "Implement the recieveCallback method for the protocol to work.");
 }
 
@@ -383,13 +377,7 @@ void ElasticFrameProtocol::deliveryWorker() {
         }
 
         if (lSuperframe) {
-            receiveCallback(lSuperframe,
-                            lSuperframe->mDataContent,
-                            lSuperframe->broken,
-                            lSuperframe->pts,
-                            lSuperframe->code,
-                            lSuperframe->stream,
-                            lSuperframe->flags);
+            receiveCallback(lSuperframe);
         }
     }
 }
@@ -527,12 +515,12 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
                         {
                             std::lock_guard<std::mutex> lk(mSuperFrameMtx);
                             mBucketList[x.bucket].mBucketData->mDataContent = mBucketList[x.bucket].mDataContent;
-                            mBucketList[x.bucket].mBucketData->broken =
+                            mBucketList[x.bucket].mBucketData->mBroken =
                                     mBucketList[x.bucket].mFragmentCounter != mBucketList[x.bucket].mOfFragmentNo;
-                            mBucketList[x.bucket].mBucketData->pts = mBucketList[x.bucket].mPts;
-                            mBucketList[x.bucket].mBucketData->code = mBucketList[x.bucket].mCode;
-                            mBucketList[x.bucket].mBucketData->stream = mBucketList[x.bucket].mStream;
-                            mBucketList[x.bucket].mBucketData->flags = mBucketList[x.bucket].mFlags;
+                            mBucketList[x.bucket].mBucketData->mPts = mBucketList[x.bucket].mPts;
+                            mBucketList[x.bucket].mBucketData->mCode = mBucketList[x.bucket].mCode;
+                            mBucketList[x.bucket].mBucketData->mStream = mBucketList[x.bucket].mStream;
+                            mBucketList[x.bucket].mBucketData->mFlags = mBucketList[x.bucket].mFlags;
                             mSuperFrameQueue.push_back(std::move(mBucketList[x.bucket].mBucketData));
                             mSuperFrameReady = true;
                         }
@@ -590,12 +578,12 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
                             {
                                 std::lock_guard<std::mutex> lk(mSuperFrameMtx);
                                 mBucketList[x.bucket].mBucketData->mDataContent = mBucketList[x.bucket].mDataContent;
-                                mBucketList[x.bucket].mBucketData->broken =
+                                mBucketList[x.bucket].mBucketData->mBroken =
                                         mBucketList[x.bucket].mFragmentCounter != mBucketList[x.bucket].mOfFragmentNo;
-                                mBucketList[x.bucket].mBucketData->pts = mBucketList[x.bucket].mPts;
-                                mBucketList[x.bucket].mBucketData->code = mBucketList[x.bucket].mCode;
-                                mBucketList[x.bucket].mBucketData->stream = mBucketList[x.bucket].mStream;
-                                mBucketList[x.bucket].mBucketData->flags = mBucketList[x.bucket].mFlags;
+                                mBucketList[x.bucket].mBucketData->mPts = mBucketList[x.bucket].mPts;
+                                mBucketList[x.bucket].mBucketData->mCode = mBucketList[x.bucket].mCode;
+                                mBucketList[x.bucket].mBucketData->mStream = mBucketList[x.bucket].mStream;
+                                mBucketList[x.bucket].mBucketData->mFlags = mBucketList[x.bucket].mFlags;
                                 mSuperFrameQueue.push_back(std::move(mBucketList[x.bucket].mBucketData));
                                 mSuperFrameReady = true;
                             }

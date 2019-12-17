@@ -17,7 +17,7 @@ void UnitTest1::sendData(const std::vector<uint8_t> &subPacket) {
     std::cout << "UnitTest " << unsigned(activeUnitTest) << " done." << std::endl;
 }
 
-void UnitTest1::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
+void UnitTest1::gotData(ElasticFrameProtocol::pFramePtr &packet) {
 
 }
 
@@ -52,8 +52,7 @@ bool UnitTest1::startUnitTest() {
         return false;
     }
     myEFPPacker->sendCallback = std::bind(&UnitTest1::sendData, this, std::placeholders::_1);
-    myEFPReciever->receiveCallback = std::bind(&UnitTest1::gotData, this, std::placeholders::_1, std::placeholders::_2,
-                                              std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7);
+    myEFPReciever->receiveCallback = std::bind(&UnitTest1::gotData, this, std::placeholders::_1);
     myEFPReciever->startReceiver(5, 2);
     mydata.resize(MTU - myEFPPacker->geType2Size());
     unitTestActive = true;

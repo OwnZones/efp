@@ -97,8 +97,7 @@ void UnitTest16::sendData(const std::vector<uint8_t> &subPacket) {
 }
 
 void
-UnitTest16::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameContent content, bool broken, uint64_t pts,
-                    uint32_t code, uint8_t stream, uint8_t flags) {
+UnitTest16::gotData(ElasticFrameProtocol::pFramePtr &packet) {
 
     testDataMtx.lock();
     bool isLoss = false;
@@ -111,11 +110,11 @@ UnitTest16::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameContent
     testDataMtx.unlock();
 
 
-    if (!broken) {
+    if (!packet->mBroken) {
         uint8_t vectorChecker = 0;
         for (int x = 0; x < packet->mFrameSize; x++) {
             if (packet->pFrameData[x] != vectorChecker++) {
-                std::cout << "Vector failed for packet " << unsigned(pts) << std::endl;
+                std::cout << "Vector failed for packet " << unsigned(packet->mPts) << std::endl;
                 unitTestFailed = true;
                 unitTestActive = false;
                 return;
@@ -127,9 +126,9 @@ UnitTest16::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameContent
 
 
     debugPrintMutex.lock();
-    std::cout << "Got -> " << unsigned(pts);
-    std::cout << " broken " << broken;
-    std::cout << " code " << code;
+    std::cout << "Got -> " << unsigned(packet->mPts);
+    std::cout << " broken " << packet->mBroken;
+    std::cout << " code " << packet->mCode;
     std::cout << std::endl;
     debugPrintMutex.unlock();
 
@@ -168,9 +167,7 @@ bool UnitTest16::startUnitTest() {
         return false;
     }
     myEFPPacker->sendCallback = std::bind(&UnitTest16::sendData, this, std::placeholders::_1);
-    myEFPReciever->receiveCallback = std::bind(&UnitTest16::gotData, this, std::placeholders::_1, std::placeholders::_2,
-                                               std::placeholders::_3, std::placeholders::_4, std::placeholders::_5,
-                                               std::placeholders::_6, std::placeholders::_7);
+    myEFPReciever->receiveCallback = std::bind(&UnitTest16::gotData, this, std::placeholders::_1);
     myEFPReciever->startReceiver(5, 2);
 
     unitTestPacketNumberReciever = 0;

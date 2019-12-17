@@ -14,7 +14,7 @@ public:
     bool startUnitTest();
 private:
     void sendData(const std::vector<uint8_t> &subPacket);
-    void gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags);
+    void gotData(ElasticFrameProtocol::pFramePtr &packet);
     bool waitForCompletion();
     ElasticFrameProtocol *myEFPReciever = nullptr;
     ElasticFrameProtocol *myEFPPacker = nullptr;

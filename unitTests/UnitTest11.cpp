@@ -36,10 +36,10 @@ void UnitTest11::sendData(const std::vector<uint8_t> &subPacket) {
     unitTestsSavedData2D.push_back(subPacket);
 }
 
-void UnitTest11::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
+void UnitTest11::gotData(ElasticFrameProtocol::pFramePtr &packet) {
     if (!unitTestActive) return;
 
-    if (broken) {
+    if (packet->mBroken) {
         unitTestFailed = true;
         unitTestActive = false;
         return;
@@ -47,19 +47,19 @@ void UnitTest11::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCo
 
     unitTestPacketNumberReciever++;
     if (unitTestPacketNumberReciever == 1) {
-        if (pts == 1) {
+        if (packet->mPts == 1) {
             expectedPTS=2;
             return;
         }
-        if (pts == 2) {
+        if (packet->mPts == 2) {
             expectedPTS=4;
             return;
         }
-        if (pts == 4) {
+        if (packet->mPts == 4) {
             expectedPTS=5;
             return;
         }
-        if (pts == 5) {
+        if (packet->mPts == 5) {
             unitTestActive = false;
             std::cout << "UnitTest " << unsigned(activeUnitTest) << " done." << std::endl;
         }
@@ -68,14 +68,14 @@ void UnitTest11::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCo
         return;
     }
     if (unitTestPacketNumberReciever == 2) {
-        if (expectedPTS == pts) {
-            if (pts == 2) {
+        if (expectedPTS == packet->mPts) {
+            if (packet->mPts == 2) {
                 expectedPTS=4;
             }
-            if (pts == 4) {
+            if (packet->mPts == 4) {
                 expectedPTS=5;
             }
-            if (pts == 5) {
+            if (packet->mPts == 5) {
                 unitTestActive = false;
                 std::cout << "UnitTest " << unsigned(activeUnitTest) << " done." << std::endl;
             }
@@ -86,11 +86,11 @@ void UnitTest11::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCo
         return;
     }
     if (unitTestPacketNumberReciever == 3) {
-        if (expectedPTS == pts) {
-            if (pts == 4) {
+        if (expectedPTS == packet->mPts) {
+            if (packet->mPts == 4) {
                 expectedPTS=5;
             }
-            if (pts == 5) {
+            if (packet->mPts == 5) {
                 unitTestActive = false;
                 std::cout << "UnitTest " << unsigned(activeUnitTest) << " done." << std::endl;
             }
@@ -101,7 +101,7 @@ void UnitTest11::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCo
         return;
     }
     if (unitTestPacketNumberReciever == 4) {
-        if (expectedPTS == pts) {
+        if (expectedPTS == packet->mPts) {
             unitTestActive = false;
             std::cout << "UnitTest " << unsigned(activeUnitTest) << " done." << std::endl;
             return;
@@ -145,8 +145,7 @@ bool UnitTest11::startUnitTest() {
         return false;
     }
     myEFPPacker->sendCallback = std::bind(&UnitTest11::sendData, this, std::placeholders::_1);
-    myEFPReciever->receiveCallback = std::bind(&UnitTest11::gotData, this, std::placeholders::_1, std::placeholders::_2,
-                                              std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7);
+    myEFPReciever->receiveCallback = std::bind(&UnitTest11::gotData, this, std::placeholders::_1);
     myEFPReciever->startReceiver(5, 2);
     mydata.clear();
     unitTestsSavedData2D.clear();

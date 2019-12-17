@@ -166,11 +166,12 @@ public:
         size_t mFrameSize = 0;           // Number of bytes in frame
         uint8_t *pFrameData = nullptr;   // Received frame data
         ElasticFrameContent mDataContent = ElasticFrameContent::unknown; // Superframe type
-        bool broken = true;
-        uint64_t pts = UINT64_MAX;
-        uint32_t code = UINT32_MAX;
-        uint8_t stream = 0;
-        uint8_t flags = NO_FLAGS;
+        bool mBroken = true;
+        uint64_t mPts = UINT64_MAX;
+        uint64_t mDts= UINT64_MAX; //Should we implement this?
+        uint32_t mCode = UINT32_MAX;
+        uint8_t mStream = 0;
+        uint8_t mFlags = NO_FLAGS;
 
         SuperFrame(const SuperFrame &) = delete;
         SuperFrame &operator=(const SuperFrame &) = delete;
@@ -243,17 +244,16 @@ public:
     /**
     * Recieve data from the EFP worker thread
     *
-    * @param rPacket data recieved
-    * @param content ElasticFrameContent::x where x is the type of data to be sent.
-    * @param broken if true the data integrety is broken by the underlying protocol.
-    * @param pts the pts value of the content
-    * @param code if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
-    * @param stream The EFP-stream number the data is associated with.
-    * @param flags signal what flags are used
-    * @return ElasticFrameMessages
+    * @param rPacket superframe recieved
+    * rPacket conatins
+    * -> mCcontent ElasticFrameContent::x where x is the type of data to be sent.
+    * -> mBbroken if true the data integrety is broken by the underlying protocol.
+    * -> mPpts the pts value of the content
+    * -> mCcode if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
+    * -> mStream The EFP-stream number the data is associated with.
+    * -> mFlags signal what flags are used
     */
-    std::function<void(ElasticFrameProtocol::pFramePtr &rPacket, ElasticFrameContent content, bool broken, uint64_t pts,
-                       uint32_t code, uint8_t stream, uint8_t flags)> receiveCallback = nullptr;
+    std::function<void(ElasticFrameProtocol::pFramePtr &rPacket)> receiveCallback = nullptr;
 
     ///Delete copy and move constructors and assign operators
     ElasticFrameProtocol(ElasticFrameProtocol const &) = delete;              // Copy construct
@@ -333,8 +333,7 @@ private:
     void sendData(const std::vector<uint8_t> &rSubPacket);
 
     // Dummy callback
-    void gotData(ElasticFrameProtocol::pFramePtr &rPacket, ElasticFrameContent content, bool broken, uint64_t pts,
-                 uint32_t code, uint8_t stream, uint8_t flags);
+    void gotData(ElasticFrameProtocol::pFramePtr &rPacket);
 
     // Method dissecting Type1 fragments
     ElasticFrameMessages unpackType1(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);

@@ -35,12 +35,12 @@ void UnitTest10::sendData(const std::vector<uint8_t> &subPacket) {
     unitTestPacketNumberSender++;
 }
 
-void UnitTest10::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameContent content, bool broken, uint64_t pts, uint32_t code, uint8_t stream, uint8_t flags) {
+void UnitTest10::gotData(ElasticFrameProtocol::pFramePtr &packet) {
     if (!unitTestActive) return;
 
     unitTestPacketNumberReciever++;
     if (unitTestPacketNumberReciever == 1) {
-        if (pts == 1) {
+        if (packet->mPts == 1) {
             return;
         }
         unitTestFailed = true;
@@ -48,7 +48,7 @@ void UnitTest10::gotData(ElasticFrameProtocol::pFramePtr &packet, ElasticFrameCo
         return;
     }
     if (unitTestPacketNumberReciever == 2) {
-        if (pts == 2) {
+        if (packet->mPts == 2) {
             unitTestActive = false;
             std::cout << "UnitTest " << unsigned(activeUnitTest) << " done." << std::endl;
             return;
@@ -92,8 +92,7 @@ bool UnitTest10::startUnitTest() {
         return false;
     }
     myEFPPacker->sendCallback = std::bind(&UnitTest10::sendData, this, std::placeholders::_1);
-    myEFPReciever->receiveCallback = std::bind(&UnitTest10::gotData, this, std::placeholders::_1, std::placeholders::_2,
-                                              std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6, std::placeholders::_7);
+    myEFPReciever->receiveCallback = std::bind(&UnitTest10::gotData, this, std::placeholders::_1);
     myEFPReciever->startReceiver(5, 2);
     unitTestPacketNumberSender = 0;
     unitTestPacketNumberReciever = 0;
