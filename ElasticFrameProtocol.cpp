@@ -5,6 +5,8 @@
 #include "ElasticFrameProtocol.h"
 #include "ElasticInternal.h"
 
+#define WORKER_THREAD_SLEEP_US 1000 * 10
+
 // Constructor setting the MTU (Only needed if sending, mode == sender)
 // Limit the MTU to uint16_t MAX and 255 min.
 // The lower limit is actually type2frameSize+1, keep it at 255 for now
@@ -392,9 +394,22 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
     uint64_t lExpectedNextFrameToDeliver = 0;
     uint64_t lOldestFrameDelivered = 0;
     uint64_t lSavedPTS = 0;
+    int64_t lTimeReference = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
 
     while (mThreadActive) {
-        usleep(1000 * 10); // Check all active buckets 100 times a second
+        lTimeReference += WORKER_THREAD_SLEEP_US;
+        int64_t lTimeNow = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+        int64_t lTimeCompensation = lTimeReference - lTimeNow;
+        if(lTimeCompensation < 0 ) {
+            //we will get a jitter but if we're a milli off then we're probably overloaded.
+            if (lTimeCompensation < -1000) {
+                LOGGER(true, LOGG_WARN, "Worker thread overloaded by " << unsigned(lTimeCompensation) << " us")
+            }
+            lTimeCompensation = 0;
+        }
+        usleep(lTimeCompensation); // Check all active buckets 100 times a second compensated for the process
+
+
         bool lTimeOutTrigger = false;
         uint32_t lActiveCount = 0;
         std::vector<CandidateToDeliver> lCandidates;
