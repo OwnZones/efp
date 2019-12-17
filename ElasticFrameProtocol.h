@@ -366,7 +366,8 @@ private:
     uint64_t mSuperFrameRecalc = 0;
     bool mSuperFrameFirstTime = true;
     // Receiver thread management
-    std::atomic_bool mIsThreadActive;
+    std::atomic_bool mIsWorkerThreadActive;
+    std::atomic_bool mIsDeliveryThreadActive;
     std::atomic_bool mThreadActive;
     // Mutex for thread safety
     std::mutex mSendMtx; //Mutex protecting the send part

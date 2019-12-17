@@ -17,12 +17,10 @@ ElasticFrameProtocol::ElasticFrameProtocol(uint16_t setMTU, ElasticFrameMode mod
     }
     mCurrentMode = mode;
     mThreadActive = false;
-    mIsThreadActive = false;
+    mIsWorkerThreadActive = false;
+    mIsDeliveryThreadActive = false;
     sendCallback = std::bind(&ElasticFrameProtocol::sendData, this, std::placeholders::_1);
-    receiveCallback = std::bind(&ElasticFrameProtocol::gotData,
-                                this,
-                                std::placeholders::_1);
-
+    receiveCallback = std::bind(&ElasticFrameProtocol::gotData, this, std::placeholders::_1);
     LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol constructed");
 }
 
@@ -380,6 +378,7 @@ void ElasticFrameProtocol::deliveryWorker() {
             receiveCallback(lSuperframe);
         }
     }
+    mIsDeliveryThreadActive = false;
 }
 
 // This is the thread going trough the buckets to see if they should be delivered to
@@ -387,8 +386,7 @@ void ElasticFrameProtocol::deliveryWorker() {
 void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
     //Set the defaults. meaning the thread is running and there is no head of line blocking action going on.
     bool lFoundHeadOfLineBlocking = false;
-    bool lFistDelivery = mHeadOfLineBlockingTimeout ? false
-                                                  : true; //if hol is used then we must recieve at least two packets first to know where to start counting.
+    bool lFistDelivery = mHeadOfLineBlockingTimeout == 0; //if hol is used then we must recieve at least two packets first to know where to start counting.
     uint32_t lHeadOfLineBlockingCounter = 0;
     uint64_t lHeadOfLineBlockingTail = 0;
     uint64_t lExpectedNextFrameToDeliver = 0;
@@ -604,7 +602,7 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
         }
 
     }
-    mIsThreadActive = false;
+    mIsWorkerThreadActive = false;
 }
 
 // Start reciever worker thread
@@ -613,8 +611,12 @@ ElasticFrameMessages ElasticFrameProtocol::startReceiver(uint32_t bucketTimeoutM
         return ElasticFrameMessages::wrongMode;
     }
 
-    if (mIsThreadActive) {
-        LOGGER(true, LOGG_WARN, "Unpacker already working");
+    if (mIsWorkerThreadActive) {
+        LOGGER(true, LOGG_WARN, "Worker thread is already running");
+        return ElasticFrameMessages::receiverAlreadyStarted;
+    }
+    if (mIsDeliveryThreadActive) {
+        LOGGER(true, LOGG_WARN, "Delivery thread is already running");
         return ElasticFrameMessages::receiverAlreadyStarted;
     }
     if (bucketTimeoutMaster == 0) {
@@ -630,7 +632,8 @@ ElasticFrameMessages ElasticFrameProtocol::startReceiver(uint32_t bucketTimeoutM
     mHeadOfLineBlockingTimeout = holTimeoutMaster;
     mThreadActive =
             true; //you must set these parameters here to avoid races. For example calling start then stop before the thread actually starts.
-    mIsThreadActive = true;
+    mIsWorkerThreadActive = true;
+    mIsDeliveryThreadActive = true;
     std::thread(std::bind(&ElasticFrameProtocol::receiverWorker, this, bucketTimeoutMaster)).detach();
     std::thread(std::bind(&ElasticFrameProtocol::deliveryWorker, this)).detach();
 
@@ -656,11 +659,11 @@ ElasticFrameMessages ElasticFrameProtocol::stopReceiver(){
     mSuperFrameDeliveryConditionVariable.notify_one();
 
     //check for it to actually stop
-    while (mIsThreadActive) {
+    while (mIsWorkerThreadActive || mIsDeliveryThreadActive) {
         usleep(1000);
         if (!--lLockProtect) {
             //we gave it a second now exit anyway
-            LOGGER(true, LOGG_FATAL, "unpackerWorker thread not stopping. Now crash and burn baby!!");
+            LOGGER(true, LOGG_FATAL, "Threads not stopping. Now crash and burn baby!!");
             return ElasticFrameMessages::failedStoppingReceiver;
         }
     }
@@ -682,7 +685,7 @@ ElasticFrameMessages ElasticFrameProtocol::receiveFragment(const std::vector<uin
         return ElasticFrameMessages::wrongMode;
     }
 
-    if (!mIsThreadActive) {
+    if (!(mIsWorkerThreadActive & mIsDeliveryThreadActive)) {
         LOGGER(true, LOGG_ERROR, "Receiver not running");
         return ElasticFrameMessages::receiverNotRunning;
     }
