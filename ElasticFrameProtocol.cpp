@@ -88,6 +88,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
         }
         pThisBucket->mDeliveryOrder = lDeliveryOrderCandidate;
         pThisBucket->mActive = true;
+        pThisBucket->mSource = fromSource;
         pThisBucket->mFlags = lType1Frame.hFrameType & 0xf0;
         pThisBucket->mStream = lType1Frame.hStream;
         Stream *pThisStream = &mStreams[fromSource][lType1Frame.hStream];
@@ -179,16 +180,14 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
         }
         pThisBucket->mDeliveryOrder = lDeliveryOrderCandidate;
         pThisBucket->mActive = true;
-
+        pThisBucket->mSource = fromSource;
         pThisBucket->mFlags = lType2Frame.hFrameType & 0xf0;
-
         pThisBucket->mStream = lType2Frame.hStream;
         Stream *pThisStream = &mStreams[fromSource][lType2Frame.hStream];
         pThisStream->dataContent = lType2Frame.hDataContent;
         pThisStream->code = lType2Frame.hCode;
         pThisBucket->mDataContent = pThisStream->dataContent;
         pThisBucket->mCode = pThisStream->code;
-
         pThisBucket->mSavedSuperFrameNo = lType2Frame.hSuperFrameNo;
         pThisBucket->mHaveReceivedPacket.reset();
         pThisBucket->mPts = lType2Frame.hPts;
@@ -281,6 +280,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
         }
         pThisBucket->mDeliveryOrder = lDeliveryOrderCandidate;
         pThisBucket->mActive = true;
+        pThisBucket->mSource = fromSource;
         pThisBucket->mFlags = lType3Frame.hFrameType & 0xf0;
         pThisBucket->mStream = lType3Frame.hStream;
         Stream *thisStream = &mStreams[fromSource][lType3Frame.hStream];
@@ -533,6 +533,7 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
                             mBucketList[x.bucket].mBucketData->mPts = mBucketList[x.bucket].mPts;
                             mBucketList[x.bucket].mBucketData->mCode = mBucketList[x.bucket].mCode;
                             mBucketList[x.bucket].mBucketData->mStream = mBucketList[x.bucket].mStream;
+                            mBucketList[x.bucket].mBucketData->mSource = mBucketList[x.bucket].mSource;
                             mBucketList[x.bucket].mBucketData->mFlags = mBucketList[x.bucket].mFlags;
                             mSuperFrameQueue.push_back(std::move(mBucketList[x.bucket].mBucketData));
                             mSuperFrameReady = true;
@@ -596,6 +597,7 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
                                 mBucketList[x.bucket].mBucketData->mPts = mBucketList[x.bucket].mPts;
                                 mBucketList[x.bucket].mBucketData->mCode = mBucketList[x.bucket].mCode;
                                 mBucketList[x.bucket].mBucketData->mStream = mBucketList[x.bucket].mStream;
+                                mBucketList[x.bucket].mBucketData->mSource = mBucketList[x.bucket].mSource;
                                 mBucketList[x.bucket].mBucketData->mFlags = mBucketList[x.bucket].mFlags;
                                 mSuperFrameQueue.push_back(std::move(mBucketList[x.bucket].mBucketData));
                                 mSuperFrameReady = true;

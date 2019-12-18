@@ -100,38 +100,26 @@ myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 'ANXB', 2, NO_FLAG
 
 // The callback function referenced as 'receiveCallback'
 // This callback will be called from a separate thread owned by EFP
-// rPacket contains a pointer to the data and the size of the data
-// content is containing the content descriptor
-// broken is true if data in the superFrame is missing
-// pts contains the pts value used in the superFrame
-// code contains the code sent (if used)
-// stream is the stream number to associate to the data
-// flags contains the flags used by the superFrame
-void gotData(ElasticFrameProtocol::pFramePtr &rPacket, 
-			ElasticFrameContent content,
-			bool broken,
-			uint64_t pts,
-			uint32_t code,
-			uint8_t stream,
-			uint8_t flags
-			) {
-			// Use the data in your application
-			// If you spend too long time here you log the queue between EFP and you. This can lead to data loss
-			// if EFP runs out of buffer space. 
+// rFrame is a pointer to the data object
+// Containing:
+// pFrameData pointer to the data
+// mFrameSize Size of the data 
+// mDataContent is containing the content descriptor
+// mBroken is true if data in the superFrame is missing
+// mPts contains the pts value used in the superFrame
+// mCode contains the code sent (if used)
+// mStream is the stream number to associate to the data
+// mFlags contains the flags used by the superFrame
+void gotData(ElasticFrameProtocol::pFramePtr &rFrame)
+{
+			// Use the data in your application 
 }
 
 // Create your receiver
 ElasticFrameProtocol myEFPReceiver();
 
 // Register the callback
-myEFPReceiver.receiveCallback = std::bind(&gotData,
-											std::placeholders::_1,
-											std::placeholders::_2,
-                                    		std::placeholders::_3,
-                                    		std::placeholders::_4,
-                                    		std::placeholders::_5,
-                                    		std::placeholders::_6,
-                                    		std::placeholders::_7);
+myEFPReceiver.receiveCallback = std::bind(&gotData, std::placeholders::_1);
 
 // Start the reciever worker
 myEFPReceiver.startReceiver(5, 2);

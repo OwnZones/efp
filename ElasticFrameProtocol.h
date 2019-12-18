@@ -172,6 +172,7 @@ public:
         uint64_t mDts= UINT64_MAX; //Should we implement this?
         uint32_t mCode = UINT32_MAX;
         uint8_t mStream = 0;
+        uint8_t mSource = 0;
         uint8_t mFlags = NO_FLAGS;
 
         SuperFrame(const SuperFrame &) = delete;
@@ -315,6 +316,7 @@ private:
         uint64_t mPts = UINT64_MAX;
         uint32_t mCode = UINT32_MAX;
         uint8_t mStream;
+        uint8_t mSource;
         uint8_t mFlags;
         std::bitset<UINT16_MAX> mHaveReceivedPacket;
         pFramePtr mBucketData = nullptr;
