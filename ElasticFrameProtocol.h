@@ -179,9 +179,10 @@ public:
         SuperFrame &operator=(const SuperFrame &) = delete;
 
         SuperFrame(size_t memAllocSize) {
-            posix_memalign((void **) &pFrameData, 32,
+            int result = posix_memalign((void **) &pFrameData, 32,
                            memAllocSize);   //32 byte memory alignment for AVX2 processing //Winboze needs some other code.
-            if (pFrameData) mFrameSize = memAllocSize;
+                           
+            if (pFrameData && !result) mFrameSize = memAllocSize;
         }
         virtual ~SuperFrame() {
             //Free if allocated

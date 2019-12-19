@@ -362,7 +362,7 @@ void ElasticFrameProtocol::deliveryWorker() {
         pFramePtr lSuperframe = nullptr;
         {
             std::unique_lock<std::mutex> lk(mSuperFrameMtx);
-            mSuperFrameDeliveryConditionVariable.wait(lk, [this] { return mSuperFrameReady; });
+            if (!mSuperFrameReady) mSuperFrameDeliveryConditionVariable.wait(lk, [this] { return mSuperFrameReady; }); //if mSuperFrameReady == true we already got data no need to wait for signal
             // We got a signal a frame is ready
 
             // pop one frame
@@ -388,13 +388,14 @@ void ElasticFrameProtocol::deliveryWorker() {
 void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
     //Set the defaults. meaning the thread is running and there is no head of line blocking action going on.
     bool lFoundHeadOfLineBlocking = false;
-    bool lFistDelivery = mHeadOfLineBlockingTimeout == 0; //if hol is used then we must recieve at least two packets first to know where to start counting.
+    bool lFistDelivery = mHeadOfLineBlockingTimeout == 0; //if HOL is used then we must receive at least two packets first to know where to start counting.
     uint32_t lHeadOfLineBlockingCounter = 0;
     uint64_t lHeadOfLineBlockingTail = 0;
     uint64_t lExpectedNextFrameToDeliver = 0;
     uint64_t lOldestFrameDelivered = 0;
     uint64_t lSavedPTS = 0;
     int64_t lTimeReference = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    int overloadCount = 0;
 
     while (mThreadActive) {
         lTimeReference += WORKER_THREAD_SLEEP_US;
@@ -403,7 +404,13 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
         if(lTimeCompensation < 0 ) {
             //we will get a jitter but if we're a milli off then we're probably overloaded.
             if (lTimeCompensation < -1000) {
-                LOGGER(true, LOGG_WARN, "Worker thread overloaded by " << unsigned(lTimeCompensation) << " us")
+                if (overloadCount++ == 100) {
+                    //Ok we have been overloaded for quite some time now..
+                    overloadCount = 0;
+                    LOGGER(true, LOGG_WARN, "Worker thread overloaded by " << signed(lTimeCompensation) << " us")
+                }
+            } else {
+                overloadCount = 0;
             }
             lTimeCompensation = 0;
         }
