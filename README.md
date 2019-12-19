@@ -138,9 +138,10 @@ myEFPReceiver.stopReciever();
 
 1. Fork it!
 2. Create your feature branch: `git checkout -b my-new-feature`
-3. Commit your changes: `git commit -am 'Add some feature'`
-4. Push to the branch: `git push origin my-new-feature`
-5. Submit a pull request :D
+3. Make your additions and write a UnitTest testing it/them.
+4. Commit your changes: `git commit -am 'Add some feature'`
+5. Push to the branch: `git push origin my-new-feature`
+6. Submit a pull request :D
 
 ## History
 
@@ -162,10 +163,18 @@ Please read -> **ElasticFrameProtocol.pdf** for more information.
 
 ---
 
+## Examples
+
+
+
+1. [EFP + SRT Client/Server](https://bitbucket.org/unitxtra/cppsrtframingexample/src/master/)
+
+
 ## Next steps
 
 * DTS has been requested.. Is it needed? Should we implement it?
-* Write examples
+* Add opportunistic embedded data
+* Write more examples
 * Write more unit-tests
 
 ## Credits
