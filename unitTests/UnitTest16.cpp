@@ -221,7 +221,7 @@ bool UnitTest16::startUnitTest() {
         brokenCounter = 0;
         reorderBuffer.clear();
 
-        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber, 'ANXB', streamID, NO_FLAGS);
+        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber, EFP_CODE('A', 'N', 'X', 'B'), streamID, NO_FLAGS);
         if (result != ElasticFrameMessages::noError) {
             std::cout << "Unit test number: " << unsigned(activeUnitTest)
                       << " Failed in the packAndSend method. Error-> " << signed(result)
