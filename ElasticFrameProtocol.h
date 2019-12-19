@@ -360,7 +360,7 @@ private:
     // Private methods ----- END ------
 
     // Internal lists and variables ----- START ------
-    Stream mStreams[UINT8_MAX][UINT8_MAX]; //EFP-Stream information store
+    Stream mStreams[UINT8_MAX]; //EFP-Stream information store
     Bucket mBucketList[CIRCULAR_BUFFER_SIZE + 1]; // Internal queue where all fragments are stored and superframes delivered from
     uint32_t mBucketTimeout = 0; // Time out passed to receiver
     uint32_t mHeadOfLineBlockingTimeout = 0; // HOL time out passed to receiver

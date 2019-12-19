@@ -91,7 +91,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
         pThisBucket->mSource = fromSource;
         pThisBucket->mFlags = lType1Frame.hFrameType & 0xf0;
         pThisBucket->mStream = lType1Frame.hStream;
-        Stream *pThisStream = &mStreams[fromSource][lType1Frame.hStream];
+        Stream *pThisStream = &mStreams[lType1Frame.hStream];
         pThisBucket->mDataContent = pThisStream->dataContent;
         pThisBucket->mCode = pThisStream->code;
         pThisBucket->mSavedSuperFrameNo = lType1Frame.hSuperFrameNo;
@@ -183,7 +183,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
         pThisBucket->mSource = fromSource;
         pThisBucket->mFlags = lType2Frame.hFrameType & 0xf0;
         pThisBucket->mStream = lType2Frame.hStream;
-        Stream *pThisStream = &mStreams[fromSource][lType2Frame.hStream];
+        Stream *pThisStream = &mStreams[lType2Frame.hStream];
         pThisStream->dataContent = lType2Frame.hDataContent;
         pThisStream->code = lType2Frame.hCode;
         pThisBucket->mDataContent = pThisStream->dataContent;
@@ -237,7 +237,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
 
     //set the content type
     pThisBucket->mStream = lType2Frame.hStream;
-    Stream *thisStream = &mStreams[fromSource][lType2Frame.hStream];
+    Stream *thisStream = &mStreams[lType2Frame.hStream];
     thisStream->dataContent = lType2Frame.hDataContent;
     thisStream->code = lType2Frame.hCode;
     pThisBucket->mDataContent = thisStream->dataContent;
@@ -283,7 +283,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
         pThisBucket->mSource = fromSource;
         pThisBucket->mFlags = lType3Frame.hFrameType & 0xf0;
         pThisBucket->mStream = lType3Frame.hStream;
-        Stream *thisStream = &mStreams[fromSource][lType3Frame.hStream];
+        Stream *thisStream = &mStreams[lType3Frame.hStream];
         pThisBucket->mDataContent = thisStream->dataContent;
         pThisBucket->mCode = thisStream->code;
         pThisBucket->mSavedSuperFrameNo = lType3Frame.hSuperFrameNo;
