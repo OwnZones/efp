@@ -145,21 +145,24 @@ myEFPReceiver.stopReciever();
 
 ## History
 
-When working with media workflows both live and non-live we use different framing protocols such as MP4 and MPEG-TS, often transported over HTTP (TCP). Some of the protocols used for media transport are also tied to a certain underlying transport mechanism (RTMP, HLS, WebRTC…) , some are agnostic (MP4, MPEG-TS…). The protocols tied to an underlying transport mechanism forces the user to the behavior of that protocol’s properties, for example TCP when using RTMP. 
-If you use MP4 as framing that is agnostic to the underlying transport and then select a protocol that delivers the data with low latency where you might lose data and the delivery might be out of order there is no mechanism to correct for that in the MP4-box domain. 
+When working with media workflows both live and non-live we use different framing protocols such as MP4 and MPEG-TS, often transported over HTTP (TCP). Some of the protocols used for media transport are also tied to a certain underlying transport mechanism (RTMP, HLS, WebRTC…), some are agnostic to the underlying transport (MP4, MPEG-TS…). The protocols tied to an underlying transport type forces the user to the behavior of that protocol’s properties, for example, TCP when using RTMP. If you use MP4 as framing agnostic to the underlying transport and then transport the data using a protocol where you might lose data and the delivery might be out of order there is no mechanism to correct for that in the MP4-box domain. 
 
-MPEG-TS is a common multiplexing standard for media. MPEG-TS on the other hand was designed in the mid 90’s for transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems present in the 1990’s world. 
-However, MPEG-TS has not changed since then, and do not match modern IP protocols MTU well and has a high payload overhead. Some more modern underlying transport protocols also loses data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behavior.
+For those situations’ MPEG-TS has traditionally been used and is a common multiplexing standard for media. MPEG-TS, on the other hand, was designed in the mid ’90s for the transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems present in the 1990’s world where simplex transport was common and data integrity looked different. However, MPEG-TS has not changed since then, does not match modern IP protocols well and has a high protocol overhead. Some of today’s underlying transport protocols also lose data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behavior.
 
-A common solution to cover for a protocols shortcoming is to stack protocols and framing structures on top of each other. That is one solution, however it drives complexity to the solution, ads overhead and sometimes delay. Many implementations are closed source and if not they could be of license types not wanted in your project.
+There has been work done in the MPEG group to modernize media/data framing using MMT (MPEG Media Transport) for better adaption against underlying transport. MMT is currently used in the ATSC 3.0 standard but has failed to attract usage in the data center/cloud/internet domain.
 
-Now with the rise of protocols such as RIST and SRT we wanted to fully utilize the transport containers with as little overhead as possible, we also implemented a thin network adaptation layer so that we can easily use the different transport protocols where they make most sense and maintain a well-defined data delivery pipeline to and from the data producers/consumers.
+Another common solution to cover for a protocol’s shortcomings is to stack protocols and framing structures on top of each other. That is one solution, however, it drives complexity to the solution, ads overhead and sometimes delay. 
 
-That’s why we developed the ElasticFrameProtocol. Please feel free to clone / fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks.
+Many implementations are closed source and if not they are often of license types unwanted in commercial products. Now with the rise of protocols such as RIST, Zixi, and SRT we wanted to fully utilize the transport containers with as little overhead as possible, so we implemented a thin network adaptation layer that enables us to easily use different transport protocols where they make most sense maintaining a well-defined data delivery pipeline to and from the data producers/consumers.
+
+That’s why we developed ElasticFrameProtocol and we are so enthusiastic about where RIST, Zixi, and SRT currently are taking the future of broadcast. There are new open source projects putting these building blocks together, creating new ways of working and transporting media all the time. 
+
+Please feel free to use, clone / fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks in your next project or lab.
+
 
 ---
 
-Please read -> **ElasticFrameProtocol.pdf** for more information.
+Please read -> **ElasticFrameProtocol.pdf** for detailed information.
 
 ---
 
@@ -173,6 +176,7 @@ Please read -> **ElasticFrameProtocol.pdf** for more information.
 ## Next steps
 
 * DTS has been requested.. Is it needed? Should we implement it?
+* EFP is not optimized for performance. Take a look at what can be done. 
 * Add opportunistic embedded data
 * Write more examples
 * Write more unit-tests
