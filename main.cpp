@@ -16,10 +16,17 @@
 #include "unitTests/UnitTest14.h"
 #include "unitTests/UnitTest15.h"
 #include "unitTests/UnitTest16.h"
+#include "unitTests/PerformanceLab.h"
 
 #include <iostream>
 
 int main() {
+
+    //PerformanceLab myPerformanceLab;
+    //if (!myPerformanceLab.startUnitTest()) {
+    //    std::cout << "Performance test" << std::endl;
+    //    return EXIT_FAILURE;
+    //}
 
     int returnCode=EXIT_SUCCESS;
 

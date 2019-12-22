@@ -57,7 +57,7 @@ struct sortDeliveryOrder
 //* - 0x02 frame is less than MTU
 //* - 0x03 The reminder of the data does not fit a type2 packet
 //Type1 and Type3 must be the same size
-enum Frametype : uint8_t { //The 4 LSB are used!
+enum Frametype : uint8_t { //The 4 LSB are used! (The 4 MSB are the flags)
     type0 = 0,
     type1,
     type2,

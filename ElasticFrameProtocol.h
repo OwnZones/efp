@@ -31,6 +31,7 @@
 #include <condition_variable>
 #include <chrono>
 
+///Generate the uint32_t 'code' out of 4 characters provided
 #define EFP_CODE(c0, c1, c2, c3) (((c0)<<24) | ((c1)<<16) | ((c2)<<8) | (c3))
 
 ///Enable or disable the APIs used by the unit tests
@@ -42,6 +43,9 @@
 /// Flag defines used py EFP
 #define NO_FLAGS 0b00000000
 #define INLINE_PAYLOAD 0b00010000
+#define UNDEFINED_FLAG1 0b00100000
+#define UNDEFINED_FLAG2 0b01000000
+#define UNDEFINED_FLAG3 0b10000000
 
 #define EFP_MAJOR_VERSION 0
 #define EFP_MINOR_VERSION 1
@@ -192,7 +196,7 @@ public:
         }
     };
 
-    using pFramePtr = std::shared_ptr<SuperFrame>;
+    using pFramePtr = std::unique_ptr<SuperFrame>;
 
     ///Constructor
     ElasticFrameProtocol(uint16_t setMTU = 0, ElasticFrameMode mode = ElasticFrameMode::receiver);

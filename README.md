@@ -145,19 +145,19 @@ myEFPReceiver.stopReciever();
 
 ## History
 
-When working with media workflows both live and non-live we use different framing protocols such as MP4 and MPEG-TS, often transported over HTTP (TCP). Some of the protocols used for media transport are also tied to a certain underlying transport mechanism (RTMP, HLS, WebRTC…), some are agnostic to the underlying transport (MP4, MPEG-TS…). The protocols tied to an underlying transport type forces the user to the behavior of that protocol’s properties, for example, TCP when using RTMP. If you use MP4 as framing agnostic to the underlying transport and then transport the data using a protocol where you might lose data and the delivery might be out of order there is no mechanism to correct for that in the MP4-box domain. 
+When working with media workflows, both live and non-live, we use framing protocols such as MP4 and MPEG-TS, often transported over HTTP (TCP). Some of the protocols used for media transport are also tied to a certain underlying transport mechanism (RTMP, HLS, WebRTC…), and some are agnostic to the underlying transport (MP4, MPEG-TS…). The protocols tied to an underlying transport type forces the user to the behavior of that protocol’s properties, for example, TCP when using RTMP. If you use MP4 as framing agnostic to the underlying transport and then transport the data using a protocol where you might lose data and the delivery might be out of order, there is no mechanism to correct for that in the MP4-box domain.  
 
-For those situations’ MPEG-TS has traditionally been used and is a common multiplexing standard for media. MPEG-TS, on the other hand, was designed in the mid ’90s for the transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems present in the 1990’s world where simplex transport was common and data integrity looked different. However, MPEG-TS has not changed since then, does not match modern IP protocols well and has a high protocol overhead. Some of today’s underlying transport protocols also lose data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behavior.
+For those situations, MPEG-TS has traditionally been used and is a common multiplexing standard for media. However, MPEG-TS, was designed in the mid ’90s for the transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems in the 1990’s where simplex transport was common and data integrity looked different. However, MPEG-TS has not changed since then, it does not match modern IP protocols well and it has a high protocol overhead. Some of today’s underlying transport protocols also lose data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behavior. 
 
-There has been work done in the MPEG group to modernize media/data framing using MMT (MPEG Media Transport) for better adaption against underlying transport. MMT is currently used in the ATSC 3.0 standard but has failed to attract usage in the data center/cloud/internet domain.
+There has been work done in the MPEG group to modernize media/data framing using MMT (MPEG Media Transport) for better adaption against underlying transport. MMT is currently used in the ATSC 3.0 standard but has not gained popularity in the data center/cloud/internet domain. 
 
-Another common solution to cover for a protocol’s shortcomings is to stack protocols and framing structures on top of each other. That is one solution, however, it drives complexity to the solution, ads overhead and sometimes delay. 
+Another common solution to cover for a protocol’s shortcomings is to stack protocols and framing structures on top of each other. However, this drives complexity to the solution, ads overhead and sometimes delay. Many implementations are closed source and, if they aren’t, they are often of license types that are unwanted in commercial products.  
 
-Many implementations are closed source and if not they are often of license types unwanted in commercial products. Now with the rise of protocols such as RIST, Zixi, and SRT we wanted to fully utilize the transport containers with as little overhead as possible, so we implemented a thin network adaptation layer that enables us to easily use different transport protocols where they make most sense maintaining a well-defined data delivery pipeline to and from the data producers/consumers.
+Now with the rise of protocols such as RIST, Zixi, and SRT we wanted to fully utilize the transport containers with as little overhead as possible, so we implemented a thin network adaptation layer that allows us to easily use different transport protocols where they make most sense maintaining a well-defined data delivery pipeline to and from the data producers/consumers. 
 
-That’s why we developed ElasticFrameProtocol and we are so enthusiastic about where RIST, Zixi, and SRT currently are taking the future of broadcast. There are new open source projects putting these building blocks together, creating new ways of working and transporting media all the time. 
+That’s why we developed ElasticFrameProtocol, we are so enthusiastic about where RIST, Zixi, and SRT is taking the future of broadcast. There are new open source projects putting these building blocks together, creating new ways of working and transporting media all the time.   
 
-Please feel free to use, clone / fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks in your next project or lab.
+Please feel free to use, clone / fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks in your next project or lab. 
 
 
 ---
@@ -175,8 +175,7 @@ Please read -> **ElasticFrameProtocol.pdf** for detailed information.
 
 ## Next steps
 
-* DTS has been requested.. Is it needed? Should we implement it?
-* EFP is not optimized for performance. Take a look at what can be done. 
+* DTS has been requested.. Is it needed? Should we implement it? 
 * Add opportunistic embedded data
 * Write more examples
 * Write more unit-tests
