@@ -74,7 +74,7 @@ bool UnitTest3::startUnitTest() {
     mydata.resize(1);
     mydata[0] = 0xaa;
     unitTestActive = true;
-    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::adts,1,2,streamID,NO_FLAGS);
+    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::adts,1,1001,2,streamID,NO_FLAGS);
     if (result != ElasticFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method. Error-> " << signed(result)
                   << std::endl;

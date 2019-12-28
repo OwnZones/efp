@@ -100,7 +100,7 @@ bool UnitTest10::startUnitTest() {
     mydata.clear();
     mydata.resize(MTU-myEFPPacker->geType2Size());
     unitTestActive = true;
-    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264,1,0,streamID,NO_FLAGS);
+    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264,1,1001,0,streamID,NO_FLAGS);
     if (result != ElasticFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method. Error-> " << signed(result)
                   << std::endl;
@@ -110,7 +110,7 @@ bool UnitTest10::startUnitTest() {
         return false;
     }
 
-    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264,2,0,streamID,NO_FLAGS);
+    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264,2,1002,0,streamID,NO_FLAGS);
     if (result != ElasticFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method. Error-> " << signed(result)
                   << std::endl;

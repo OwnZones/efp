@@ -31,11 +31,18 @@ void UnitTest13::gotData(ElasticFrameProtocol::pFramePtr &packet) {
 
     if (unitTestPacketNumberReciever != packet->mPts) {
         std::cout << "Got PTS -> " << unsigned(packet->mPts) << " Expected -> " << unsigned(unitTestPacketNumberReciever) << std::endl;
-        unitTestPacketNumberReciever = packet->mPts; //if you want to continue remove the lines under to the break
+        unitTestPacketNumberReciever = packet->mPts; //if you want to continue remove the lines under to the return;
         unitTestFailed = true;
         unitTestActive = false;
         return;
+    }
 
+    if ((unitTestPacketNumberReciever+1000) != packet->mDts) {
+        std::cout << "Got DTS -> " << unsigned(packet->mPts) << " Expected -> " << unsigned(unitTestPacketNumberReciever) << std::endl;
+        unitTestPacketNumberReciever = packet->mPts; //if you want to continue remove the lines under to the return;
+        unitTestFailed = true;
+        unitTestActive = false;
+        return;
     }
 
     if (packet->mFrameSize != (((MTU - myEFPPacker->geType1Size()) * 5) + 12)) {
@@ -104,7 +111,7 @@ bool UnitTest13::startUnitTest() {
 
         mydata.clear();
         mydata.resize(((MTU - myEFPPacker->geType1Size()) * 5) + 12);
-        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber+1, 0, streamID, INLINE_PAYLOAD);
+        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber+1, packetNumber+1001, 0, streamID, INLINE_PAYLOAD);
         if (result != ElasticFrameMessages::noError) {
             std::cout << "Unit test number: " << unsigned(activeUnitTest)
                       << " Failed in the packAndSend method. Error-> " << signed(result)

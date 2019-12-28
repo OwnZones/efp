@@ -97,6 +97,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
         pThisBucket->mSavedSuperFrameNo = lType1Frame.hSuperFrameNo;
         pThisBucket->mHaveReceivedPacket.reset();
         pThisBucket->mPts = UINT64_MAX;
+        pThisBucket->mDts = UINT64_MAX;
         pThisBucket->mHaveReceivedPacket[lType1Frame.hFragmentNo] = 1;
         pThisBucket->mTimeout = mBucketTimeout;
         pThisBucket->mFragmentCounter = 0;
@@ -198,6 +199,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
         pThisBucket->mSavedSuperFrameNo = lType2Frame.hSuperFrameNo;
         pThisBucket->mHaveReceivedPacket.reset();
         pThisBucket->mPts = lType2Frame.hPts;
+        pThisBucket->mDts = lType2Frame.hDts;
         pThisBucket->mHaveReceivedPacket[lType2Frame.hOfFragmentNo] = 1;
         pThisBucket->mTimeout = mBucketTimeout;
         pThisBucket->mOfFragmentNo = lType2Frame.hOfFragmentNo;
@@ -242,6 +244,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
     // Before the type2 frame arrives PTS and CODE are set to it's respective 'illegal' value. meaning you cant't use them.
     pThisBucket->mTimeout = mBucketTimeout;
     pThisBucket->mPts = lType2Frame.hPts;
+    pThisBucket->mDts = lType2Frame.hDts;
     pThisBucket->mCode = lType2Frame.hCode;
     pThisBucket->mFlags = lType2Frame.hFrameType & 0xf0;
     pThisBucket->mFragmentCounter++;
@@ -304,6 +307,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
         pThisBucket->mSavedSuperFrameNo = lType3Frame.hSuperFrameNo;
         pThisBucket->mHaveReceivedPacket.reset();
         pThisBucket->mPts = UINT64_MAX;
+        pThisBucket->mDts = UINT64_MAX;
         pThisBucket->mHaveReceivedPacket[lThisFragmentNo] = 1;
         pThisBucket->mTimeout = mBucketTimeout;
         pThisBucket->mFragmentCounter = 0;
@@ -417,41 +421,40 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
     uint64_t lOldestFrameDelivered = 0;
     uint64_t lSavedPTS = 0;
     int64_t lTimeReference = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
-    int overloadCount = 0;
+    int lOverloadCount = 0;
 
-    uint32_t timedebuggerPointer = 0;
-    int64_t timeDebugger[100];
+    uint32_t lTimedebuggerPointer = 0;
+    int64_t lTimeDebugger[100];
 
     while (mThreadActive) {
         lTimeReference += WORKER_THREAD_SLEEP_US;
         int64_t lTimeNow = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
         int64_t lTimeCompensation = lTimeReference - lTimeNow;
 
-//        timeDebugger[timedebuggerPointer++]=lTimeCompensation;
-//        if (! (timedebuggerPointer % 100)) {
+//        lTimeDebugger[lTimedebuggerPointer++]=lTimeCompensation;
+//        if (! (lTimedebuggerPointer % 100)) {
 //            std::cout << "Time Debug ->  ";
-//            timedebuggerPointer=0;
+//            lTimedebuggerPointer=0;
 //            int64_t averageTime=0;
 //            for (int g = 0; g < 100; g++) {
-//                averageTime += WORKER_THREAD_SLEEP_US-timeDebugger[g];
-//                std::cout << int64_t(WORKER_THREAD_SLEEP_US-timeDebugger[g]) << " ";
+//                averageTime += WORKER_THREAD_SLEEP_US-lTimeDebugger[g];
+//                std::cout << int64_t(WORKER_THREAD_SLEEP_US-lTimeDebugger[g]) << " ";
 //            }
 //            std::cout << std::endl;
 //            averageTime = averageTime / 100;
 //            std::cout << "Average -> " << signed(averageTime) << std::endl;
 //        }
 
-
         if(lTimeCompensation < 0 ) {
             //we will get a jitter but if we're a milli off then we're probably overloaded.
             if (lTimeCompensation < -1000) {
-                if (overloadCount++ == 100) {
+                if (lOverloadCount++ == 100) {
                     //Ok we have been overloaded for quite some time now..
-                    overloadCount = 0;
+                    lOverloadCount = 0;
                     LOGGER(true, LOGG_WARN, "Worker thread overloaded by " << signed(lTimeCompensation) << " us")
                 }
             } else {
-                overloadCount = 0;
+                lOverloadCount = 0;
             }
             lTimeCompensation = 0;
         }
@@ -582,6 +585,7 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
                             mBucketList[x.bucket].mBucketData->mBroken =
                                     mBucketList[x.bucket].mFragmentCounter != mBucketList[x.bucket].mOfFragmentNo;
                             mBucketList[x.bucket].mBucketData->mPts = mBucketList[x.bucket].mPts;
+                            mBucketList[x.bucket].mBucketData->mDts = mBucketList[x.bucket].mDts;
                             mBucketList[x.bucket].mBucketData->mCode = mBucketList[x.bucket].mCode;
                             mBucketList[x.bucket].mBucketData->mStream = mBucketList[x.bucket].mStream;
                             mBucketList[x.bucket].mBucketData->mSource = mBucketList[x.bucket].mSource;
@@ -646,6 +650,7 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
                                 mBucketList[x.bucket].mBucketData->mBroken =
                                         mBucketList[x.bucket].mFragmentCounter != mBucketList[x.bucket].mOfFragmentNo;
                                 mBucketList[x.bucket].mBucketData->mPts = mBucketList[x.bucket].mPts;
+                                mBucketList[x.bucket].mBucketData->mDts = mBucketList[x.bucket].mDts;
                                 mBucketList[x.bucket].mBucketData->mCode = mBucketList[x.bucket].mCode;
                                 mBucketList[x.bucket].mBucketData->mStream = mBucketList[x.bucket].mStream;
                                 mBucketList[x.bucket].mBucketData->mSource = mBucketList[x.bucket].mSource;
@@ -787,7 +792,7 @@ ElasticFrameMessages ElasticFrameProtocol::receiveFragment(const std::vector<uin
 
 // Pack data method. Fragments the data and calls the sendCallback method at the host level.
 ElasticFrameMessages
-ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts,
+ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
                                   uint32_t code, uint8_t stream, uint8_t flags) {
 
     std::lock_guard<std::mutex> lock(mSendMtx);
@@ -802,6 +807,10 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
 
     if (pts == UINT64_MAX) {
         return ElasticFrameMessages::reservedPTSValue;
+    }
+
+    if (dts == UINT64_MAX) {
+        return ElasticFrameMessages::reservedDTSValue;
     }
 
     if (code == UINT32_MAX) {
@@ -829,6 +838,7 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
         lType2Frame.hDataContent = dataContent;
         lType2Frame.hSizeOfData = (uint16_t) rPacket.size(); //The total size fits uint16_t since we cap the MTU to uint16_t
         lType2Frame.hPts = pts;
+        lType2Frame.hDts = dts;
         lType2Frame.hCode = code;
         lType2Frame.hStream = stream;
         try {
@@ -939,6 +949,7 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
     lType2Frame.hDataContent = dataContent;
     lType2Frame.hSizeOfData = (uint16_t) lDataLeftToSend;
     lType2Frame.hPts = pts;
+    lType2Frame.hDts = dts;
     lType2Frame.hCode = code;
     lType2Frame.hType1PacketSize = mCurrentMTU - sizeof(ElasticFrameType1);
     std::vector<uint8_t> lFinalPacket(sizeof(ElasticFrameType2) + lDataLeftToSend);

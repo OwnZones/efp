@@ -104,7 +104,7 @@ bool UnitTest4::startUnitTest() {
     unitTestPacketNumberSender = 0;
     mydata.resize((MTU - myEFPPacker->geType1Size()) + 1);
     unitTestActive = true;
-    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::adts,1,2,streamID,NO_FLAGS);
+    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::adts,1,1001,2,streamID,NO_FLAGS);
     if (result != ElasticFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method. Error-> " << signed(result)
                   << std::endl;

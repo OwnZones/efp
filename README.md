@@ -175,7 +175,6 @@ Please read -> **ElasticFrameProtocol.pdf** for detailed information.
 
 ## Next steps
 
-* DTS has been requested.. Is it needed? Should we implement it? 
 * Add opportunistic embedded data
 * Write more examples
 * Write more unit-tests

@@ -22,11 +22,10 @@
 
 int main() {
 
+    //PerformanceLab sends/receives a endless stream of packets (Used when profiling the code)
     //PerformanceLab myPerformanceLab;
-    //if (!myPerformanceLab.startUnitTest()) {
-    //    std::cout << "Performance test" << std::endl;
-    //    return EXIT_FAILURE;
-    //}
+    //myPerformanceLab.startUnitTest();
+    //code will never get to here
 
     int returnCode=EXIT_SUCCESS;
 
@@ -125,6 +124,7 @@ int main() {
 
 
     //Test sending 100 000 superframes
+    //Check PTS and DTS values sent are also received
     UnitTest13 unitTest13;
     if (!unitTest13.startUnitTest()) {
         std::cout << "Unit test 13 failed" << std::endl;

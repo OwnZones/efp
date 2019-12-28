@@ -85,6 +85,7 @@ struct ElasticFrameType2 {
     uint16_t hOfFragmentNo = 0;
     uint16_t hType1PacketSize = 0;
     uint64_t hPts = UINT64_MAX;
+    uint64_t hDts = UINT64_MAX;
     uint32_t hCode = UINT32_MAX;
 };
 

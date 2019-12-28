@@ -112,6 +112,7 @@ namespace ElasticFrameMessagesNamespace {
                 bufferOutOfResources,       //This error is indicating there are no more buffer resources. In the unlikely event where all frames miss fragment(s) and the timeout is set high
         //then broken superFrames will be buffered and new incoming data will claim buffers. When there are no more buffers to claim this error will be triggered.
                 reservedPTSValue,           //UINT64_MAX is a EFP reserved value
+        reservedDTSValue,           //UINT64_MAX is a EFP reserved value
         reservedCodeValue,          //UINT32_MAX is a EFP reserved value
         reservedStreamValue,        //0 is a EFP reserved value for signaling manifests
         memoryAllocationError,      //Failed allocating system memory. This is fatal and results in unknown behaviour.
@@ -218,7 +219,7 @@ public:
     * @return ElasticFrameMessages
     */
     ElasticFrameMessages
-    packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts, uint32_t code,
+    packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts, uint32_t code,
                 uint8_t stream, uint8_t flags);
 
 
@@ -321,6 +322,7 @@ private:
         uint64_t mDeliveryOrder = UINT64_MAX;
         size_t mFragmentSize = 0;
         uint64_t mPts = UINT64_MAX;
+        uint64_t mDts = UINT64_MAX;
         uint32_t mCode = UINT32_MAX;
         uint8_t mStream;
         uint8_t mSource;

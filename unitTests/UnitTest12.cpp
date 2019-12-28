@@ -152,7 +152,7 @@ bool UnitTest12::startUnitTest() {
     unitTestActive = true;
 
     for (int packetNumber=0;packetNumber < 5; packetNumber++) {
-        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber+1, 0,streamID,NO_FLAGS);
+        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber+1, packetNumber+1001, 0,streamID,NO_FLAGS);
         if (result != ElasticFrameMessages::noError) {
             std::cout << "Unit test number: " << unsigned(activeUnitTest)
                       << " Failed in the packAndSend method. Error-> " << signed(result)
