@@ -12,7 +12,7 @@
 // The lower limit is actually type2frameSize+1, keep it at 255 for now
 ElasticFrameProtocol::ElasticFrameProtocol(uint16_t setMTU, ElasticFrameMode mode) {
     if ((setMTU < UINT8_MAX) && mode != ElasticFrameMode::receiver) {
-        LOGGER(true, LOGG_ERROR, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.");
+        LOGGER(true, LOGG_ERROR, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.")
         mCurrentMTU = UINT8_MAX;
     } else {
         mCurrentMTU = setMTU;
@@ -23,7 +23,7 @@ ElasticFrameProtocol::ElasticFrameProtocol(uint16_t setMTU, ElasticFrameMode mod
     mIsDeliveryThreadActive = false;
     sendCallback = std::bind(&ElasticFrameProtocol::sendData, this, std::placeholders::_1);
     receiveCallback = std::bind(&ElasticFrameProtocol::gotData, this, std::placeholders::_1);
-    LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol constructed");
+    LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol constructed")
 }
 
 ElasticFrameProtocol::~ElasticFrameProtocol() {
@@ -31,20 +31,20 @@ ElasticFrameProtocol::~ElasticFrameProtocol() {
     if (mThreadActive) {
         ElasticFrameMessages result = stopReceiver();
         if (result) {
-            LOGGER(true, LOGG_ERROR, "Failed stopping worker thread.");
+            LOGGER(true, LOGG_ERROR, "Failed stopping worker thread.")
         }
     }
-    LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol destruct");
+    LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol destruct")
 }
 
 // Dummy callback for transmitter
 void ElasticFrameProtocol::sendData(const std::vector<uint8_t> &rSubPacket) {
-    LOGGER(true, LOGG_ERROR, "Implement the sendCallback method for the protocol to work.");
+    LOGGER(true, LOGG_ERROR, "Implement the sendCallback method for the protocol to work.")
 }
 
 // Dummy callback for reciever
 void ElasticFrameProtocol::gotData(ElasticFrameProtocol::pFramePtr &rPacket) {
-    LOGGER(true, LOGG_ERROR, "Implement the recieveCallback method for the protocol to work.");
+    LOGGER(true, LOGG_ERROR, "Implement the recieveCallback method for the protocol to work.")
 }
 
 // This method is generating a uint64_t counter from the  uint16_t counter
@@ -136,7 +136,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
     // I invalidate this bucket to save me but the user should be notified somehow about this state. FIXME
 
     if (pThisBucket->mOfFragmentNo < lType1Frame.hFragmentNo || lType1Frame.hOfFragmentNo != pThisBucket->mOfFragmentNo) {
-        LOGGER(true, LOGG_FATAL, "bufferOutOfBounds");
+        LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
         pThisBucket->mActive = false;
         return ElasticFrameMessages::bufferOutOfBounds;
     }
@@ -229,7 +229,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
     }
 
     if (pThisBucket->mOfFragmentNo < lType2Frame.hOfFragmentNo || lType2Frame.hOfFragmentNo != pThisBucket->mOfFragmentNo) {
-        LOGGER(true, LOGG_FATAL, "bufferOutOfBounds");
+        LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
         pThisBucket->mActive = false;
         return ElasticFrameMessages::bufferOutOfBounds;
     }
@@ -346,7 +346,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
     // I invalidate this bucket to save me but the user should be notified somehow about this state. FIXME
 
     if (pThisBucket->mOfFragmentNo < lThisFragmentNo || lType3Frame.hOfFragmentNo != pThisBucket->mOfFragmentNo) {
-        LOGGER(true, LOGG_FATAL, "bufferOutOfBounds");
+        LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
         pThisBucket->mActive = false;
         return ElasticFrameMessages::bufferOutOfBounds;
     }
@@ -423,8 +423,8 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
     int64_t lTimeReference = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();
     int lOverloadCount = 0;
 
-    uint32_t lTimedebuggerPointer = 0;
-    int64_t lTimeDebugger[100];
+//    uint32_t lTimedebuggerPointer = 0;
+//    int64_t lTimeDebugger[100];
 
     while (mThreadActive) {
         lTimeReference += WORKER_THREAD_SLEEP_US;
@@ -671,7 +671,7 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
 
         // Is more than 75% of the buffer used. //FIXME notify the user in some way
         if (lActiveCount > (CIRCULAR_BUFFER_SIZE / 4) * 3) {
-            LOGGER(true, LOGG_WARN, "Current active buckets are more than 75% of the circular buffer.");
+            LOGGER(true, LOGG_WARN, "Current active buckets are more than 75% of the circular buffer.")
         }
     }
     mIsWorkerThreadActive = false;
@@ -684,19 +684,19 @@ ElasticFrameMessages ElasticFrameProtocol::startReceiver(uint32_t bucketTimeoutM
     }
 
     if (mIsWorkerThreadActive) {
-        LOGGER(true, LOGG_WARN, "Worker thread is already running");
+        LOGGER(true, LOGG_WARN, "Worker thread is already running")
         return ElasticFrameMessages::receiverAlreadyStarted;
     }
     if (mIsDeliveryThreadActive) {
-        LOGGER(true, LOGG_WARN, "Delivery thread is already running");
+        LOGGER(true, LOGG_WARN, "Delivery thread is already running")
         return ElasticFrameMessages::receiverAlreadyStarted;
     }
     if (bucketTimeoutMaster == 0) {
-        LOGGER(true, LOGG_WARN, "bucketTimeoutMaster can't be 0");
+        LOGGER(true, LOGG_WARN, "bucketTimeoutMaster can't be 0")
         return ElasticFrameMessages::parameterError;
     }
     if (holTimeoutMaster >= bucketTimeoutMaster) {
-        LOGGER(true, LOGG_WARN, "holTimeoutMaster can't be less or equal to bucketTimeoutMaster");
+        LOGGER(true, LOGG_WARN, "holTimeoutMaster can't be less or equal to bucketTimeoutMaster")
         return ElasticFrameMessages::parameterError;
     }
 
@@ -735,7 +735,7 @@ ElasticFrameMessages ElasticFrameProtocol::stopReceiver(){
         usleep(1000);
         if (!--lLockProtect) {
             //we gave it a second now exit anyway
-            LOGGER(true, LOGG_FATAL, "Threads not stopping. Now crash and burn baby!!");
+            LOGGER(true, LOGG_FATAL, "Threads not stopping. Now crash and burn baby!!")
             return ElasticFrameMessages::failedStoppingReceiver;
         }
     }
@@ -758,7 +758,7 @@ ElasticFrameMessages ElasticFrameProtocol::receiveFragment(const std::vector<uin
     }
 
     if (!(mIsWorkerThreadActive & mIsDeliveryThreadActive)) {
-        LOGGER(true, LOGG_ERROR, "Receiver not running");
+        LOGGER(true, LOGG_ERROR, "Receiver not running")
         return ElasticFrameMessages::receiverNotRunning;
     }
 
@@ -934,7 +934,7 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
 
     //Debug me for calculation errors
     if (lDataLeftToSend + sizeof(ElasticFrameType2) > mCurrentMTU) {
-        LOGGER(true, LOGG_FATAL, "Calculation bug.. Value that made me sink -> " << rPacket.size());
+        LOGGER(true, LOGG_FATAL, "Calculation bug.. Value that made me sink -> " << rPacket.size())
         return ElasticFrameMessages::internalCalculationError;
     }
 

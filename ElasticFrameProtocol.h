@@ -19,7 +19,7 @@
 #include <sstream>
 #include <climits>
 #include <cstring>
-#include <math.h>
+#include <cmath>
 #include <thread>
 #include <unistd.h>
 #include <functional>
@@ -185,7 +185,7 @@ public:
         SuperFrame(const SuperFrame &) = delete;
         SuperFrame &operator=(const SuperFrame &) = delete;
 
-        SuperFrame(size_t memAllocSize) {
+        explicit SuperFrame(size_t memAllocSize) {
             int result = posix_memalign((void **) &pFrameData, 32,
                            memAllocSize);   //32 byte memory alignment for AVX2 processing //Winboze needs some other code.
 
@@ -200,7 +200,7 @@ public:
     using pFramePtr = std::unique_ptr<SuperFrame>;
 
     ///Constructor
-    ElasticFrameProtocol(uint16_t setMTU = 0, ElasticFrameMode mode = ElasticFrameMode::receiver);
+    explicit ElasticFrameProtocol(uint16_t setMTU = 0, ElasticFrameMode mode = ElasticFrameMode::receiver);
     ///Destructor
     virtual ~ElasticFrameProtocol();
 
@@ -213,6 +213,7 @@ public:
     * @param rPacket The Data to be sent
     * @param dataContent ElasticFrameContent::x where x is the type of data to be sent.
     * @param pts the pts value of the content
+    * @param dts the dts value of the content
     * @param code if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
     * @param stream The EFP-stream number the data is associated with.
     * @param flags signal what flags are used
@@ -258,7 +259,8 @@ public:
     * rPacket conatins
     * -> mCcontent ElasticFrameContent::x where x is the type of data to be sent.
     * -> mBbroken if true the data integrety is broken by the underlying protocol.
-    * -> mPpts the pts value of the content
+    * -> mPts the pts value of the content
+    * -> mDts the pts value of the content
     * -> mCcode if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
     * -> mStream The EFP-stream number the data is associated with.
     * -> mFlags signal what flags are used
