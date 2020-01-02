@@ -113,10 +113,6 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
             return ElasticFrameMessages::memoryAllocationError;
         }
 
-        //std::copy(rSubPacket.begin() + sizeof(ElasticFrameType1),
-        //          rSubPacket.end(),
-        //          pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
-
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
                      rSubPacket.data() + sizeof(ElasticFrameType1), rSubPacket.size() - sizeof(ElasticFrameType1));
 
@@ -159,10 +155,6 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
     // lInsertDataPointer will point to the fragment start above and fill with the incoming data
 
     size_t lInsertDataPointer = pThisBucket->mFragmentSize * lType1Frame.hFragmentNo;
-
-    //std::copy(rSubPacket.begin() + sizeof(ElasticFrameType1),
-    //          rSubPacket.end(),
-    //          pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
 
     std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
                  rSubPacket.data() + sizeof(ElasticFrameType1), rSubPacket.size() - sizeof(ElasticFrameType1));
@@ -214,10 +206,6 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
         }
         size_t lInsertDataPointer = lType2Frame.hType1PacketSize * lType2Frame.hOfFragmentNo;
 
-        //std::copy(rSubPacket.begin() + sizeof(ElasticFrameType2),
-        //          rSubPacket.end(),
-        //          pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
-
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
                      rSubPacket.data() + sizeof(ElasticFrameType2), rSubPacket.size() - sizeof(ElasticFrameType2));
 
@@ -241,7 +229,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
     }
 
     // Type 2 frames contains the pts and code. If for some reason the type2 packet is missing or the frame is delivered
-    // Before the type2 frame arrives PTS and CODE are set to it's respective 'illegal' value. meaning you cant't use them.
+    // Before the type2 frame arrives PTS,DTS and CODE are set to it's respective 'illegal' value. meaning you cant't use them.
     pThisBucket->mTimeout = mBucketTimeout;
     pThisBucket->mPts = lType2Frame.hPts;
     pThisBucket->mDts = lType2Frame.hDts;
@@ -263,10 +251,6 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
                 (pThisBucket->mFragmentSize * lType2Frame.hOfFragmentNo) + (rSubPacket.size() - sizeof(ElasticFrameType2));
         // Type 2 is always at the end and is always the highest number fragment
         size_t lInsertDataPointer = lType2Frame.hType1PacketSize * lType2Frame.hOfFragmentNo;
-
-        //std::copy(rSubPacket.begin() + sizeof(ElasticFrameType2),
-        //          rSubPacket.end(),
-        //          pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
 
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
                      rSubPacket.data() + sizeof(ElasticFrameType2), rSubPacket.size() - sizeof(ElasticFrameType2));
@@ -323,10 +307,6 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
             return ElasticFrameMessages::memoryAllocationError;
         }
 
-        //std::copy(rSubPacket.begin() + sizeof(ElasticFrameType3),
-        //          rSubPacket.end(),
-        //          pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
-
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
                      rSubPacket.data() + sizeof(ElasticFrameType3), rSubPacket.size() - sizeof(ElasticFrameType3));
 
@@ -373,9 +353,6 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
     // lInsertDataPointer will point to the fragment start above and fill with the incoming data
 
     size_t lInsertDataPointer = pThisBucket->mFragmentSize * lThisFragmentNo;
-    //std::copy(rSubPacket.begin() + sizeof(ElasticFrameType3),
-    //          rSubPacket.end(),
-    //          pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
 
     std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
                  rSubPacket.data() + sizeof(ElasticFrameType3), rSubPacket.size() - sizeof(ElasticFrameType3));
@@ -847,9 +824,6 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
             std::memmove(lFinalPacket.data(),(uint8_t *) &lType2Frame,sizeof(ElasticFrameType2));
             std::memmove(lFinalPacket.data()+sizeof(ElasticFrameType2),rPacket.data(),rPacket.size());
 
-            //std::copy((uint8_t *) &lType2Frame, ((uint8_t *) &lType2Frame) + sizeof(ElasticFrameType2),
-            //          lFinalPacket.begin());
-            //std::copy(rPacket.begin(), rPacket.end(), lFinalPacket.begin() + sizeof(ElasticFrameType2));
             sendCallback(lFinalPacket);
         }
         catch (std::bad_alloc const &) {
@@ -889,11 +863,6 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
                      rPacket.data() + lDataPointer,
                      lDataPayloadType1);
 
-        //std::copy((uint8_t *) &lType1Frame, ((uint8_t *) &lType1Frame) + sizeof(ElasticFrameType1),
-        //          lFinalPacketLoop.begin());
-        //std::copy(rPacket.begin() + lDataPointer,
-        //          rPacket.begin() + lDataPointer + lDataPayloadType1,
-        //          lFinalPacketLoop.begin() + sizeof(ElasticFrameType1));
         lDataPointer += lDataPayloadType1;
         sendCallback(lFinalPacketLoop);
     }
@@ -913,11 +882,6 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
                      rPacket.data() + lDataPointer,
                      lReminderData);
 
-        //std::copy((uint8_t *) &lType3Frame, ((uint8_t *) &lType3Frame) + sizeof(ElasticFrameType3),
-        //          lType3PacketData.begin());
-        //std::copy(rPacket.begin() + lDataPointer,
-        //          rPacket.begin() + lDataPointer + lReminderData,
-        //          lType3PacketData.begin() + sizeof(ElasticFrameType3));
         lDataPointer += lReminderData;
         if (lDataPointer != rPacket.size()) {
             return ElasticFrameMessages::internalCalculationError;
@@ -956,16 +920,11 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
 
     std::memmove(lFinalPacket.data(),(uint8_t *) &lType2Frame,sizeof(ElasticFrameType2));
 
-    //std::copy((uint8_t *) &lType2Frame, ((uint8_t *) &lType2Frame) + sizeof(ElasticFrameType2), lFinalPacket.begin());
     if (lDataLeftToSend) {
 
         std::memmove(lFinalPacket.data() + sizeof(ElasticFrameType2),
                      rPacket.data() + lDataPointer,
                      lDataLeftToSend);
-
-        //std::copy(rPacket.begin() + lDataPointer,
-        //          rPacket.begin() + lDataPointer + lDataLeftToSend,
-        //          lFinalPacket.begin() + sizeof(ElasticFrameType2));
     }
     sendCallback(lFinalPacket);
     mSuperFrameNoGenerator++;
@@ -1012,11 +971,6 @@ ElasticFrameMessages ElasticFrameProtocol::extractEmbeddedData(ElasticFrameProto
         std::memmove(lEmbeddedData.data(),
                      rPacket->pFrameData + lHeaderSize + *pPayloadDataPosition,
                      lEmbeddedHeader.size);
-
-        //std::copy(rPacket->pFrameData + lHeaderSize + *pPayloadDataPosition,
-        //          rPacket->pFrameData + lHeaderSize + *pPayloadDataPosition + lEmbeddedHeader.size,
-        //          lEmbeddedData.begin());
-
 
         pEmbeddedDataList->emplace_back(lEmbeddedData);
         lMoreData = lEmbeddedHeader.embeddedFrameType & 0x80;

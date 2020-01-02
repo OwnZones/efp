@@ -9,6 +9,8 @@ add_library(efp STATIC ElasticFrameProtocol.cpp)
 #remove_definitions(-DDEBUG)
 #add_definitions(-DDEBUG)
 
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+
 #if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 #    add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
 #    add_link_options(-fprofile-instr-generate)
