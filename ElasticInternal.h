@@ -49,7 +49,7 @@ struct sortDeliveryOrder
 
 //Packet header part ----- START ------
 
-//Type 0,1,2 aso. are static from when defined. For new protocol functions/features add new types.
+//Type 0,1,2 aso. are static from when defined. For new protocol functions/features add new types or flags
 //type15 is the maximum type number 4 bits used
 //* - 0x00 private fragment
 //* - 0x01 frame is larger than MTU
@@ -67,7 +67,7 @@ enum Frametype : uint8_t { //The 4 LSB are used! (The 4 MSB are the flags)
 
 struct ElasticFrameType0 {
     uint8_t hFrameType = Frametype::type0;
-};
+} __attribute__((packed));
 
 struct ElasticFrameType1 {
     uint8_t hFrameType = Frametype::type1;
@@ -75,13 +75,12 @@ struct ElasticFrameType1 {
     uint16_t hSuperFrameNo = 0;
     uint16_t hFragmentNo = 0;
     uint16_t hOfFragmentNo = 0;
-};
+} __attribute__((packed));
 
 struct ElasticFrameType2 {
     uint8_t hFrameType  = Frametype::type2;
     uint8_t  hStream = 0;
     ElasticFrameContent hDataContent = ElasticFrameContent::unknown;
-    //Dummy byte will be inserted here :*(
     uint16_t hSizeOfData = 0;
     uint16_t hSuperFrameNo = 0;
     uint16_t hOfFragmentNo = 0;
@@ -89,7 +88,7 @@ struct ElasticFrameType2 {
     uint64_t hPts = UINT64_MAX;
     uint32_t hDtsPtsDiff = UINT32_MAX;
     uint32_t hCode = UINT32_MAX;
-};
+} __attribute__((packed));
 
 struct ElasticFrameType3 {
     uint8_t hFrameType = Frametype::type3;
@@ -97,7 +96,7 @@ struct ElasticFrameType3 {
     uint16_t hSuperFrameNo = 0;
     uint16_t hType1PacketSize = 0;
     uint16_t hOfFragmentNo = 0;
-};
+} __attribute__((packed));
 
 //Proposal of new minimalistic end-frame
 struct ElasticFrameType4 {
@@ -109,7 +108,7 @@ struct ElasticFrameType4 {
     uint16_t hType1PacketSize = 0;
     uint64_t hPts = UINT64_MAX;
     uint32_t hDtsPtsDiff = UINT32_MAX;
-};
+} __attribute__((packed));
 //Packet header part ----- END ------
 
 
