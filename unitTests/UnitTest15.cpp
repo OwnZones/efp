@@ -30,7 +30,7 @@ void UnitTest15::gotData(ElasticFrameProtocol::pFramePtr &packet) {
         return;
     }
 
-    if (unitTestPacketNumberReciever != packet->mPts) {
+    if (unitTestPacketNumberReciever+1000 != packet->mPts) {
         std::cout << "Got PTS -> " << unsigned(packet->mPts) << " Expected -> " << unsigned(unitTestPacketNumberReciever) << std::endl;
         unitTestPacketNumberReciever = packet->mPts; //if you want to continue remove the lines under to the break
         unitTestFailed = true;
@@ -153,7 +153,7 @@ bool UnitTest15::startUnitTest() {
                       << std::endl;
         }
 
-        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber+1, packetNumber+1001, EFP_CODE('A', 'N', 'X', 'B'), streamID, INLINE_PAYLOAD);
+        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber+1001, packetNumber+1, EFP_CODE('A', 'N', 'X', 'B'), streamID, INLINE_PAYLOAD);
         if (result != ElasticFrameMessages::noError) {
             std::cout << "Unit test number: " << unsigned(activeUnitTest)
                       << " Failed in the packAndSend method. Error-> " << signed(result)

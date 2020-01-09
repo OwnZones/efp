@@ -1,5 +1,5 @@
 //
-// Created by UnitX Edgeware AB 2019
+// UnitX Edgeware AB 2020
 //
 
 #include "ElasticFrameProtocol.h"
@@ -8,7 +8,7 @@
 #define WORKER_THREAD_SLEEP_US 1000 * 10
 
 // Constructor setting the MTU (Only needed if sending, mode == sender)
-// Limit the MTU to uint16_t MAX and 255 min.
+// Limit the MTU to uint16_t MAX and UINT8_MAX min.
 // The lower limit is actually type2frameSize+1, keep it at 255 for now
 ElasticFrameProtocol::ElasticFrameProtocol(uint16_t setMTU, ElasticFrameMode mode) {
     if ((setMTU < UINT8_MAX) && mode != ElasticFrameMode::receiver) {
@@ -191,7 +191,13 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
         pThisBucket->mSavedSuperFrameNo = lType2Frame.hSuperFrameNo;
         pThisBucket->mHaveReceivedPacket.reset();
         pThisBucket->mPts = lType2Frame.hPts;
-        pThisBucket->mDts = lType2Frame.hDts;
+
+        if (lType2Frame.hDtsPtsDiff == UINT32_MAX) {
+            pThisBucket->mDts = UINT64_MAX;
+        } else {
+            pThisBucket->mDts = lType2Frame.hPts - (uint64_t)lType2Frame.hDtsPtsDiff;
+        }
+
         pThisBucket->mHaveReceivedPacket[lType2Frame.hOfFragmentNo] = 1;
         pThisBucket->mTimeout = mBucketTimeout;
         pThisBucket->mOfFragmentNo = lType2Frame.hOfFragmentNo;
@@ -232,7 +238,13 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
     // Before the type2 frame arrives PTS,DTS and CODE are set to it's respective 'illegal' value. meaning you cant't use them.
     pThisBucket->mTimeout = mBucketTimeout;
     pThisBucket->mPts = lType2Frame.hPts;
-    pThisBucket->mDts = lType2Frame.hDts;
+
+    if (lType2Frame.hDtsPtsDiff == UINT32_MAX) {
+        pThisBucket->mDts = UINT64_MAX;
+    } else {
+        pThisBucket->mDts = lType2Frame.hPts - (uint64_t)lType2Frame.hDtsPtsDiff;
+    }
+
     pThisBucket->mCode = lType2Frame.hCode;
     pThisBucket->mFlags = lType2Frame.hFrameType & 0xf0;
     pThisBucket->mFragmentCounter++;
@@ -457,7 +469,6 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
                 lFoundHeadOfLineBlocking = false;
             }
         }
-
 
         // Scan trough all buckets
 
@@ -798,6 +809,11 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
         return ElasticFrameMessages::reservedStreamValue;
     }
 
+    uint64_t lPtsDtsDiff = pts - dts;
+    if (lPtsDtsDiff >= UINT32_MAX) {
+        return ElasticFrameMessages::dtsptsDiffToLarge;
+    }
+
     flags &= 0xf0;
 
     // Will the data fit?
@@ -815,7 +831,7 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
         lType2Frame.hDataContent = dataContent;
         lType2Frame.hSizeOfData = (uint16_t) rPacket.size(); //The total size fits uint16_t since we cap the MTU to uint16_t
         lType2Frame.hPts = pts;
-        lType2Frame.hDts = dts;
+        lType2Frame.hDtsPtsDiff = (uint32_t)lPtsDtsDiff;
         lType2Frame.hCode = code;
         lType2Frame.hStream = stream;
         try {
@@ -913,7 +929,7 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
     lType2Frame.hDataContent = dataContent;
     lType2Frame.hSizeOfData = (uint16_t) lDataLeftToSend;
     lType2Frame.hPts = pts;
-    lType2Frame.hDts = dts;
+    lType2Frame.hDtsPtsDiff = lPtsDtsDiff;
     lType2Frame.hCode = code;
     lType2Frame.hType1PacketSize = mCurrentMTU - sizeof(ElasticFrameType1);
     std::vector<uint8_t> lFinalPacket(sizeof(ElasticFrameType2) + lDataLeftToSend);

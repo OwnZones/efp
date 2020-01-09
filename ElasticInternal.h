@@ -1,5 +1,5 @@
 //
-// Created by Anders Cedronius on 2019-11-19.
+// UnitX Edgeware AB 2020
 //
 
 #ifndef EFP_ELASTICINTERNAL_H
@@ -55,12 +55,14 @@ struct sortDeliveryOrder
 //* - 0x01 frame is larger than MTU
 //* - 0x02 frame is less than MTU
 //* - 0x03 The reminder of the data does not fit a type2 packet
-//Type1 and Type3 must be the same size
+//* - 0x04 Minimalistic type2-type frame used when static EFP stream and reciever signaled known stream.
+
 enum Frametype : uint8_t { //The 4 LSB are used! (The 4 MSB are the flags)
     type0 = 0,
     type1,
     type2,
-    type3
+    type3,
+    type4
 };
 
 struct ElasticFrameType0 {
@@ -79,12 +81,13 @@ struct ElasticFrameType2 {
     uint8_t hFrameType  = Frametype::type2;
     uint8_t  hStream = 0;
     ElasticFrameContent hDataContent = ElasticFrameContent::unknown;
+    //Dummy byte will be inserted here :*(
     uint16_t hSizeOfData = 0;
     uint16_t hSuperFrameNo = 0;
     uint16_t hOfFragmentNo = 0;
     uint16_t hType1PacketSize = 0;
     uint64_t hPts = UINT64_MAX;
-    uint64_t hDts = UINT64_MAX;
+    uint32_t hDtsPtsDiff = UINT32_MAX;
     uint32_t hCode = UINT32_MAX;
 };
 
@@ -94,6 +97,18 @@ struct ElasticFrameType3 {
     uint16_t hSuperFrameNo = 0;
     uint16_t hType1PacketSize = 0;
     uint16_t hOfFragmentNo = 0;
+};
+
+//Proposal of new minimalistic end-frame
+struct ElasticFrameType4 {
+    uint8_t hFrameType  = Frametype::type4;
+    uint8_t  hStream = 0;
+    uint16_t hSizeOfData = 0;
+    uint16_t hSuperFrameNo = 0;
+    uint16_t hOfFragmentNo = 0;
+    uint16_t hType1PacketSize = 0;
+    uint64_t hPts = UINT64_MAX;
+    uint32_t hDtsPtsDiff = UINT32_MAX;
 };
 //Packet header part ----- END ------
 

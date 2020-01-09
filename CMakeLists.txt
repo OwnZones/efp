@@ -1,15 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 project(efp)
-
 set(CMAKE_CXX_STANDARD 14)
-
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 find_package (Threads REQUIRED)
 add_library(efp STATIC ElasticFrameProtocol.cpp)
-
-#remove_definitions(-DDEBUG)
-#add_definitions(-DDEBUG)
-
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 
 #if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 #    add_compile_options(-fprofile-instr-generate -fcoverage-mapping)

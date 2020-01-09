@@ -18,7 +18,7 @@ void UnitTest5::sendData(const std::vector<uint8_t> &subPacket) {
 }
 
 void UnitTest5::gotData(ElasticFrameProtocol::pFramePtr &packet) {
-    if (packet->mPts != 1 || packet->mCode != 2) {
+    if (packet->mPts != 1001 || packet->mCode != 2) {
         unitTestFailed = true;
         unitTestActive = false;
         return;
@@ -82,7 +82,7 @@ bool UnitTest5::startUnitTest() {
     mydata.resize((MTU * 5) + (MTU / 2));
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
     unitTestActive = true;
-    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::adts,1,1001,2,streamID,NO_FLAGS);
+    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::adts,1001,1,2,streamID,NO_FLAGS);
     if (result != ElasticFrameMessages::noError) {
         std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method. Error-> " << signed(result)
                   << std::endl;

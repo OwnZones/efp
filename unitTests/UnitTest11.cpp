@@ -47,19 +47,19 @@ void UnitTest11::gotData(ElasticFrameProtocol::pFramePtr &packet) {
 
     unitTestPacketNumberReciever++;
     if (unitTestPacketNumberReciever == 1) {
-        if (packet->mPts == 1) {
-            expectedPTS=2;
+        if (packet->mPts == 1001) {
+            expectedPTS=1002;
             return;
         }
-        if (packet->mPts == 2) {
-            expectedPTS=4;
+        if (packet->mPts == 1002) {
+            expectedPTS=1004;
             return;
         }
-        if (packet->mPts == 4) {
-            expectedPTS=5;
+        if (packet->mPts == 1004) {
+            expectedPTS=1005;
             return;
         }
-        if (packet->mPts == 5) {
+        if (packet->mPts == 1005) {
             unitTestActive = false;
             std::cout << "UnitTest " << unsigned(activeUnitTest) << " done." << std::endl;
         }
@@ -69,13 +69,13 @@ void UnitTest11::gotData(ElasticFrameProtocol::pFramePtr &packet) {
     }
     if (unitTestPacketNumberReciever == 2) {
         if (expectedPTS == packet->mPts) {
-            if (packet->mPts == 2) {
-                expectedPTS=4;
+            if (packet->mPts == 1002) {
+                expectedPTS=1004;
             }
-            if (packet->mPts == 4) {
-                expectedPTS=5;
+            if (packet->mPts == 1004) {
+                expectedPTS=1005;
             }
-            if (packet->mPts == 5) {
+            if (packet->mPts == 1005) {
                 unitTestActive = false;
                 std::cout << "UnitTest " << unsigned(activeUnitTest) << " done." << std::endl;
             }
@@ -87,10 +87,10 @@ void UnitTest11::gotData(ElasticFrameProtocol::pFramePtr &packet) {
     }
     if (unitTestPacketNumberReciever == 3) {
         if (expectedPTS == packet->mPts) {
-            if (packet->mPts == 4) {
-                expectedPTS=5;
+            if (packet->mPts == 1004) {
+                expectedPTS=1005;
             }
-            if (packet->mPts == 5) {
+            if (packet->mPts == 1005) {
                 unitTestActive = false;
                 std::cout << "UnitTest " << unsigned(activeUnitTest) << " done." << std::endl;
             }
@@ -150,13 +150,13 @@ bool UnitTest11::startUnitTest() {
     mydata.clear();
     unitTestsSavedData2D.clear();
     unitTestsSavedData3D.clear();
-    expectedPTS = 0;
+    expectedPTS = 1000;
     unitTestPacketNumberSender=0;
     unitTestPacketNumberReciever = 0;
     mydata.resize(((MTU - myEFPPacker->geType1Size()) * 5) + 12);
     unitTestActive = true;
     for (int packetNumber=0;packetNumber < 5; packetNumber++) {
-        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber + 1,packetNumber + 1001, 0, streamID, NO_FLAGS);
+        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber + 1001,packetNumber + 1, 0, streamID, NO_FLAGS);
         if (result != ElasticFrameMessages::noError) {
             std::cout << "Unit test number: " << unsigned(activeUnitTest)
                       << " Failed in the packAndSend method. Error-> " << signed(result)

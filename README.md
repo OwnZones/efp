@@ -15,14 +15,14 @@ The ElasticFrameProtocol is acting as a bridge between elementary data and the u
 
 ```
 
-The elasticity comes from the protocols ability to adapt to incoming frame size, type, number of concurrent streams and underlying infrastructure. Due to it’s elastic behavior the layer between the transport layer and producers/consumers of the data can be kept thin without driving overhead, complexity and delay. 
+The elasticity comes from the protocols ability to adapt to incoming frame size, type, number of concurrent streams and underlying infrastructure. The layer between the transport layer and producers/consumers of the data can be kept thin without driving overhead, complexity and delay. 
 
 Please read -> **ElasticFrameProtocol.pdf** for more information.
 
 
 ## Installation
 
-Requires cmake version >= **3.10** and **C++11**
+Requires cmake version >= **3.10** and **C++14**
 
 **Release:**
 
@@ -52,9 +52,8 @@ The static EFP library
 
 **EFP** is built on Ubuntu 18.04 in the bitbucket [pipeline](https://bitbucket.org/unitxtra/efp/addon/pipelines/home).
 
-By us on MacOS using C-Lion.
-
-Please help us build other platforms. 
+and MacOS by us during development.
+ 
 
 ---
 
@@ -86,11 +85,12 @@ myEFPSender.sendCallback = std::bind(&sendData, std::placeholders::_1);
 // param1 = The data
 // param2 = The data type
 // param3 = PTS
-// param4 = CODE (if the data type param2 (uint8_t) msb is set then CODE must be used
+// param4 = DTS
+// param5 = CODE (if the data type param2 (uint8_t) msb is set then CODE must be used
 // See the header file detailing what CODE should be set to
-// param5 = Stream number (uint8_t) a unique value for that EFP-Stream
-// param6 = FLAGS (used for various signaling in the protocol) 
-myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 'ANXB', 2, NO_FLAGS);
+// param6 = Stream number (uint8_t) a unique value for that EFP-Stream
+// param7 = FLAGS (used for various signaling in the protocol) 
+myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 0, 'ANXB', 2, NO_FLAGS);
 
 ```
 
@@ -107,6 +107,7 @@ myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 'ANXB', 2, NO_FLAG
 // mDataContent is containing the content descriptor
 // mBroken is true if data in the superFrame is missing
 // mPts contains the pts value used in the superFrame
+// mDts contains the pts value used in the superFrame
 // mCode contains the code sent (if used)
 // mStream is the stream number to associate to the data
 // mFlags contains the flags used by the superFrame

@@ -1,6 +1,6 @@
 // ElasticFrameProtocol
 //
-// UnitX Edgeware AB 2019
+// UnitX Edgeware AB 2020
 //
 
 // Prefixes used
@@ -120,6 +120,7 @@ namespace ElasticFrameMessagesNamespace {
         type1And3SizeError,         //Type1 and Type3 must have the same header size
         wrongMode,                  //mode is set to receiver when using the class as sender or the other way around
         receiverNotRunning,         //The EFP receiver is not running
+        dtsptsDiffToLarge,          //PTS - DTS > UINT32_MAX
 
 
         noError = 0,
