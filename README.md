@@ -6,11 +6,11 @@ The ElasticFrameProtocol is acting as a bridge between elementary data and the u
 
 ```
 ---------------------------------------------------------   /\
-| Data type 1 | Data type 2 | Data type 3 | Data type 4 |  /  \
+| Data type L | Data type L | Data type F | Data type Q |  /  \
 ---------------------------------------------------------   ||
 |                   ElasticFrameProtocol                |   ||
 ---------------------------------------------------------   ||
-| Network layer: UDP, TCP, SRT, RIST aso.               |  \  /
+| Network layer: UDP, TCP, SRT, RIST, Zixi, SCTP, aso.  |  \  /
 ---------------------------------------------------------   \/
 
 ```
@@ -156,7 +156,7 @@ Another common solution to cover for a protocol’s shortcomings is to stack pro
 
 Now with the rise of protocols such as RIST, Zixi, and SRT we wanted to fully utilize the transport containers with as little overhead as possible, so we implemented a thin network adaptation layer that allows us to easily use different transport protocols where they make most sense maintaining a well-defined data delivery pipeline to and from the data producers/consumers. 
 
-That’s why we developed ElasticFrameProtocol, we are so enthusiastic about where RIST, Zixi, and SRT is taking the future of broadcast. There are new open source projects putting these building blocks together, creating new ways of working and transporting media all the time.   
+That’s why we developed ElasticFrameProtocol, we are so enthusiastic about where RIST, Zixi, and SRT is taking the future of broadcast. There are new open source projects putting these building blocks together, creating new ways of working and transporting media all the time.  We would like to simplify the way of building media solutions even more by open sourcing the layer on top of the transport protocols so that you can focus on developing great services instead.  
 
 Please feel free to use, clone / fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks in your next project or lab. 
 
