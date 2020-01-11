@@ -98,7 +98,8 @@ void UnitTest14::gotData(ElasticFrameProtocol::pFramePtr &packet) {
 bool UnitTest14::waitForCompletion() {
     int breakOut = 0;
     while (unitTestActive) {
-        usleep(1000 * 250); //quarter of a second
+        //quarter of a second
+        std::this_thread::sleep_for(std::chrono::microseconds(1000 * 250));
         if (breakOut++ == 10) {
             std::cout << "waitForCompletion did wait for 5 seconds. fail the test." << std::endl;
             unitTestFailed = true;

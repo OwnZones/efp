@@ -447,7 +447,8 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout){
             }
             lTimeCompensation = 0;
         }
-        usleep(lTimeCompensation); // Check all active buckets 100 times a second compensated for the process
+        // Check all active buckets 100 times a second compensated for the process
+        std::this_thread::sleep_for(std::chrono::microseconds(lTimeCompensation));
 
         bool lTimeOutTrigger = false;
         uint32_t lActiveCount = 0;
@@ -720,7 +721,7 @@ ElasticFrameMessages ElasticFrameProtocol::stopReceiver(){
 
     //check for it to actually stop
     while (mIsWorkerThreadActive || mIsDeliveryThreadActive) {
-        usleep(1000);
+        std::this_thread::sleep_for(std::chrono::microseconds(1000));
         if (!--lLockProtect) {
             //we gave it a second now exit anyway
             LOGGER(true, LOGG_FATAL, "Threads not stopping. Now crash and burn baby!!")

@@ -187,8 +187,17 @@ public:
         SuperFrame &operator=(const SuperFrame &) = delete;
 
         explicit SuperFrame(size_t memAllocSize) {
-            int result = posix_memalign((void **) &pFrameData, 32,
-                           memAllocSize);   //32 byte memory alignment for AVX2 processing //Winboze needs some other code.
+
+            int result = 0;
+
+            //32 byte memory alignment for AVX2 processing.
+
+#ifdef _WIN64
+            pFrameData = _aligned_malloc(memAllocSize, 32);
+#else
+            result = posix_memalign((void **) &pFrameData, 32,
+                           memAllocSize);
+#endif
 
             if (pFrameData && !result) mFrameSize = memAllocSize;
         }
