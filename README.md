@@ -52,7 +52,10 @@ The static EFP library
 
 **EFP** is built on Ubuntu 18.04 in the bitbucket [pipeline](https://bitbucket.org/unitxtra/efp/addon/pipelines/home).
 
-and MacOS by us during development.
+MacOS by us during development.
+
+Aidan from Nvidia developer forum helped us building a Windows version
+(Windows is not currently verified during commits)
  
 
 ---

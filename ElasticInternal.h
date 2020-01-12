@@ -66,18 +66,23 @@ enum Frametype : uint8_t { //The 4 LSB are used! (The 4 MSB are the flags)
 };
 
 struct ElasticFrameType0 {
+#pragma pack(push, 1)
     uint8_t hFrameType = Frametype::type0;
-} __attribute__((packed));
+#pragma pack(pop)
+};
 
 struct ElasticFrameType1 {
+#pragma pack(push, 1)
     uint8_t hFrameType = Frametype::type1;
     uint8_t  hStream = 0;
     uint16_t hSuperFrameNo = 0;
     uint16_t hFragmentNo = 0;
     uint16_t hOfFragmentNo = 0;
-} __attribute__((packed));
+#pragma pack(pop)
+};
 
 struct ElasticFrameType2 {
+#pragma pack(push, 1)
     uint8_t hFrameType  = Frametype::type2;
     uint8_t  hStream = 0;
     ElasticFrameContent hDataContent = ElasticFrameContent::unknown;
@@ -88,18 +93,22 @@ struct ElasticFrameType2 {
     uint64_t hPts = UINT64_MAX;
     uint32_t hDtsPtsDiff = UINT32_MAX;
     uint32_t hCode = UINT32_MAX;
-} __attribute__((packed));
+#pragma pack(pop)
+};
 
 struct ElasticFrameType3 {
+#pragma pack(push, 1)
     uint8_t hFrameType = Frametype::type3;
     uint8_t  hStream = 0;
     uint16_t hSuperFrameNo = 0;
     uint16_t hType1PacketSize = 0;
     uint16_t hOfFragmentNo = 0;
-} __attribute__((packed));
+#pragma pack(pop)
+};
 
 //Proposal of new minimalistic end-frame
 struct ElasticFrameType4 {
+#pragma pack(push, 1)
     uint8_t hFrameType  = Frametype::type4;
     uint8_t  hStream = 0;
     uint16_t hSizeOfData = 0;
@@ -108,7 +117,8 @@ struct ElasticFrameType4 {
     uint16_t hType1PacketSize = 0;
     uint64_t hPts = UINT64_MAX;
     uint32_t hDtsPtsDiff = UINT32_MAX;
-} __attribute__((packed));
+#pragma pack(pop)
+};
 //Packet header part ----- END ------
 
 

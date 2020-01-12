@@ -21,7 +21,9 @@
 #include <cstring>
 #include <cmath>
 #include <thread>
+#ifndef _WIN64
 #include <unistd.h>
+#endif
 #include <functional>
 #include <bitset>
 #include <mutex>
@@ -193,17 +195,23 @@ public:
             //32 byte memory alignment for AVX2 processing.
 
 #ifdef _WIN64
-            pFrameData = _aligned_malloc(memAllocSize, 32);
+            pFrameData = (uint8_t*)_aligned_malloc(memAllocSize, 32);
 #else
             result = posix_memalign((void **) &pFrameData, 32,
-                           memAllocSize);
+                                    memAllocSize);
 #endif
 
             if (pFrameData && !result) mFrameSize = memAllocSize;
         }
         virtual ~SuperFrame() {
             //Free if allocated
-            if (pFrameData) free(pFrameData);
+            if (pFrameData)
+#ifdef _WIN64
+                _aligned_free(pFrameData);
+#else
+                free(pFrameData);
+#endif
+
         }
     };
 
