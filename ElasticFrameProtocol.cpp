@@ -105,7 +105,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
         pThisBucket->mFragmentSize = (rSubPacket.size() - sizeof(ElasticFrameType1));
         size_t lInsertDataPointer = pThisBucket->mFragmentSize * lType1Frame.hFragmentNo;
         pThisBucket->mBucketData = std::make_unique<SuperFrame>(
-                pThisBucket->mFragmentSize * (lType1Frame.hOfFragmentNo + 1));
+                pThisBucket->mFragmentSize * ((size_t)lType1Frame.hOfFragmentNo + 1));
         pThisBucket->mBucketData->mFrameSize = pThisBucket->mFragmentSize * lType1Frame.hOfFragmentNo;
 
         if (pThisBucket->mBucketData->pFrameData == nullptr) {
@@ -210,7 +210,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
             pThisBucket->mActive = false;
             return ElasticFrameMessages::memoryAllocationError;
         }
-        size_t lInsertDataPointer = lType2Frame.hType1PacketSize * lType2Frame.hOfFragmentNo;
+        size_t lInsertDataPointer = (size_t) lType2Frame.hType1PacketSize * (size_t) lType2Frame.hOfFragmentNo;
 
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
                      rSubPacket.data() + sizeof(ElasticFrameType2), rSubPacket.size() - sizeof(ElasticFrameType2));
@@ -262,7 +262,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
         pThisBucket->mBucketData->mFrameSize =
                 (pThisBucket->mFragmentSize * lType2Frame.hOfFragmentNo) + (rSubPacket.size() - sizeof(ElasticFrameType2));
         // Type 2 is always at the end and is always the highest number fragment
-        size_t lInsertDataPointer = lType2Frame.hType1PacketSize * lType2Frame.hOfFragmentNo;
+        size_t lInsertDataPointer = (size_t) lType2Frame.hType1PacketSize * (size_t) lType2Frame.hOfFragmentNo;
 
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
                      rSubPacket.data() + sizeof(ElasticFrameType2), rSubPacket.size() - sizeof(ElasticFrameType2));
