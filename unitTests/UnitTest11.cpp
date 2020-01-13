@@ -17,7 +17,7 @@ void UnitTest11::sendData(const std::vector<uint8_t> &subPacket) {
         unitTestsSavedData2D.push_back(subPacket);
         unitTestsSavedData3D.push_back(unitTestsSavedData2D);
         if (unitTestPacketNumberSender == 5) {
-            for (int item=unitTestsSavedData3D.size();item > 0;item--) {
+            for (size_t item=unitTestsSavedData3D.size();item > 0;item--) {
                 for (auto &x: unitTestsSavedData3D[item-1]) {
                     if (item != 3) {
                         info = myEFPReciever->receiveFragment(x,0);

@@ -153,7 +153,7 @@ bool UnitTest16::waitForCompletion() {
 }
 
 bool UnitTest16::startUnitTest() {
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    unsigned seed = (unsigned) std::chrono::system_clock::now().time_since_epoch().count();
     randEng =  std::default_random_engine(seed);
     unitTestFailed = false;
     unitTestActive = false;

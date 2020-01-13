@@ -22,7 +22,7 @@ private:
     std::atomic_bool unitTestFailed;
     int activeUnitTest = 13;
     std::atomic_int unitTestPacketNumberSender;
-    std::atomic_int unitTestPacketNumberReciever;
+    std::atomic_uint64_t unitTestPacketNumberReciever;
     std::vector<uint8_t> unitTestsSavedData;
     std::vector<std::vector<uint8_t>> unitTestsSavedData2D;
     std::vector<std::vector<std::vector<uint8_t>>> unitTestsSavedData3D;

@@ -860,7 +860,7 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
     size_t lDataPayloadType2 = (uint16_t) (mCurrentMTU - sizeof(ElasticFrameType2));
 
     uint64_t lDataPointer = 0;
-    uint16_t lOfFragmentNo = floor((double) (rPacket.size()) / (double) (mCurrentMTU - sizeof(ElasticFrameType1)));
+    uint16_t lOfFragmentNo = (uint16_t) floor((double) (rPacket.size()) / (double) (mCurrentMTU - sizeof(ElasticFrameType1)));
     uint16_t lOfFragmentNoType1 = lOfFragmentNo;
     bool lType3needed = false;
     size_t lReminderData = rPacket.size() - (lOfFragmentNo * lDataPayloadType1);
@@ -891,7 +891,7 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
         lType3Frame.hFrameType |= flags;
         lType3Frame.hStream = lType1Frame.hStream;
         lType3Frame.hOfFragmentNo = lType1Frame.hOfFragmentNo;
-        lType3Frame.hType1PacketSize = mCurrentMTU - sizeof(ElasticFrameType1);
+        lType3Frame.hType1PacketSize = (uint16_t) (mCurrentMTU - sizeof(ElasticFrameType1));
         lType3Frame.hSuperFrameNo = lType1Frame.hSuperFrameNo;
 
         std::memmove(lType3PacketData.data(),(uint8_t *) &lType3Frame,sizeof(ElasticFrameType3));
@@ -930,9 +930,9 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
     lType2Frame.hDataContent = dataContent;
     lType2Frame.hSizeOfData = (uint16_t) lDataLeftToSend;
     lType2Frame.hPts = pts;
-    lType2Frame.hDtsPtsDiff = lPtsDtsDiff;
+    lType2Frame.hDtsPtsDiff = (uint32_t) lPtsDtsDiff;
     lType2Frame.hCode = code;
-    lType2Frame.hType1PacketSize = mCurrentMTU - sizeof(ElasticFrameType1);
+    lType2Frame.hType1PacketSize = (uint16_t) (mCurrentMTU - sizeof(ElasticFrameType1));
     std::vector<uint8_t> lFinalPacket(sizeof(ElasticFrameType2) + lDataLeftToSend);
 
     std::memmove(lFinalPacket.data(),(uint8_t *) &lType2Frame,sizeof(ElasticFrameType2));
@@ -960,7 +960,7 @@ ElasticFrameMessages ElasticFrameProtocol::addEmbeddedData(std::vector<uint8_t> 
     }
 
     ElasticFrameContentNamespace::ElasticEmbeddedHeader lEmbeddedHeader;
-    lEmbeddedHeader.size = privateDataSize;
+    lEmbeddedHeader.size = (uint16_t) privateDataSize;
     lEmbeddedHeader.embeddedFrameType = content;
     if (isLast)
         lEmbeddedHeader.embeddedFrameType =

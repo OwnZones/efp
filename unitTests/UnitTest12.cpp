@@ -17,9 +17,9 @@ void UnitTest12::sendData(const std::vector<uint8_t> &subPacket) {
         unitTestsSavedData2D.push_back(subPacket);
         unitTestsSavedData3D.push_back(unitTestsSavedData2D);
         if (unitTestPacketNumberSender == 5) {
-            for (int item=unitTestsSavedData3D.size();item > 0;item--) {
+            for (size_t item=unitTestsSavedData3D.size();item > 0;item--) {
                 std::vector<std::vector<uint8_t>> unitTestsSavedData2DLocal=unitTestsSavedData3D[item-1];
-                for (int fragment=unitTestsSavedData2DLocal.size();fragment > 0;fragment--) {
+                for (size_t fragment=unitTestsSavedData2DLocal.size();fragment > 0;fragment--) {
                     if (item != 3) {
                         info =myEFPReciever->receiveFragment(unitTestsSavedData2DLocal[fragment-1],0);
                     }

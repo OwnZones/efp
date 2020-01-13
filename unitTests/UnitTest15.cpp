@@ -68,7 +68,7 @@ void UnitTest15::gotData(ElasticFrameProtocol::pFramePtr &packet) {
                 }
 
                 uint8_t vectorChecker = 0;
-                for (int x = payloadDataPosition; x < packet->mFrameSize; x++) {
+                for (size_t x = payloadDataPosition; x < packet->mFrameSize; x++) {
                     if (packet->pFrameData[x] != vectorChecker++) {
                         unitTestFailed = true;
                         unitTestActive = false;
