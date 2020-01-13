@@ -74,6 +74,9 @@ crashlytics.properties
 crashlytics-build.properties
 fabric.properties
 
+#visual studio
+.vs/
+
 # Build directories
 /cmake-build-debug/
 /cmake-build-release/
