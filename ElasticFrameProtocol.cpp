@@ -30,7 +30,7 @@ ElasticFrameProtocol::~ElasticFrameProtocol() {
     // If my worker is active we need to stop it.
     if (mThreadActive) {
         ElasticFrameMessages result = stopReceiver();
-        if (result) {
+        if (result != ElasticFrameMessages::noError) {
             LOGGER(true, LOGG_ERROR, "Failed stopping worker thread.")
         }
     }

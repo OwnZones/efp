@@ -25,7 +25,7 @@ bool PerformanceLab::startUnitTest() {
     std::vector<uint8_t> mydata;
     uint8_t streamID = 1;
     myEFPReciever = new(std::nothrow) ElasticFrameProtocol();
-    myEFPPacker = new(std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameProtocolModeNamespace::sender);
+    myEFPPacker = new(std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameMode::sender);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;
         if (myEFPPacker) delete myEFPPacker;
