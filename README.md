@@ -187,6 +187,10 @@ Please read -> **ElasticFrameProtocol.pdf** for detailed information.
 
 The UnitX team at Edgeware AB
 
+Maintainer: anders.cedronius(at)edgeware.tv
+
+
+
 ## License
 
 *MIT*
