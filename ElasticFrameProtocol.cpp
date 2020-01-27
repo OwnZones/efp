@@ -783,6 +783,14 @@ ElasticFrameMessages ElasticFrameProtocol::receiveFragment(const std::vector<uin
 ElasticFrameMessages
 ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
                                   uint32_t code, uint8_t stream, uint8_t flags) {
+    return packAndSendFromPtr(rPacket.data(),rPacket.size(),dataContent,pts,dts,code,stream,flags);
+
+}
+
+// Pack data method. Fragments the data and calls the sendCallback method at the host level.
+ElasticFrameMessages
+ElasticFrameProtocol::packAndSendFromPtr(const uint8_t* rPacket, size_t packetSize, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
+                                  uint32_t code, uint8_t stream, uint8_t flags) {
 
     std::lock_guard<std::mutex> lock(mSendMtx);
 
@@ -820,26 +828,26 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
     // Will the data fit?
     // we know that we can send USHRT_MAX (65535) packets
     // the last packet will be a type2 packet.. so the current MTU muliplied with USHRT_MAX subtracting the space the protocol needs for the headers
-    if (rPacket.size()
+    if (packetSize
         > (((mCurrentMTU - sizeof(ElasticFrameType1)) * (USHRT_MAX - 1)) + (mCurrentMTU - sizeof(ElasticFrameType2)))) {
         return ElasticFrameMessages::tooLargeFrame;
     }
 
-    if ((rPacket.size() + sizeof(ElasticFrameType2)) <= mCurrentMTU) {
+    if ((packetSize + sizeof(ElasticFrameType2)) <= mCurrentMTU) {
         ElasticFrameType2 lType2Frame;
         lType2Frame.hSuperFrameNo = mSuperFrameNoGenerator;
         lType2Frame.hFrameType |= flags;
         lType2Frame.hDataContent = dataContent;
-        lType2Frame.hSizeOfData = (uint16_t) rPacket.size(); //The total size fits uint16_t since we cap the MTU to uint16_t
+        lType2Frame.hSizeOfData = (uint16_t) packetSize; //The total size fits uint16_t since we cap the MTU to uint16_t
         lType2Frame.hPts = pts;
         lType2Frame.hDtsPtsDiff = (uint32_t)lPtsDtsDiff;
         lType2Frame.hCode = code;
         lType2Frame.hStream = stream;
         try {
-            std::vector<uint8_t> lFinalPacket(sizeof(ElasticFrameType2) + rPacket.size());
+            std::vector<uint8_t> lFinalPacket(sizeof(ElasticFrameType2) + packetSize);
 
-            std::memmove(lFinalPacket.data(),(uint8_t *) &lType2Frame,sizeof(ElasticFrameType2));
-            std::memmove(lFinalPacket.data()+sizeof(ElasticFrameType2),rPacket.data(),rPacket.size());
+            std::memmove(lFinalPacket.data(),(uint8_t *) &lType2Frame, sizeof(ElasticFrameType2));
+            std::memmove(lFinalPacket.data()+sizeof(ElasticFrameType2), rPacket, packetSize);
 
             sendCallback(lFinalPacket);
         }
@@ -860,10 +868,10 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
     size_t lDataPayloadType2 = (uint16_t) (mCurrentMTU - sizeof(ElasticFrameType2));
 
     uint64_t lDataPointer = 0;
-    uint16_t lOfFragmentNo = (uint16_t) floor((double) (rPacket.size()) / (double) (mCurrentMTU - sizeof(ElasticFrameType1)));
+    uint16_t lOfFragmentNo = (uint16_t) floor((double) (packetSize) / (double) (mCurrentMTU - sizeof(ElasticFrameType1)));
     uint16_t lOfFragmentNoType1 = lOfFragmentNo;
     bool lType3needed = false;
-    size_t lReminderData = rPacket.size() - (lOfFragmentNo * lDataPayloadType1);
+    size_t lReminderData = packetSize - (lOfFragmentNo * lDataPayloadType1);
     if (lReminderData > lDataPayloadType2) {
         // We need a type3 frame. The reminder is too large for a type2 frame
         lType3needed = true;
@@ -877,7 +885,7 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
 
         std::memmove(lFinalPacketLoop.data(),(uint8_t *) &lType1Frame, sizeof(ElasticFrameType1));
         std::memmove(lFinalPacketLoop.data() + sizeof(ElasticFrameType1),
-                     rPacket.data() + lDataPointer,
+                     rPacket + lDataPointer,
                      lDataPayloadType1);
 
         lDataPointer += lDataPayloadType1;
@@ -896,18 +904,18 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
 
         std::memmove(lType3PacketData.data(),(uint8_t *) &lType3Frame,sizeof(ElasticFrameType3));
         std::memmove(lType3PacketData.data() + sizeof(ElasticFrameType3),
-                     rPacket.data() + lDataPointer,
+                     rPacket + lDataPointer,
                      lReminderData);
 
         lDataPointer += lReminderData;
-        if (lDataPointer != rPacket.size()) {
+        if (lDataPointer != packetSize) {
             return ElasticFrameMessages::internalCalculationError;
         }
         sendCallback(lType3PacketData);
     }
 
     // Create the last type2 packet
-    size_t lDataLeftToSend = rPacket.size() - lDataPointer;
+    size_t lDataLeftToSend = packetSize - lDataPointer;
 
     if (lType3needed && lDataLeftToSend != 0) {
         return ElasticFrameMessages::internalCalculationError;
@@ -940,7 +948,7 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
     if (lDataLeftToSend) {
 
         std::memmove(lFinalPacket.data() + sizeof(ElasticFrameType2),
-                     rPacket.data() + lDataPointer,
+                     rPacket + lDataPointer,
                      lDataLeftToSend);
     }
     sendCallback(lFinalPacket);

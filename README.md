@@ -93,7 +93,10 @@ myEFPSender.sendCallback = std::bind(&sendData, std::placeholders::_1);
 // See the header file detailing what CODE should be set to
 // param6 = Stream number (uint8_t) a unique value for that EFP-Stream
 // param7 = FLAGS (used for various signaling in the protocol) 
-myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 0, 'ANXB', 2, NO_FLAGS);
+myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 0, EFP_CODE('A', 'N', 'X', 'B'), 2, NO_FLAGS);
+
+//If you got your data as a pointer there is also the method 'packAndSendFromPtr' so you don't need to copy your data into a vector first.
+
 
 ```
 
@@ -136,7 +139,44 @@ myEFPReceiver.stopReciever();
 
 ```
 
+## Using EFP in your CMake project
 
+* **Step 1**
+
+Add EFP as a submodule in the root of your project
+>(any other location needs modifications to the below information)
+
+```
+git submodule add https://bitbucket.org/unitxtra/efp.git
+git submodule init
+```
+
+* **Step2**
+
+Add this to your CMake
+
+```
+include(ExternalProject)
+ExternalProject_Add(project_efp
+        SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
+        BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
+        STEP_TARGETS build
+        EXCLUDE_FROM_ALL TRUE
+        )
+add_library(efp STATIC IMPORTED)
+set_property(TARGET efp PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/efp/libefp.a)
+```
+
+
+and -> efp in `target_link_libraries(yourTarget efp otherIncludes)`
+
+* **Step3** 
+
+Add header file to your project
+
+`#include "efp/ElasticFrameProtocol.h"`
+
+You should now be able to use EFP in your project and use any CMake supported IDE
 
 ## Contributing
 

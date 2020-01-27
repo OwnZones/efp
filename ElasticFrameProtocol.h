@@ -224,7 +224,7 @@ public:
     uint16_t getVersion() { return (EFP_MAJOR_VERSION << 8) | EFP_MINOR_VERSION; }
 
     /**
-    * Segments data and calls the send callback
+    * Segments data and call the send callback
     *
     * @param rPacket The Data to be sent
     * @param dataContent ElasticFrameContent::x where x is the type of data to be sent.
@@ -239,6 +239,23 @@ public:
     packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
                 uint32_t code,
                 uint8_t stream, uint8_t flags);
+
+    /**
+    * Segments data and call the send callback
+    *
+    * @param rPacket pointer to the data to be sent
+    * @param packetSize size of the data to be sent
+    * @param dataContent ElasticFrameContent::x where x is the type of data to be sent.
+    * @param pts the pts value of the content
+    * @param dts the dts value of the content
+    * @param code if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
+    * @param stream The EFP-stream number the data is associated with.
+    * @param flags signal what flags are used
+    * @return ElasticFrameMessages
+    */
+    ElasticFrameMessages
+    packAndSendFromPtr(const uint8_t* rPacket, size_t packetSize, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
+                                             uint32_t code, uint8_t stream, uint8_t flags);
 
 
     /**
