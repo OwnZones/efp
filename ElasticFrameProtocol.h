@@ -224,7 +224,7 @@ public:
     uint16_t getVersion() { return (EFP_MAJOR_VERSION << 8) | EFP_MINOR_VERSION; }
 
     /**
-    * Segments data and call the send callback
+    * Segments data and call the send callback when the data is a vector
     *
     * @param rPacket The Data to be sent
     * @param dataContent ElasticFrameContent::x where x is the type of data to be sent.
@@ -241,9 +241,9 @@ public:
                 uint8_t stream, uint8_t flags);
 
     /**
-    * Segments data and call the send callback
+    * Segments data and call the send callback when the data is a pointer
     *
-    * @param rPacket pointer to the data to be sent
+    * @param pPacket pointer to the data to be sent
     * @param packetSize size of the data to be sent
     * @param dataContent ElasticFrameContent::x where x is the type of data to be sent.
     * @param pts the pts value of the content
@@ -254,7 +254,7 @@ public:
     * @return ElasticFrameMessages
     */
     ElasticFrameMessages
-    packAndSendFromPtr(const uint8_t* rPacket, size_t packetSize, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
+    packAndSendFromPtr(const uint8_t* pPacket, size_t packetSize, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
                                              uint32_t code, uint8_t stream, uint8_t flags);
 
 
@@ -278,19 +278,28 @@ public:
     ElasticFrameMessages stopReceiver();
 
     /**
-    * Method to feed the network fragments recieved
+    * Method to feed the network fragments received when the data is a vector
     *
-    * @param rSubPacket The data recieved
+    * @param rSubPacket The data received
     * @param fromSource the unique EFP source id. Provided by the user of the EFP protocol
     * @return ElasticFrameMessages
     */
     ElasticFrameMessages receiveFragment(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
 
     /**
+    * Method to feed the network fragments received when the data is a pointer
+    *
+    * @param rSubPacket The data received
+    * @param fromSource the unique EFP source id. Provided by the user of the EFP protocol
+    * @return ElasticFrameMessages
+    */
+    ElasticFrameMessages receiveFragmentFromPtr(const uint8_t* pSubPacket, size_t packetSize, uint8_t fromSource);
+
+    /**
     * Recieve data from the EFP worker thread
     *
-    * @param rPacket superframe recieved
-    * rPacket conatins
+    * @param rPacket superframe received
+    * rPacket contains
     * -> mCcontent ElasticFrameContent::x where x is the type of data to be sent.
     * -> mBbroken if true the data integrety is broken by the underlying protocol.
     * -> mPts the pts value of the content
@@ -309,7 +318,7 @@ public:
 
     //Help methods ----------- START ----------
     /**
-    * Add embedded data infront of a superFrame
+    * Add embedded data in front of a superFrame
     * These helper methods should not be used in production code
     * the embedded data should be embedded prior to filling the payload content
     *
@@ -325,7 +334,7 @@ public:
                                          bool isLast = false);
 
     /**
-    * Add embedded data infront of a superFrame
+    * Add embedded data in front of a superFrame
     * These helper methods should not be used in production code
     * the embedded data should be embedded prior to filling the payload content
     *
@@ -388,13 +397,13 @@ private:
     void gotData(ElasticFrameProtocol::pFramePtr &rPacket);
 
     // Method dissecting Type1 fragments
-    ElasticFrameMessages unpackType1(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
+    ElasticFrameMessages unpackType1(const uint8_t* pSubPacket, size_t packetSize, uint8_t fromSource);
 
     // Method dissecting Type2 fragments
-    ElasticFrameMessages unpackType2LastFrame(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
+    ElasticFrameMessages unpackType2(const uint8_t* pSubPacket, size_t packetSize, uint8_t fromSource);
 
     // Method dissecting Type3 fragments
-    ElasticFrameMessages unpackType3(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource);
+    ElasticFrameMessages unpackType3(const uint8_t* pSubPacket, size_t packetSize, uint8_t fromSource);
 
     // The worker thread assembling fragments and delivering the superFrames
     void receiverWorker(uint32_t timeout);

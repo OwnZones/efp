@@ -71,10 +71,10 @@ uint64_t ElasticFrameProtocol::superFrameRecalculator(uint16_t superFrame) {
 }
 
 // Unpack method for type1 packets. Type1 packets are the parts of frames larger than the MTU
-ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource) {
+ElasticFrameMessages ElasticFrameProtocol::unpackType1(const uint8_t* pSubPacket, size_t packetSize, uint8_t fromSource) {
     std::lock_guard<std::mutex> lock(mNetMtx);
 
-    ElasticFrameType1 lType1Frame = *(ElasticFrameType1 *) rSubPacket.data();
+    ElasticFrameType1 lType1Frame = *(ElasticFrameType1 *) pSubPacket;
     Bucket *pThisBucket = &mBucketList[lType1Frame.hSuperFrameNo & CIRCULAR_BUFFER_SIZE];
     //LOGGER(false, LOGG_NOTIFY, "superFrameNo1-> " << unsigned(type1Frame.superFrameNo))
 
@@ -102,7 +102,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
         pThisBucket->mTimeout = mBucketTimeout;
         pThisBucket->mFragmentCounter = 0;
         pThisBucket->mOfFragmentNo = lType1Frame.hOfFragmentNo;
-        pThisBucket->mFragmentSize = (rSubPacket.size() - sizeof(ElasticFrameType1));
+        pThisBucket->mFragmentSize = (packetSize - sizeof(ElasticFrameType1));
         size_t lInsertDataPointer = pThisBucket->mFragmentSize * lType1Frame.hFragmentNo;
         pThisBucket->mBucketData = std::make_unique<SuperFrame>(
                 pThisBucket->mFragmentSize * ((size_t)lType1Frame.hOfFragmentNo + 1));
@@ -114,7 +114,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
         }
 
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
-                     rSubPacket.data() + sizeof(ElasticFrameType1), rSubPacket.size() - sizeof(ElasticFrameType1));
+                     pSubPacket + sizeof(ElasticFrameType1), packetSize - sizeof(ElasticFrameType1));
 
         return ElasticFrameMessages::noError;
     }
@@ -157,7 +157,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
     size_t lInsertDataPointer = pThisBucket->mFragmentSize * lType1Frame.hFragmentNo;
 
     std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
-                 rSubPacket.data() + sizeof(ElasticFrameType1), rSubPacket.size() - sizeof(ElasticFrameType1));
+                 pSubPacket + sizeof(ElasticFrameType1), packetSize - sizeof(ElasticFrameType1));
 
     return ElasticFrameMessages::noError;
 }
@@ -166,10 +166,10 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType1(const std::vector<uint8_t
 // Type2 packets are also parts of frames smaller than the MTU
 // The data IS the last data of a sequence
 
-ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vector<uint8_t> &rSubPacket,
+ElasticFrameMessages ElasticFrameProtocol::unpackType2(const uint8_t* pSubPacket, size_t packetSize,
                                                                 uint8_t fromSource) {
     std::lock_guard<std::mutex> lock(mNetMtx);
-    ElasticFrameType2 lType2Frame = *(ElasticFrameType2 *) rSubPacket.data();
+    ElasticFrameType2 lType2Frame = *(ElasticFrameType2 *) pSubPacket;
     Bucket *pThisBucket = &mBucketList[lType2Frame.hSuperFrameNo & CIRCULAR_BUFFER_SIZE];
 
     if (!pThisBucket->mActive) {
@@ -213,7 +213,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
         size_t lInsertDataPointer = (size_t) lType2Frame.hType1PacketSize * (size_t) lType2Frame.hOfFragmentNo;
 
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
-                     rSubPacket.data() + sizeof(ElasticFrameType2), rSubPacket.size() - sizeof(ElasticFrameType2));
+                     pSubPacket + sizeof(ElasticFrameType2), packetSize - sizeof(ElasticFrameType2));
 
         return ElasticFrameMessages::noError;
     }
@@ -260,12 +260,12 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
     // When the type2 frames are received only then is the actual size to be delivered known... Now set the real size for the bucketData
     if (lType2Frame.hSizeOfData) {
         pThisBucket->mBucketData->mFrameSize =
-                (pThisBucket->mFragmentSize * lType2Frame.hOfFragmentNo) + (rSubPacket.size() - sizeof(ElasticFrameType2));
+                (pThisBucket->mFragmentSize * lType2Frame.hOfFragmentNo) + (packetSize - sizeof(ElasticFrameType2));
         // Type 2 is always at the end and is always the highest number fragment
         size_t lInsertDataPointer = (size_t) lType2Frame.hType1PacketSize * (size_t) lType2Frame.hOfFragmentNo;
 
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
-                     rSubPacket.data() + sizeof(ElasticFrameType2), rSubPacket.size() - sizeof(ElasticFrameType2));
+                     pSubPacket + sizeof(ElasticFrameType2), packetSize - sizeof(ElasticFrameType2));
 
     }
 
@@ -275,10 +275,10 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2LastFrame(const std::vecto
 // Unpack method for type3 packets. Type3 packets are the parts of frames where the reminder data does not fit a type2 packet. Then a type 3 is added
 // in front of a type2 packet to catch the data overshoot.
 // Type 3 frames MUST be the same header size as type1 headers
-ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource) {
+ElasticFrameMessages ElasticFrameProtocol::unpackType3(const uint8_t* pSubPacket, size_t packetSize, uint8_t fromSource) {
     std::lock_guard<std::mutex> lock(mNetMtx);
 
-    ElasticFrameType3 lType3Frame = *(ElasticFrameType3 *) rSubPacket.data();
+    ElasticFrameType3 lType3Frame = *(ElasticFrameType3 *) pSubPacket;
     Bucket *pThisBucket = &mBucketList[lType3Frame.hSuperFrameNo & CIRCULAR_BUFFER_SIZE];
 
     // If there is a type3 frame it's the second last frame
@@ -311,7 +311,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
         pThisBucket->mFragmentSize = lType3Frame.hType1PacketSize;
         size_t lInsertDataPointer = pThisBucket->mFragmentSize * lThisFragmentNo;
         size_t lReserveThis = ((pThisBucket->mFragmentSize * (lType3Frame.hOfFragmentNo - 1)) +
-                               (rSubPacket.size() - sizeof(ElasticFrameType3)));
+                               (packetSize - sizeof(ElasticFrameType3)));
         pThisBucket->mBucketData = std::make_unique<SuperFrame>(lReserveThis);
 
         if (pThisBucket->mBucketData->pFrameData == nullptr) {
@@ -320,7 +320,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
         }
 
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
-                     rSubPacket.data() + sizeof(ElasticFrameType3), rSubPacket.size() - sizeof(ElasticFrameType3));
+                     pSubPacket + sizeof(ElasticFrameType3), packetSize - sizeof(ElasticFrameType3));
 
         return ElasticFrameMessages::noError;
     }
@@ -356,7 +356,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
 
     pThisBucket->mBucketData->mFrameSize =
             (pThisBucket->mFragmentSize * (lType3Frame.hOfFragmentNo - 1)) +
-            (rSubPacket.size() - sizeof(ElasticFrameType3));
+            (packetSize - sizeof(ElasticFrameType3));
 
     // Move the data to the correct fragment position in the frame.
     // A bucket contains the frame data -> This is the internal data format
@@ -367,7 +367,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType3(const std::vector<uint8_t
     size_t lInsertDataPointer = pThisBucket->mFragmentSize * lThisFragmentNo;
 
     std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
-                 rSubPacket.data() + sizeof(ElasticFrameType3), rSubPacket.size() - sizeof(ElasticFrameType3));
+                 pSubPacket + sizeof(ElasticFrameType3), packetSize - sizeof(ElasticFrameType3));
     return ElasticFrameMessages::noError;
 }
 
@@ -731,8 +731,12 @@ ElasticFrameMessages ElasticFrameProtocol::stopReceiver(){
     return ElasticFrameMessages::noError;
 }
 
-// Unpack method. We recieved a fragment of data or a full frame. Lets unpack it
 ElasticFrameMessages ElasticFrameProtocol::receiveFragment(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource) {
+    return receiveFragmentFromPtr(rSubPacket.data(), rSubPacket.size(), fromSource);
+}
+
+// Unpack method. We recieved a fragment of data or a full frame. Lets unpack it
+ElasticFrameMessages ElasticFrameProtocol::receiveFragmentFromPtr(const uint8_t* pSubPacket, size_t packetSize, uint8_t fromSource) {
     // Type 0 packet. Discard and continue
     // Type 0 packets can be used to fill with user data outside efp protocol packets just put a uint8_t = Frametype::type0 at position 0 and then any data.
     // Type 1 are frames larger than MTU
@@ -751,28 +755,28 @@ ElasticFrameMessages ElasticFrameProtocol::receiveFragment(const std::vector<uin
         return ElasticFrameMessages::receiverNotRunning;
     }
 
-    if ((rSubPacket[0] & 0x0f) == Frametype::type0) {
+    if ((pSubPacket[0] & 0x0f) == Frametype::type0) {
         return ElasticFrameMessages::type0Frame;
-    } else if ((rSubPacket[0] & 0x0f) == Frametype::type1) {
-        if (rSubPacket.size() < sizeof(ElasticFrameType1)) {
+    } else if ((pSubPacket[0] & 0x0f) == Frametype::type1) {
+        if (packetSize < sizeof(ElasticFrameType1)) {
             return ElasticFrameMessages::frameSizeMismatch;
         }
-        return unpackType1(rSubPacket, fromSource);
-    } else if ((rSubPacket[0] & 0x0f) == Frametype::type2) {
-        if (rSubPacket.size() < sizeof(ElasticFrameType2)) {
+        return unpackType1(pSubPacket, packetSize, fromSource);
+    } else if ((pSubPacket[0] & 0x0f) == Frametype::type2) {
+        if (packetSize < sizeof(ElasticFrameType2)) {
             return ElasticFrameMessages::frameSizeMismatch;
         }
-        ElasticFrameType2 lType2Frame = *(ElasticFrameType2 *) rSubPacket.data();
+        ElasticFrameType2 lType2Frame = *(ElasticFrameType2 *) pSubPacket;
         if (lType2Frame.hOfFragmentNo == lType2Frame.hOfFragmentNo) {
-            return unpackType2LastFrame(rSubPacket, fromSource);
+            return unpackType2(pSubPacket, packetSize, fromSource);
         } else {
             return ElasticFrameMessages::endOfPacketError;
         }
-    } else if ((rSubPacket[0] & 0x0f) == Frametype::type3) {
-        if (rSubPacket.size() < sizeof(ElasticFrameType3)) {
+    } else if ((pSubPacket[0] & 0x0f) == Frametype::type3) {
+        if (packetSize < sizeof(ElasticFrameType3)) {
             return ElasticFrameMessages::frameSizeMismatch;
         }
-        return unpackType3(rSubPacket, fromSource);
+        return unpackType3(pSubPacket, packetSize, fromSource);
     }
 
     // Did not catch anything I understand

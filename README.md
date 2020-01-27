@@ -134,6 +134,8 @@ myEFPReceiver.startReceiver(5, 2);
 // Receive a EFP fragment
 myEFPReceiver.receiveFragment(subPacket,0);
 
+//If you got your data as a pointer there is also the method 'receiveFragmentFromPtr' so you don't need to copy your data into a vector first.
+
 // When done stop the worker
 myEFPReceiver.stopReciever();
 
