@@ -944,6 +944,7 @@ ElasticFrameProtocol::packAndSendFromPtr(const uint8_t* rPacket, size_t packetSi
     lType2Frame.hPts = pts;
     lType2Frame.hDtsPtsDiff = (uint32_t) lPtsDtsDiff;
     lType2Frame.hCode = code;
+    lType2Frame.hStream = stream;
     lType2Frame.hType1PacketSize = (uint16_t) (mCurrentMTU - sizeof(ElasticFrameType1));
     std::vector<uint8_t> lFinalPacket(sizeof(ElasticFrameType2) + lDataLeftToSend);
 

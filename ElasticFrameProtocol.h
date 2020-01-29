@@ -47,8 +47,8 @@
 #define CIRCULAR_BUFFER_SIZE 0b1111111111111
 
 /// Flag defines used py EFP
-#define NO_FLAGS 0b00000000
-#define INLINE_PAYLOAD 0b00010000
+#define NO_FLAGS        0b00000000
+#define INLINE_PAYLOAD  0b00010000
 #define UNDEFINED_FLAG1 0b00100000
 #define UNDEFINED_FLAG2 0b01000000
 #define UNDEFINED_FLAG3 0b10000000
@@ -396,13 +396,13 @@ private:
     // Dummy callback
     void gotData(ElasticFrameProtocol::pFramePtr &rPacket);
 
-    // Method dissecting Type1 fragments
+    // Method assembling Type1 fragments
     ElasticFrameMessages unpackType1(const uint8_t* pSubPacket, size_t packetSize, uint8_t fromSource);
 
-    // Method dissecting Type2 fragments
+    // Method assembling Type2 fragments
     ElasticFrameMessages unpackType2(const uint8_t* pSubPacket, size_t packetSize, uint8_t fromSource);
 
-    // Method dissecting Type3 fragments
+    // Method assembling Type3 fragments
     ElasticFrameMessages unpackType3(const uint8_t* pSubPacket, size_t packetSize, uint8_t fromSource);
 
     // The worker thread assembling fragments and delivering the superFrames
