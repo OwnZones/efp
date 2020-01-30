@@ -143,15 +143,35 @@ myEFPReceiver.stopReciever();
 
 ## Using EFP in your CMake project
 
-* **Step 1**
+* **Step1** 
 
-Add EFP as a submodule in the root of your project
->(any other location needs modifications to the below information)
+Create a directory named efp at *${CMAKE_CURRENT_SOURCE_DIR}*.
+
+`mkdir efp`
+
+If you use GIT continue else go to *step2*
+
+Make sure your repo is clean.
+
+Create a file named .gitkeep in the directory *efp/*
+
+`touch efp/.gitkeep`
+
+Add this to your .gitignore file:
 
 ```
-git submodule add https://bitbucket.org/unitxtra/efp.git
-git submodule init
+# ignore all efp files
+efp/*
+# don't ignore .gitkeep files
+!.gitkeep
 ```
+
+`git add -A`
+
+`git commit -a -m "Added efp build directory"`
+
+`git push`
+
 
 * **Step2**
 
@@ -160,17 +180,32 @@ Add this to your CMake
 ```
 include(ExternalProject)
 ExternalProject_Add(project_efp
+        GIT_REPOSITORY https://bitbucket.org/unitxtra/efp.git
+        GIT_SUBMODULES ""
+        #use GIT_TAG for version control
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
         BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
+        GIT_PROGRESS 1
+        BUILD_COMMAND make efp
         STEP_TARGETS build
         EXCLUDE_FROM_ALL TRUE
+        INSTALL_COMMAND ""
         )
 add_library(efp STATIC IMPORTED)
 set_property(TARGET efp PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/efp/libefp.a)
 ```
 
+Then you define your executable, *add_executable* or library, *add_library* 
+you need to set that this target is depending on *project_efp*
+Then when linking you include *efp*.. 
 
-and -> efp in `target_link_libraries(yourTarget efp otherIncludes)`
+Simplified example below creating a executable:
+
+```
+add_executable(yourTarget yourCode)
+add_dependencies(yourTarget project_efp)
+target_link_libraries(yourTarget efp otherIncludes)
+```
 
 * **Step3** 
 
