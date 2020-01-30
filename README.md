@@ -17,7 +17,7 @@ The ElasticFrameProtocol is acting as a bridge between elementary data and the u
 
 The elasticity comes from the protocols ability to adapt to incoming frame size, type, number of concurrent streams and underlying infrastructure. The layer between the transport layer and producers/consumers of the data can be kept thin without driving overhead, complexity and delay. 
 
-Please read -> **ElasticFrameProtocol.pdf** for more information.
+Please read -> [**ElasticFrameProtocol.pdf**](https://edgeware-my.sharepoint.com/:b:/g/personal/anders_cedronius_edgeware_tv/EWeoXdpkecVKpoqnzSSu57gBQhQYk-bVwKGLKc8jCg9hHg?e=2011Oy) for more information.
 
 
 ## Installation
