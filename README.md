@@ -151,8 +151,6 @@ Create a directory named efp at *${CMAKE_CURRENT_SOURCE_DIR}*.
 
 If you use GIT continue else go to *step2*
 
-Make sure your repo is clean.
-
 Create a file named .gitkeep in the directory *efp/*
 
 `touch efp/.gitkeep`
@@ -166,7 +164,7 @@ efp/*
 !.gitkeep
 ```
 
-`git add -A`
+`git add efp/.gitkeep`
 
 `git commit -a -m "Added efp build directory"`
 
@@ -195,9 +193,11 @@ add_library(efp STATIC IMPORTED)
 set_property(TARGET efp PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/efp/libefp.a)
 ```
 
-Then you define your executable, *add_executable* or library, *add_library* 
-you need to set that this target is depending on *project_efp*
-Then when linking you include *efp*.. 
+Then you define your executable, *add_executable* or library, *add_library*.
+ 
+You need to tell CMake that your target is depending on *project_efp*
+
+Then when linking you include *efp*. 
 
 Simplified example below creating a executable:
 
