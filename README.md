@@ -17,7 +17,7 @@ The ElasticFrameProtocol is acting as a bridge between elementary data and the u
 
 The elasticity comes from the protocols ability to adapt to incoming frame size, type, number of concurrent streams and underlying infrastructure. The layer between the transport layer and producers/consumers of the data can be kept thin without driving overhead, complexity and delay. 
 
-Please read -> [**ElasticFrameProtocol.pdf**](https://edgeware-my.sharepoint.com/:b:/g/personal/anders_cedronius_edgeware_tv/EWeoXdpkecVKpoqnzSSu57gBQhQYk-bVwKGLKc8jCg9hHg?e=2011Oy) for more information.
+Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:/g/personal/anders_cedronius_edgeware_tv/ERnSit7j6udBsZOqkQcMLrQBpKmnfdApG3lehRk4zE-qgQ?e=qXzjfX) for more information.
 
 
 ## Installation
@@ -214,6 +214,14 @@ Add header file to your project
 `#include "efp/ElasticFrameProtocol.h"`
 
 You should now be able to use EFP in your project and use any CMake supported IDE
+
+## Plug-in
+
+EFP is all about framing data and checking the integrity of the content. For other functionality EFP uses plug-ins. Available plug-ins are listed below.
+
+[**EFPBonding**](https://bitbucket.org/unitxtra/efpbond/src/master/)
+
+EFPBond makes it possible for all streams to use multiple underlying transport interfaces for protection or to increase the capacity. 
 
 ## Contributing
 
