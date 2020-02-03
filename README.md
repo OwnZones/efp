@@ -249,12 +249,6 @@ That’s why we developed ElasticFrameProtocol, we are so enthusiastic about whe
 Please feel free to use, clone / fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks in your next project or lab. 
 
 
----
-
-Please read -> **ElasticFrameProtocol.pdf** for detailed information.
-
----
-
 ## Examples
 
 
