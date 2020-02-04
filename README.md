@@ -27,14 +27,14 @@ Requires cmake version >= **3.10** and **C++14**
 **Release:**
 
 ```sh
-cmake -DCMAKE_BUILD_TYPE=Release
+cmake -DCMAKE_BUILD_TYPE=Release .
 make
 ```
 
 ***Debug:***
 
 ```sh
-cmake -DCMAKE_BUILD_TYPE=Debug
+cmake -DCMAKE_BUILD_TYPE=Debug .
 make
 ```
 
