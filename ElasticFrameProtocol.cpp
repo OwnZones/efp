@@ -943,7 +943,7 @@ ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSi
 
     //Debug me for calculation errors
     if (lDataLeftToSend + sizeof(ElasticFrameType2) > mCurrentMTU) {
-        LOGGER(true, LOGG_FATAL, "Calculation bug.. Value that made me sink -> " << rPacket.size())
+        LOGGER(true, LOGG_FATAL, "Calculation bug.. Value that made me sink -> " << unsigned(packetSize))
         return ElasticFrameMessages::internalCalculationError;
     }
 
