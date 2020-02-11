@@ -131,7 +131,7 @@ bool UnitTest15::startUnitTest() {
     }
     myEFPPacker->sendCallback = std::bind(&UnitTest15::sendData, this, std::placeholders::_1);
     myEFPReciever->receiveCallback = std::bind(&UnitTest15::gotData, this, std::placeholders::_1);
-    myEFPReciever->startReceiver(5, 2);
+    myEFPReciever->startReceiver(10, 4);
 
     unitTestPacketNumberReciever = 0;
 

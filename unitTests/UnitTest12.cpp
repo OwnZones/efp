@@ -142,7 +142,7 @@ bool UnitTest12::startUnitTest() {
     }
     myEFPPacker->sendCallback = std::bind(&UnitTest12::sendData, this, std::placeholders::_1);
     myEFPReciever->receiveCallback = std::bind(&UnitTest12::gotData, this, std::placeholders::_1);
-    myEFPReciever->startReceiver(5, 2);
+    myEFPReciever->startReceiver(10, 4);
     mydata.clear();
     unitTestsSavedData2D.clear();
     unitTestsSavedData3D.clear();
