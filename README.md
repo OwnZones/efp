@@ -31,7 +31,7 @@ cmake -DCMAKE_BUILD_TYPE=Release .
 make
 
 //If building on a Windows platform 
-//cmake --build . --config Release --target efp
+//cmake --build . --config Release
 ```
 
 ***Debug:***
@@ -41,7 +41,7 @@ cmake -DCMAKE_BUILD_TYPE=Debug .
 make
 
 //If building on a Windows platform 
-//cmake --build . --config Debug --target efp
+//cmake --build . --config Debug
 ```
 
 Output: 
