@@ -128,6 +128,7 @@ enum class ElasticFrameMessages : int16_t {
     wrongMode,                  //mode is set to receiver when using the class as sender or the other way around
     receiverNotRunning,         //The EFP receiver is not running
     dtsptsDiffToLarge,          //PTS - DTS > UINT32_MAX
+    type2FrameOutOfBounds,      //The user provided a packet with type2 data but the size of the packet is smaller than the declared content
 
     noError = 0,
 

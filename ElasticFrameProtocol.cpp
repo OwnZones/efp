@@ -169,6 +169,11 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2(const uint8_t *pSubPacket
                                                        uint8_t fromSource) {
     std::lock_guard<std::mutex> lock(mNetMtx);
     ElasticFrameType2 lType2Frame = *(ElasticFrameType2 *) pSubPacket;
+
+    if (packetSize < (sizeof(ElasticFrameType2)+lType2Frame.hSizeOfData)) {
+        return ElasticFrameMessages::type2FrameOutOfBounds;
+    }
+
     Bucket *pThisBucket = &mBucketList[lType2Frame.hSuperFrameNo & CIRCULAR_BUFFER_SIZE];
 
     if (!pThisBucket->mActive) {
