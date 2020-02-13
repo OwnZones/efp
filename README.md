@@ -29,6 +29,9 @@ Requires cmake version >= **3.10** and **C++14**
 ```sh
 cmake -DCMAKE_BUILD_TYPE=Release .
 make
+
+//If building on a Windows platform 
+//cmake --build . --config Release --target efp
 ```
 
 ***Debug:***
@@ -36,6 +39,9 @@ make
 ```sh
 cmake -DCMAKE_BUILD_TYPE=Debug .
 make
+
+//If building on a Windows platform 
+//cmake --build . --config Debug --target efp
 ```
 
 Output: 
@@ -43,6 +49,10 @@ Output:
 **libefp.a**
 
 The static EFP library 
+
+**libefp_shared.(platform specific)**
+
+The dynamic EFP library 
 
 **efptests**
 
