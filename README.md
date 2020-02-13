@@ -145,73 +145,43 @@ myEFPReceiver.stopReciever();
 
 * **Step1** 
 
-Create a directory named efp at *${CMAKE_CURRENT_SOURCE_DIR}*.
-
-`mkdir efp`
-
-If you use GIT continue else go to *step2*
-
-Create a file named .gitkeep in the directory *efp/*
-
-`touch efp/.gitkeep`
-
-Add this to your .gitignore file:
+Add this in your CMake file.
 
 ```
-# ignore all efp files
-efp/*
-# don't ignore .gitkeep files
-!.gitkeep
-```
-
-`git add efp/.gitkeep`
-
-`git commit -a -m "Added efp build directory"`
-
-`git push`
-
-
-* **Step2**
-
-Add this to your CMake
-
-```
+#Include EFP
 include(ExternalProject)
 ExternalProject_Add(project_efp
         GIT_REPOSITORY https://bitbucket.org/unitxtra/efp.git
         GIT_SUBMODULES ""
-        #use GIT_TAG for version control
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
         BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
         GIT_PROGRESS 1
-        BUILD_COMMAND make efp
+        BUILD_COMMAND cmake --build ${CMAKE_CURRENT_SOURCE_DIR}/efp --config ${CMAKE_BUILD_TYPE} --target efp
         STEP_TARGETS build
         EXCLUDE_FROM_ALL TRUE
         INSTALL_COMMAND ""
         )
 add_library(efp STATIC IMPORTED)
 set_property(TARGET efp PROPERTY IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/efp/libefp.a)
+add_dependencies(efp project_efp)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/efp/)
 ```
 
-Then you define your executable, *add_executable* or library, *add_library*.
- 
-You need to tell CMake that your target is depending on *project_efp*
+* **Step2**
 
-Then when linking you include *efp*. 
-
-Simplified example below creating a executable:
+Link your library or executable.
 
 ```
-add_executable(yourTarget yourCode)
-add_dependencies(yourTarget project_efp)
-target_link_libraries(yourTarget efp otherIncludes)
+target_link_libraries((your target) efp (the rest you want to link)) 
 ```
 
 * **Step3** 
 
-Add header file to your project
+Add header file to your project.
 
-`#include "efp/ElasticFrameProtocol.h"`
+```
+#include "ElasticFrameProtocol.h"
+```
 
 You should now be able to use EFP in your project and use any CMake supported IDE
 
@@ -252,8 +222,17 @@ Please feel free to use, clone / fork and contribute to this new way of intercon
 ## Examples
 
 
+1. A client/server using EFP over SRT
 
-1. [EFP + SRT Client/Server](https://bitbucket.org/unitxtra/cppsrtframingexample/src/master/)
+[EFP + SRT Client/Server](https://bitbucket.org/unitxtra/cppsrtframingexample/src/master/)
+
+2. A example showing how to use the EBPBond plug-in 
+
+[EFP + EFPBond](https://bitbucket.org/andersced/cppsrtbondingexample/src/master/)
+
+3. A simple example showing how to map UDP -> MPEG-TS -> EFP
+
+[UDP -> MPEG-TS -> EFP](https://bitbucket.org/unitxtra/ts2efp/src/master/)
 
 
 ## Next steps
