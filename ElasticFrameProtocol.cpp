@@ -203,7 +203,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2(const uint8_t *pSubPacket
         pThisBucket->mFragmentCounter = 0;
         pThisBucket->mFragmentSize = lType2Frame.hType1PacketSize;
         size_t lReserveThis = ((pThisBucket->mFragmentSize * lType2Frame.hOfFragmentNo) +
-                               (lType2Frame.hSizeOfData));
+                               lType2Frame.hSizeOfData);
         pThisBucket->mBucketData = std::make_unique<SuperFrame>(lReserveThis);
         if (pThisBucket->mBucketData->pFrameData == nullptr) {
             pThisBucket->mActive = false;
@@ -212,7 +212,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2(const uint8_t *pSubPacket
         size_t lInsertDataPointer = (size_t) lType2Frame.hType1PacketSize * (size_t) lType2Frame.hOfFragmentNo;
 
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
-                     pSubPacket + sizeof(ElasticFrameType2), packetSize - sizeof(ElasticFrameType2));
+                     pSubPacket + sizeof(ElasticFrameType2), lType2Frame.hSizeOfData);
 
         return ElasticFrameMessages::noError;
     }
@@ -260,12 +260,12 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2(const uint8_t *pSubPacket
     // When the type2 frames are received only then is the actual size to be delivered known... Now set the real size for the bucketData
     if (lType2Frame.hSizeOfData) {
         pThisBucket->mBucketData->mFrameSize =
-                (pThisBucket->mFragmentSize * lType2Frame.hOfFragmentNo) + (packetSize - sizeof(ElasticFrameType2));
+                (pThisBucket->mFragmentSize * lType2Frame.hOfFragmentNo) + lType2Frame.hSizeOfData;
         // Type 2 is always at the end and is always the highest number fragment
         size_t lInsertDataPointer = (size_t) lType2Frame.hType1PacketSize * (size_t) lType2Frame.hOfFragmentNo;
 
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
-                     pSubPacket + sizeof(ElasticFrameType2), packetSize - sizeof(ElasticFrameType2));
+                     pSubPacket + sizeof(ElasticFrameType2), lType2Frame.hSizeOfData);
 
     }
 

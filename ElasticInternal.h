@@ -69,20 +69,34 @@ struct ElasticFrameType0 {
 #pragma pack(push, 1)
     uint8_t hFrameType = Frametype::type0;
 #pragma pack(pop)
-};
+}
+#ifdef __ANDROID__
+__attribute__((packed))
+#endif
+;
 
 struct ElasticFrameType1 {
+#ifndef __ANDROID__
 #pragma pack(push, 1)
+#endif
     uint8_t hFrameType = Frametype::type1;
     uint8_t  hStream = 0;
     uint16_t hSuperFrameNo = 0;
     uint16_t hFragmentNo = 0;
     uint16_t hOfFragmentNo = 0;
+#ifndef __ANDROID__
 #pragma pack(pop)
-};
+#endif
+}
+#ifdef __ANDROID__
+__attribute__((packed))
+#endif
+;
 
 struct ElasticFrameType2 {
+#ifndef __ANDROID__
 #pragma pack(push, 1)
+#endif
     uint8_t hFrameType  = Frametype::type2;
     uint8_t  hStream = 0;
     ElasticFrameContent hDataContent = ElasticFrameContent::unknown;
@@ -93,22 +107,38 @@ struct ElasticFrameType2 {
     uint64_t hPts = UINT64_MAX;
     uint32_t hDtsPtsDiff = UINT32_MAX;
     uint32_t hCode = UINT32_MAX;
+#ifndef __ANDROID__
 #pragma pack(pop)
-};
+#endif
+}
+#ifdef __ANDROID__
+__attribute__((packed))
+#endif
+;
 
 struct ElasticFrameType3 {
+#ifndef __ANDROID__
 #pragma pack(push, 1)
+#endif
     uint8_t hFrameType = Frametype::type3;
     uint8_t  hStream = 0;
     uint16_t hSuperFrameNo = 0;
     uint16_t hType1PacketSize = 0;
     uint16_t hOfFragmentNo = 0;
+#ifndef __ANDROID__
 #pragma pack(pop)
-};
+#endif
+}
+#ifdef __ANDROID__
+__attribute__((packed))
+#endif
+;
 
 //Proposal of new minimalistic end-frame
 struct ElasticFrameType4 {
+#ifndef __ANDROID__
 #pragma pack(push, 1)
+#endif
     uint8_t hFrameType  = Frametype::type4;
     uint8_t  hStream = 0;
     uint16_t hSizeOfData = 0;
@@ -117,8 +147,14 @@ struct ElasticFrameType4 {
     uint16_t hType1PacketSize = 0;
     uint64_t hPts = UINT64_MAX;
     uint32_t hDtsPtsDiff = UINT32_MAX;
+#ifndef __ANDROID__
 #pragma pack(pop)
-};
+#endif
+}
+#ifdef __ANDROID__
+__attribute__((packed))
+#endif
+;
 //Packet header part ----- END ------
 
 
