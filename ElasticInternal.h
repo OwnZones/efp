@@ -66,9 +66,13 @@ enum Frametype : uint8_t { //The 4 LSB are used! (The 4 MSB are the flags)
 };
 
 struct ElasticFrameType0 {
+#ifndef __ANDROID__
 #pragma pack(push, 1)
+#endif
     uint8_t hFrameType = Frametype::type0;
+#ifndef __ANDROID__
 #pragma pack(pop)
+#endif
 }
 #ifdef __ANDROID__
 __attribute__((packed))
