@@ -13,7 +13,7 @@ class UnitTest7 {
 public:
     bool startUnitTest();
 private:
-    void sendData(const std::vector<uint8_t> &subPacket);
+    void sendData(const std::vector<uint8_t> &subPacket, uint8_t streamID);
     void gotData(ElasticFrameProtocol::pFramePtr &packet);
     bool waitForCompletion();
     ElasticFrameProtocol *myEFPReciever = nullptr;

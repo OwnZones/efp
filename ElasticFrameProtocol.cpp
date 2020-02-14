@@ -21,7 +21,7 @@ ElasticFrameProtocol::ElasticFrameProtocol(uint16_t setMTU, ElasticFrameMode mod
     mThreadActive = false;
     mIsWorkerThreadActive = false;
     mIsDeliveryThreadActive = false;
-    sendCallback = std::bind(&ElasticFrameProtocol::sendData, this, std::placeholders::_1);
+    sendCallback = std::bind(&ElasticFrameProtocol::sendData, this, std::placeholders::_1, std::placeholders::_2);
     receiveCallback = std::bind(&ElasticFrameProtocol::gotData, this, std::placeholders::_1);
     LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol constructed")
 }
@@ -37,7 +37,7 @@ ElasticFrameProtocol::~ElasticFrameProtocol() {
 }
 
 // Dummy callback for transmitter
-void ElasticFrameProtocol::sendData(const std::vector<uint8_t> &rSubPacket) {
+void ElasticFrameProtocol::sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID) {
     LOGGER(true, LOGG_ERROR, "Implement the sendCallback method for the protocol to work.")
 }
 
@@ -186,8 +186,8 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2(const uint8_t *pSubPacket
         pThisBucket->mActive = true;
         pThisBucket->mSource = fromSource;
         pThisBucket->mFlags = lType2Frame.hFrameType & 0xf0;
-        pThisBucket->mStream = lType2Frame.hStream;
-        Stream *pThisStream = &mStreams[lType2Frame.hStream];
+        pThisBucket->mStream = lType2Frame.hStreamID;
+        Stream *pThisStream = &mStreams[lType2Frame.hStreamID];
         pThisStream->dataContent = lType2Frame.hDataContent;
         pThisStream->code = lType2Frame.hCode;
         pThisBucket->mDataContent = pThisStream->dataContent;
@@ -255,8 +255,8 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2(const uint8_t *pSubPacket
     pThisBucket->mFragmentCounter++;
 
     //set the content type
-    pThisBucket->mStream = lType2Frame.hStream;
-    Stream *thisStream = &mStreams[lType2Frame.hStream];
+    pThisBucket->mStream = lType2Frame.hStreamID;
+    Stream *thisStream = &mStreams[lType2Frame.hStreamID];
     thisStream->dataContent = lType2Frame.hDataContent;
     thisStream->code = lType2Frame.hCode;
     pThisBucket->mDataContent = thisStream->dataContent;
@@ -302,8 +302,8 @@ ElasticFrameProtocol::unpackType3(const uint8_t *pSubPacket, size_t packetSize, 
         pThisBucket->mActive = true;
         pThisBucket->mSource = fromSource;
         pThisBucket->mFlags = lType3Frame.hFrameType & 0xf0;
-        pThisBucket->mStream = lType3Frame.hStream;
-        Stream *thisStream = &mStreams[lType3Frame.hStream];
+        pThisBucket->mStream = lType3Frame.hStreamID;
+        Stream *thisStream = &mStreams[lType3Frame.hStreamID];
         pThisBucket->mDataContent = thisStream->dataContent;
         pThisBucket->mCode = thisStream->code;
         pThisBucket->mSavedSuperFrameNo = lType3Frame.hSuperFrameNo;
@@ -587,7 +587,7 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout) {
                             mBucketList[x.bucket].mBucketData->mPts = mBucketList[x.bucket].mPts;
                             mBucketList[x.bucket].mBucketData->mDts = mBucketList[x.bucket].mDts;
                             mBucketList[x.bucket].mBucketData->mCode = mBucketList[x.bucket].mCode;
-                            mBucketList[x.bucket].mBucketData->mStream = mBucketList[x.bucket].mStream;
+                            mBucketList[x.bucket].mBucketData->mStreamID = mBucketList[x.bucket].mStream;
                             mBucketList[x.bucket].mBucketData->mSource = mBucketList[x.bucket].mSource;
                             mBucketList[x.bucket].mBucketData->mFlags = mBucketList[x.bucket].mFlags;
                             mSuperFrameQueue.push_back(std::move(mBucketList[x.bucket].mBucketData));
@@ -652,7 +652,7 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout) {
                                 mBucketList[x.bucket].mBucketData->mPts = mBucketList[x.bucket].mPts;
                                 mBucketList[x.bucket].mBucketData->mDts = mBucketList[x.bucket].mDts;
                                 mBucketList[x.bucket].mBucketData->mCode = mBucketList[x.bucket].mCode;
-                                mBucketList[x.bucket].mBucketData->mStream = mBucketList[x.bucket].mStream;
+                                mBucketList[x.bucket].mBucketData->mStreamID = mBucketList[x.bucket].mStream;
                                 mBucketList[x.bucket].mBucketData->mSource = mBucketList[x.bucket].mSource;
                                 mBucketList[x.bucket].mBucketData->mFlags = mBucketList[x.bucket].mFlags;
                                 mSuperFrameQueue.push_back(std::move(mBucketList[x.bucket].mBucketData));
@@ -799,8 +799,8 @@ ElasticFrameProtocol::receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t p
 ElasticFrameMessages
 ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts,
                                   uint64_t dts,
-                                  uint32_t code, uint8_t stream, uint8_t flags) {
-    return packAndSendFromPtr(rPacket.data(), rPacket.size(), dataContent, pts, dts, code, stream, flags);
+                                  uint32_t code, uint8_t streamID, uint8_t flags) {
+    return packAndSendFromPtr(rPacket.data(), rPacket.size(), dataContent, pts, dts, code, streamID, flags);
 
 }
 
@@ -808,7 +808,7 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
 ElasticFrameMessages
 ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSize, ElasticFrameContent dataContent,
                                          uint64_t pts, uint64_t dts,
-                                         uint32_t code, uint8_t stream, uint8_t flags) {
+                                         uint32_t code, uint8_t streamID, uint8_t flags) {
 
     std::lock_guard<std::mutex> lock(mSendMtx);
 
@@ -832,7 +832,7 @@ ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSi
         return ElasticFrameMessages::reservedCodeValue;
     }
 
-    if (stream == 0) {
+    if (streamID == 0) {
         return ElasticFrameMessages::reservedStreamValue;
     }
 
@@ -860,12 +860,12 @@ ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSi
         lType2Frame.hPts = pts;
         lType2Frame.hDtsPtsDiff = (uint32_t) lPtsDtsDiff;
         lType2Frame.hCode = code;
-        lType2Frame.hStream = stream;
+        lType2Frame.hStreamID = streamID;
         try {
             std::vector<uint8_t> lFinalPacket(sizeof(ElasticFrameType2) + packetSize);
             std::memmove(lFinalPacket.data(), (uint8_t *) &lType2Frame, sizeof(ElasticFrameType2));
             std::memmove(lFinalPacket.data() + sizeof(ElasticFrameType2), rPacket, packetSize);
-            sendCallback(lFinalPacket);
+            sendCallback(lFinalPacket, streamID);
         }
         catch (std::bad_alloc const &) {
             return ElasticFrameMessages::memoryAllocationError;
@@ -877,7 +877,7 @@ ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSi
     uint16_t lFragmentNo = 0;
     ElasticFrameType1 lType1Frame;
     lType1Frame.hFrameType |= flags;
-    lType1Frame.hStream = stream;
+    lType1Frame.hStream = streamID;
     lType1Frame.hSuperFrameNo = mSuperFrameNoGenerator;
     // The size is known for type1 packets no need to write it in any header.
     size_t lDataPayloadType1 = (uint16_t) (mCurrentMTU - sizeof(ElasticFrameType1));
@@ -907,7 +907,7 @@ ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSi
                          lDataPayloadType1);
 
             lDataPointer += lDataPayloadType1;
-            sendCallback(lFinalPacketLoop);
+            sendCallback(lFinalPacketLoop, streamID);
         }
     } catch (std::bad_alloc const &) {
         return ElasticFrameMessages::memoryAllocationError;
@@ -919,7 +919,7 @@ ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSi
             std::vector<uint8_t> lType3PacketData(sizeof(ElasticFrameType3) + lReminderData);
             ElasticFrameType3 lType3Frame;
             lType3Frame.hFrameType |= flags;
-            lType3Frame.hStream = lType1Frame.hStream;
+            lType3Frame.hStreamID = lType1Frame.hStream;
             lType3Frame.hOfFragmentNo = lType1Frame.hOfFragmentNo;
             lType3Frame.hType1PacketSize = (uint16_t) (mCurrentMTU - sizeof(ElasticFrameType1));
             lType3Frame.hSuperFrameNo = lType1Frame.hSuperFrameNo;
@@ -933,7 +933,7 @@ ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSi
             if (lDataPointer != packetSize) {
                 return ElasticFrameMessages::internalCalculationError;
             }
-            sendCallback(lType3PacketData);
+            sendCallback(lType3PacketData, streamID);
         } catch (std::bad_alloc const &) {
             return ElasticFrameMessages::memoryAllocationError;
         }
@@ -965,7 +965,7 @@ ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSi
     lType2Frame.hPts = pts;
     lType2Frame.hDtsPtsDiff = (uint32_t) lPtsDtsDiff;
     lType2Frame.hCode = code;
-    lType2Frame.hStream = stream;
+    lType2Frame.hStreamID = streamID;
     lType2Frame.hType1PacketSize = (uint16_t) (mCurrentMTU - sizeof(ElasticFrameType1));
     try {
         std::vector<uint8_t> lFinalPacket(sizeof(ElasticFrameType2) + lDataLeftToSend);
@@ -975,7 +975,7 @@ ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSi
                          rPacket + lDataPointer,
                          lDataLeftToSend);
         }
-        sendCallback(lFinalPacket);
+        sendCallback(lFinalPacket, streamID);
     } catch (std::bad_alloc const &) {
         return ElasticFrameMessages::memoryAllocationError;
     }

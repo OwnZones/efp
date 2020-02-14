@@ -178,7 +178,7 @@ public:
         uint64_t mPts = UINT64_MAX;
         uint64_t mDts = UINT64_MAX; //Should we implement this?
         uint32_t mCode = UINT32_MAX;
-        uint8_t mStream = 0;
+        uint8_t mStreamID = 0;
         uint8_t mSource = 0;
         uint8_t mFlags = NO_FLAGS;
 
@@ -232,14 +232,14 @@ public:
     * @param pts the pts value of the content
     * @param dts the dts value of the content
     * @param code if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
-    * @param stream The EFP-stream number the data is associated with.
+    * @param streamID The EFP-stream ID the data is associated with.
     * @param flags signal what flags are used
     * @return ElasticFrameMessages
     */
     ElasticFrameMessages
     packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
                 uint32_t code,
-                uint8_t stream, uint8_t flags);
+                uint8_t streamID, uint8_t flags);
 
     /**
     * Segments data and call the send callback when the data is a pointer
@@ -250,13 +250,13 @@ public:
     * @param pts the pts value of the content
     * @param dts the dts value of the content
     * @param code if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
-    * @param stream The EFP-stream number the data is associated with.
+    * @param streamID The EFP-stream ID the data is associated with.
     * @param flags signal what flags are used
     * @return ElasticFrameMessages
     */
     ElasticFrameMessages
     packAndSendFromPtr(const uint8_t* pPacket, size_t packetSize, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
-                                             uint32_t code, uint8_t stream, uint8_t flags);
+                                             uint32_t code, uint8_t streamID, uint8_t flags);
 
 
     /**
@@ -264,7 +264,7 @@ public:
     *
     * @param rSubPacket The data to send
     */
-    std::function<void(const std::vector<uint8_t> &rSubPacket)> sendCallback = nullptr;
+    std::function<void(const std::vector<uint8_t> &rSubPacket, uint8_t streamID)> sendCallback = nullptr;
 
     /**
     * Start the receiver worker
@@ -306,7 +306,7 @@ public:
     * -> mPts the pts value of the content
     * -> mDts the pts value of the content
     * -> mCcode if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
-    * -> mStream The EFP-stream number the data is associated with.
+    * -> mStreamID The EFP-stream ID the data is associated with.
     * -> mFlags signal what flags are used
     */
     std::function<void(ElasticFrameProtocol::pFramePtr &rPacket)> receiveCallback = nullptr;
@@ -392,7 +392,7 @@ private:
     //Private methods ----- START ------
 
     // Dummy callback
-    void sendData(const std::vector<uint8_t> &rSubPacket);
+    void sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID);
 
     // Dummy callback
     void gotData(ElasticFrameProtocol::pFramePtr &rPacket);

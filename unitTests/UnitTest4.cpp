@@ -50,7 +50,7 @@ void UnitTest4::sendData(const std::vector<uint8_t> &subPacket) {
 
 void UnitTest4::gotData(ElasticFrameProtocol::pFramePtr &packet) {
 
-    if (packet -> mStream != 4) {
+    if (packet -> mStreamID != 4) {
         unitTestFailed = true;
         unitTestActive = false;
         return;

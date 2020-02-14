@@ -5,10 +5,19 @@
 //UnitTest7
 //Test sending packets, 5 type 1 + 1 type 2.. Reorder type1 packet 3 and 2 so the delivery order is 1 3 2 4 5 6
 //then check for correct length and correct vector in the payload
+// Also checks the streamID parameter in sendData callback
 
 #include "UnitTest7.h"
 
-void UnitTest7::sendData(const std::vector<uint8_t> &subPacket) {
+void UnitTest7::sendData(const std::vector<uint8_t> &subPacket, uint8_t streamID) {
+
+    if (streamID != 8) {
+        std::cout << "Error-> streamID missmatch";
+        unitTestFailed = true;
+        unitTestActive = false;
+        return;
+    }
+
     ElasticFrameMessages info;
     if (unitTestPacketNumberSender == 1) {
         unitTestPacketNumberSender++;
@@ -93,7 +102,7 @@ bool UnitTest7::startUnitTest() {
     unitTestActive = false;
     ElasticFrameMessages result;
     std::vector<uint8_t> mydata;
-    uint8_t streamID=1;
+    uint8_t streamID=8;
     myEFPReciever = new (std::nothrow) ElasticFrameProtocol();
     myEFPPacker = new (std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameMode::sender);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
@@ -101,7 +110,7 @@ bool UnitTest7::startUnitTest() {
         if (myEFPPacker) delete myEFPPacker;
         return false;
     }
-    myEFPPacker->sendCallback = std::bind(&UnitTest7::sendData, this, std::placeholders::_1);
+    myEFPPacker->sendCallback = std::bind(&UnitTest7::sendData, this, std::placeholders::_1, std::placeholders::_2);
     myEFPReciever->receiveCallback = std::bind(&UnitTest7::gotData, this, std::placeholders::_1);
     myEFPReciever->startReceiver(5, 2);
     unitTestPacketNumberSender = 0;

@@ -102,7 +102,7 @@ struct ElasticFrameType2 {
 #pragma pack(push, 1)
 #endif
     uint8_t hFrameType  = Frametype::type2;
-    uint8_t  hStream = 0;
+    uint8_t  hStreamID = 0;
     ElasticFrameContent hDataContent = ElasticFrameContent::unknown;
     uint16_t hSizeOfData = 0;
     uint16_t hSuperFrameNo = 0;
@@ -125,7 +125,7 @@ struct ElasticFrameType3 {
 #pragma pack(push, 1)
 #endif
     uint8_t hFrameType = Frametype::type3;
-    uint8_t  hStream = 0;
+    uint8_t  hStreamID = 0;
     uint16_t hSuperFrameNo = 0;
     uint16_t hType1PacketSize = 0;
     uint16_t hOfFragmentNo = 0;
@@ -144,7 +144,7 @@ struct ElasticFrameType4 {
 #pragma pack(push, 1)
 #endif
     uint8_t hFrameType  = Frametype::type4;
-    uint8_t  hStream = 0;
+    uint8_t  hStreamID = 0;
     uint16_t hSizeOfData = 0;
     uint16_t hSuperFrameNo = 0;
     uint16_t hOfFragmentNo = 0;
