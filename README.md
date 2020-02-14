@@ -92,6 +92,7 @@ ElasticFrameProtocol myEFPSender(MTU, ElasticFrameProtocolModeNamespace::sender)
 
 // Register your callback sending the packets
 // The callback will be called on the same thread calling 'packAndSend'
+//optionally also a std::placeholders::_2 if you want the EFP streamID
 myEFPSender.sendCallback = std::bind(&sendData, std::placeholders::_1);
 
 // Send the data
