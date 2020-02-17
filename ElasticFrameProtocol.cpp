@@ -40,19 +40,6 @@ ElasticFrameProtocol::~ElasticFrameProtocol() {
     LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol destruct")
 }
 
-/*
- * (uint8_t *pFrameData,
-                            size_t mFrameSize,
-                            uint8_t mDataContent,
-                            uint8_t mBroken,
-                            uint64_t mPts,
-                            uint64_t mDts,
-                            uint32_t mCode,
-                            uint8_t mStreamID,
-                            uint8_t mSource,
-                            uint8_t mFlags);
- */
-
 // Dummy callback for transmitter
 void ElasticFrameProtocol::sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID) {
   if (c_sendCallback) {
@@ -75,8 +62,6 @@ void ElasticFrameProtocol::gotData(ElasticFrameProtocol::pFramePtr &rPacket) {
                       rPacket->mStreamID,
                       rPacket->mSource,
                       rPacket->mFlags);
-
-
   } else {
     LOGGER(true, LOGG_ERROR, "Implement the recieveCallback method for the protocol to work.")
   }
@@ -1085,12 +1070,11 @@ size_t ElasticFrameProtocol::geType2Size() {
 // ****************************************************
 
 #include <map>
-
-std::map<int ,std::shared_ptr<ElasticFrameProtocol>> efp_base_map;
-int c_object_handle = {1};
+std::map<uint64_t ,std::shared_ptr<ElasticFrameProtocol>> efp_base_map;
+uint64_t c_object_handle = {1};
 pthread_mutex_t efp_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-int efp_init_send(int mtu, void (*f)(const uint8_t*, size_t, uint8_t)) {
+uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t*, size_t, uint8_t)) {
   pthread_mutex_lock(&efp_mutex);
   auto result = efp_base_map.insert(std::make_pair(c_object_handle,std::make_shared<ElasticFrameProtocol>(mtu,ElasticFrameMode::sender)));
   pthread_mutex_unlock(&efp_mutex);
@@ -1101,7 +1085,7 @@ int efp_init_send(int mtu, void (*f)(const uint8_t*, size_t, uint8_t)) {
   return c_object_handle++;
 }
 
-int efp_init_receive(uint32_t bucketTimeout, uint32_t holTimeout, void (*f)(uint8_t*, size_t, uint8_t, uint8_t, uint64_t, uint64_t, uint32_t, uint8_t, uint8_t, uint8_t)) {
+uint64_t efp_init_receive(uint32_t bucketTimeout, uint32_t holTimeout, void (*f)(uint8_t*, size_t, uint8_t, uint8_t, uint64_t, uint64_t, uint32_t, uint8_t, uint8_t, uint8_t)) {
   pthread_mutex_lock(&efp_mutex);
   auto result = efp_base_map.insert(std::make_pair(c_object_handle,std::make_shared<ElasticFrameProtocol>()));
   pthread_mutex_unlock(&efp_mutex);
@@ -1113,9 +1097,9 @@ int efp_init_receive(uint32_t bucketTimeout, uint32_t holTimeout, void (*f)(uint
   return c_object_handle++;
 }
 
-int16_t efp_send_data(int efp_object,
-                  const uint8_t *rPacket,
-                  size_t packetSize,
+int16_t efp_send_data(uint64_t efp_object,
+                  const uint8_t *data,
+                  size_t size,
                   uint8_t dataContent,
                   uint64_t pts,
                   uint64_t dts,
@@ -1128,10 +1112,10 @@ int16_t efp_send_data(int efp_object,
   if (efp_base == nullptr) {
     return (int16_t)ElasticFrameMessages::efpCAPIfailure;
   }
-  return (int16_t)efp_base->packAndSendFromPtr(rPacket,packetSize,(ElasticFrameContent)dataContent,pts,dts,code,streamID,flags);
+  return (int16_t)efp_base->packAndSendFromPtr(data,size,(ElasticFrameContent)dataContent,pts,dts,code,streamID,flags);
 }
 
-int16_t efp_receive_fragment(int efp_object,
+int16_t efp_receive_fragment(uint64_t efp_object,
                              const uint8_t* pSubPacket,
                              size_t packetSize,
                              uint8_t fromSource) {
@@ -1144,7 +1128,7 @@ int16_t efp_receive_fragment(int efp_object,
   return (int16_t)efp_base->receiveFragmentFromPtr(pSubPacket,packetSize,fromSource);
 }
 
-int16_t efp_end(int efp_object) {
+int16_t efp_end(uint64_t efp_object) {
   pthread_mutex_lock(&efp_mutex);
   auto efp_base = efp_base_map.find(efp_object)->second;
   pthread_mutex_unlock(&efp_mutex);

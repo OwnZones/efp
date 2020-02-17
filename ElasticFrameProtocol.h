@@ -282,9 +282,9 @@ public:
     *
     * @data Pointer to the data
     * @size Size of the data
-    * @streamID EFP stream ID
+    * @stream_id EFP stream ID
     */
-    void (*c_sendCallback)(const uint8_t* data, size_t size, uint8_t streamID);
+    void (*c_sendCallback)(const uint8_t* data, size_t size, uint8_t stream_id);
 
     /**
     * Start the receiver worker
@@ -336,26 +336,27 @@ public:
     /**
     * Recieve data callback (C-API version)
     *
-    * @pFrameData Pointer to the data.
-    * @mFrameSize Size of the data.
-    * @mCcontent ElasticFrameContent::x where x is the type of data to be sent.
-    * @mBbroken if not 0 the data integrety is broken by the underlying protocol.
-    * @mPts the pts value of the content
-    * @mDts the pts value of the content
-    * @mCcode if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
-    * @mStreamID The EFP-stream ID the data is associated with.
-    * @mFlags signal what flags are used
+    * @data Pointer to the data.
+    * @size Size of the data.
+    * @data_content ElasticFrameContent::x where x is the type of data to be sent.
+    * @broken if not 0 the data integrety is broken by the underlying protocol.
+    * @pts the pts value of the content
+    * @dts the pts value of the content
+    * @code if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
+    * @stream_id The EFP-stream ID the data is associated with.
+    * @source The EFP source ID.
+    * @flags signal what flags are used
     */
-    void (*c_recieveCallback)(uint8_t *pFrameData,
-                            size_t mFrameSize,
-                            uint8_t mDataContent,
-                            uint8_t mBroken,
-                            uint64_t mPts,
-                            uint64_t mDts,
-                            uint32_t mCode,
-                            uint8_t mStreamID,
-                            uint8_t mSource,
-                            uint8_t mFlags);
+    void (*c_recieveCallback)(uint8_t *data,
+                            size_t size,
+                            uint8_t data_content,
+                            uint8_t broken,
+                            uint64_t pts,
+                            uint64_t dts,
+                            uint32_t code,
+                            uint8_t stream_id,
+                            uint8_t source,
+                            uint8_t flags);
 
     ///Delete copy and move constructors and assign operators
     ElasticFrameProtocol(ElasticFrameProtocol const &) = delete;              // Copy construct
