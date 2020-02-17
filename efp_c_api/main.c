@@ -2,6 +2,8 @@
 
 #ifndef _WIN64
 #include <unistd.h>
+#else
+#include <windows.h>
 #endif
 
 #include "elastic_frame_protocol_c_api.h"
@@ -94,7 +96,12 @@ int main() {
   } else if (result > 0) {
     printf("Notification %d sending\n", result);
   }
-  sleep (1);
+
+#ifndef _WIN64
+  sleep(1);
+#else
+  Sleep(1000);
+#endif
 
   result = efp_end(efp_object_handle_send);
   if (result < 0) {
