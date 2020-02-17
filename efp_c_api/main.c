@@ -1,5 +1,9 @@
 #include <stdio.h>
+
+#ifndef _WIN64
 #include <unistd.h>
+#endif
+
 #include "elastic_frame_protocol_c_api.h"
 
 #define TEST_MTU 300
