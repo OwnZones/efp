@@ -1,0 +1,49 @@
+add libefp.a and elastic_frame_protocol_c_api.h to this folder then the Golang example compiles. Expected output ->
+
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Send Fragment. 
+Got frame: 
+Size: 10000
+data_content: 4
+broken: 0
+pts: 103
+dts: 100
+code: 50
+stream_id: 3
+source: 0
+flags: 0
+Tests completed OK. 
+
