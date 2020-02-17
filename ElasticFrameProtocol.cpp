@@ -11,6 +11,10 @@
 // Limit the MTU to uint16_t MAX and UINT8_MAX min.
 // The lower limit is actually type2frameSize+1, keep it at 255 for now
 ElasticFrameProtocol::ElasticFrameProtocol(uint16_t setMTU, ElasticFrameMode mode) {
+
+    c_sendCallback = 0;
+    c_recieveCallback = 0;
+
     if ((setMTU < UINT8_MAX) && mode != ElasticFrameMode::receiver) {
         LOGGER(true, LOGG_ERROR, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.")
         mCurrentMTU = UINT8_MAX;
@@ -36,14 +40,46 @@ ElasticFrameProtocol::~ElasticFrameProtocol() {
     LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol destruct")
 }
 
+/*
+ * (uint8_t *pFrameData,
+                            size_t mFrameSize,
+                            uint8_t mDataContent,
+                            uint8_t mBroken,
+                            uint64_t mPts,
+                            uint64_t mDts,
+                            uint32_t mCode,
+                            uint8_t mStreamID,
+                            uint8_t mSource,
+                            uint8_t mFlags);
+ */
+
 // Dummy callback for transmitter
 void ElasticFrameProtocol::sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID) {
+  if (c_sendCallback) {
+    c_sendCallback(rSubPacket.data(), rSubPacket.size(), streamID);
+  } else {
     LOGGER(true, LOGG_ERROR, "Implement the sendCallback method for the protocol to work.")
+  }
 }
 
 // Dummy callback for reciever
 void ElasticFrameProtocol::gotData(ElasticFrameProtocol::pFramePtr &rPacket) {
+  if (c_recieveCallback) {
+    c_recieveCallback(rPacket->pFrameData,
+        rPacket->mFrameSize,
+                      rPacket->mDataContent,
+                      (uint8_t)rPacket->mBroken,
+                      rPacket->mPts,
+                      rPacket->mDts,
+                      rPacket->mCode,
+                      rPacket->mStreamID,
+                      rPacket->mSource,
+                      rPacket->mFlags);
+
+
+  } else {
     LOGGER(true, LOGG_ERROR, "Implement the recieveCallback method for the protocol to work.")
+  }
 }
 
 // This method is generating a uint64_t counter from the uint16_t counter
@@ -1039,6 +1075,94 @@ size_t ElasticFrameProtocol::geType1Size() {
 
 size_t ElasticFrameProtocol::geType2Size() {
     return sizeof(ElasticFrameType2);
+}
+
+
+// ****************************************************
+//
+//                      C API
+//
+// ****************************************************
+
+#include <map>
+
+std::map<int ,std::shared_ptr<ElasticFrameProtocol>> efp_base_map;
+int c_object_handle = {1};
+pthread_mutex_t efp_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+int efp_init_send(int mtu, void (*f)(const uint8_t*, size_t, uint8_t)) {
+  pthread_mutex_lock(&efp_mutex);
+  auto result = efp_base_map.insert(std::make_pair(c_object_handle,std::make_shared<ElasticFrameProtocol>(mtu,ElasticFrameMode::sender)));
+  pthread_mutex_unlock(&efp_mutex);
+  if (!result.first->second) {
+    return 0;
+  }
+  result.first->second->c_sendCallback = f;
+  return c_object_handle++;
+}
+
+int efp_init_receive(uint32_t bucketTimeout, uint32_t holTimeout, void (*f)(uint8_t*, size_t, uint8_t, uint8_t, uint64_t, uint64_t, uint32_t, uint8_t, uint8_t, uint8_t)) {
+  pthread_mutex_lock(&efp_mutex);
+  auto result = efp_base_map.insert(std::make_pair(c_object_handle,std::make_shared<ElasticFrameProtocol>()));
+  pthread_mutex_unlock(&efp_mutex);
+  if (!result.first->second) {
+    return 0;
+  }
+  result.first->second->c_recieveCallback = f;
+  result.first->second->startReceiver(bucketTimeout,holTimeout);
+  return c_object_handle++;
+}
+
+int16_t efp_send_data(int efp_object,
+                  const uint8_t *rPacket,
+                  size_t packetSize,
+                  uint8_t dataContent,
+                  uint64_t pts,
+                  uint64_t dts,
+                  uint32_t code,
+                  uint8_t streamID,
+                  uint8_t flags) {
+  pthread_mutex_lock(&efp_mutex);
+  auto efp_base = efp_base_map.find(efp_object)->second;
+  pthread_mutex_unlock(&efp_mutex);
+  if (efp_base == nullptr) {
+    return (int16_t)ElasticFrameMessages::efpCAPIfailure;
+  }
+  return (int16_t)efp_base->packAndSendFromPtr(rPacket,packetSize,(ElasticFrameContent)dataContent,pts,dts,code,streamID,flags);
+}
+
+int16_t efp_receive_fragment(int efp_object,
+                             const uint8_t* pSubPacket,
+                             size_t packetSize,
+                             uint8_t fromSource) {
+  pthread_mutex_lock(&efp_mutex);
+  auto efp_base = efp_base_map.find(efp_object)->second;
+  pthread_mutex_unlock(&efp_mutex);
+  if (efp_base == nullptr) {
+    return (int16_t)ElasticFrameMessages::efpCAPIfailure;
+  }
+  return (int16_t)efp_base->receiveFragmentFromPtr(pSubPacket,packetSize,fromSource);
+}
+
+int16_t efp_end(int efp_object) {
+  pthread_mutex_lock(&efp_mutex);
+  auto efp_base = efp_base_map.find(efp_object)->second;
+  pthread_mutex_unlock(&efp_mutex);
+  if (efp_base == nullptr) {
+    return (int16_t)ElasticFrameMessages::efpCAPIfailure;
+  }
+  efp_base->stopReceiver();
+  pthread_mutex_lock(&efp_mutex);
+  auto num_deleted = efp_base_map.erase(efp_object);
+  pthread_mutex_unlock(&efp_mutex);
+  if (num_deleted) {
+    return (int16_t)ElasticFrameMessages::noError;
+  }
+  return (int16_t)ElasticFrameMessages::efpCAPIfailure;
+}
+
+uint16_t efp_get_version() {
+  return (EFP_MAJOR_VERSION << 8) | EFP_MINOR_VERSION;
 }
 
 

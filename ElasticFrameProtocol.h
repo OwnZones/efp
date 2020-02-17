@@ -37,6 +37,15 @@
 #include <condition_variable>
 #include <chrono>
 
+//Generate the C - API
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "efp_c_api/elastic_frame_protocol_c_api.h"
+#ifdef __cplusplus
+}
+#endif
+
 ///Generate the uint32_t 'code' out of 4 characters provided
 #define EFP_CODE(c0, c1, c2, c3) (((c0)<<24) | ((c1)<<16) | ((c2)<<8) | (c3))
 
@@ -129,6 +138,7 @@ enum class ElasticFrameMessages : int16_t {
     receiverNotRunning,         //The EFP receiver is not running
     dtsptsDiffToLarge,          //PTS - DTS > UINT32_MAX
     type2FrameOutOfBounds,      //The user provided a packet with type2 data but the size of the packet is smaller than the declared content
+    efpCAPIfailure,             //failure in the C-API
 
     noError = 0,
 
@@ -176,7 +186,7 @@ public:
         ElasticFrameContent mDataContent = ElasticFrameContent::unknown; // Superframe type
         bool mBroken = true;
         uint64_t mPts = UINT64_MAX;
-        uint64_t mDts = UINT64_MAX; //Should we implement this?
+        uint64_t mDts = UINT64_MAX;
         uint32_t mCode = UINT32_MAX;
         uint8_t mStreamID = 0;
         uint8_t mSource = 0;
@@ -263,8 +273,18 @@ public:
     * Send packet callback
     *
     * @param rSubPacket The data to send
+    * @streamID EFP stream ID
     */
     std::function<void(const std::vector<uint8_t> &rSubPacket, uint8_t streamID)> sendCallback = nullptr;
+
+    /**
+    * Send packet callback (C-API version)
+    *
+    * @data Pointer to the data
+    * @size Size of the data
+    * @streamID EFP stream ID
+    */
+    void (*c_sendCallback)(const uint8_t* data, size_t size, uint8_t streamID);
 
     /**
     * Start the receiver worker
@@ -301,6 +321,8 @@ public:
     *
     * @param rPacket superframe received
     * rPacket contains
+    * -> pFrameData Pointer to the data.
+    * -> mFrameSize Size of the data.
     * -> mCcontent ElasticFrameContent::x where x is the type of data to be sent.
     * -> mBbroken if true the data integrety is broken by the underlying protocol.
     * -> mPts the pts value of the content
@@ -310,6 +332,30 @@ public:
     * -> mFlags signal what flags are used
     */
     std::function<void(ElasticFrameProtocol::pFramePtr &rPacket)> receiveCallback = nullptr;
+
+    /**
+    * Recieve data callback (C-API version)
+    *
+    * @pFrameData Pointer to the data.
+    * @mFrameSize Size of the data.
+    * @mCcontent ElasticFrameContent::x where x is the type of data to be sent.
+    * @mBbroken if not 0 the data integrety is broken by the underlying protocol.
+    * @mPts the pts value of the content
+    * @mDts the pts value of the content
+    * @mCcode if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
+    * @mStreamID The EFP-stream ID the data is associated with.
+    * @mFlags signal what flags are used
+    */
+    void (*c_recieveCallback)(uint8_t *pFrameData,
+                            size_t mFrameSize,
+                            uint8_t mDataContent,
+                            uint8_t mBroken,
+                            uint64_t mPts,
+                            uint64_t mDts,
+                            uint32_t mCode,
+                            uint8_t mStreamID,
+                            uint8_t mSource,
+                            uint8_t mFlags);
 
     ///Delete copy and move constructors and assign operators
     ElasticFrameProtocol(ElasticFrameProtocol const &) = delete;              // Copy construct
