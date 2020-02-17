@@ -1072,12 +1072,11 @@ size_t ElasticFrameProtocol::geType2Size() {
 #include <map>
 std::map<uint64_t ,std::shared_ptr<ElasticFrameProtocol>> efp_base_map;
 uint64_t c_object_handle = {1};
-pthread_mutex_t efp_mutex = PTHREAD_MUTEX_INITIALIZER;
+std::mutex efp_mutex;
 
 uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t*, size_t, uint8_t)) {
-  pthread_mutex_lock(&efp_mutex);
+  std::lock_guard<std::mutex> lock(efp_mutex);
   auto result = efp_base_map.insert(std::make_pair(c_object_handle,std::make_shared<ElasticFrameProtocol>(mtu,ElasticFrameMode::sender)));
-  pthread_mutex_unlock(&efp_mutex);
   if (!result.first->second) {
     return 0;
   }
@@ -1086,9 +1085,8 @@ uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t*, size_t, uint8_t))
 }
 
 uint64_t efp_init_receive(uint32_t bucketTimeout, uint32_t holTimeout, void (*f)(uint8_t*, size_t, uint8_t, uint8_t, uint64_t, uint64_t, uint32_t, uint8_t, uint8_t, uint8_t)) {
-  pthread_mutex_lock(&efp_mutex);
+  std::lock_guard<std::mutex> lock(efp_mutex);
   auto result = efp_base_map.insert(std::make_pair(c_object_handle,std::make_shared<ElasticFrameProtocol>()));
-  pthread_mutex_unlock(&efp_mutex);
   if (!result.first->second) {
     return 0;
   }
@@ -1106,9 +1104,8 @@ int16_t efp_send_data(uint64_t efp_object,
                   uint32_t code,
                   uint8_t streamID,
                   uint8_t flags) {
-  pthread_mutex_lock(&efp_mutex);
+  std::lock_guard<std::mutex> lock(efp_mutex);
   auto efp_base = efp_base_map.find(efp_object)->second;
-  pthread_mutex_unlock(&efp_mutex);
   if (efp_base == nullptr) {
     return (int16_t)ElasticFrameMessages::efpCAPIfailure;
   }
@@ -1119,9 +1116,8 @@ int16_t efp_receive_fragment(uint64_t efp_object,
                              const uint8_t* pSubPacket,
                              size_t packetSize,
                              uint8_t fromSource) {
-  pthread_mutex_lock(&efp_mutex);
-  auto efp_base = efp_base_map.find(efp_object)->second;
-  pthread_mutex_unlock(&efp_mutex);
+  std::lock_guard<std::mutex> lock(efp_mutex);
+  auto efp_base = efp_base_map.find(efp_object)->second;;
   if (efp_base == nullptr) {
     return (int16_t)ElasticFrameMessages::efpCAPIfailure;
   }
@@ -1129,16 +1125,13 @@ int16_t efp_receive_fragment(uint64_t efp_object,
 }
 
 int16_t efp_end(uint64_t efp_object) {
-  pthread_mutex_lock(&efp_mutex);
+  std::lock_guard<std::mutex> lock(efp_mutex);
   auto efp_base = efp_base_map.find(efp_object)->second;
-  pthread_mutex_unlock(&efp_mutex);
   if (efp_base == nullptr) {
     return (int16_t)ElasticFrameMessages::efpCAPIfailure;
   }
   efp_base->stopReceiver();
-  pthread_mutex_lock(&efp_mutex);
   auto num_deleted = efp_base_map.erase(efp_object);
-  pthread_mutex_unlock(&efp_mutex);
   if (num_deleted) {
     return (int16_t)ElasticFrameMessages::noError;
   }
