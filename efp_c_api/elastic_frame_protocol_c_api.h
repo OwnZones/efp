@@ -1,5 +1,5 @@
 //
-// Created by Anders Cedronius on 2020-02-16.
+// Created by UnitX on 2020-02-16.
 //
 
 #ifndef EFP_EFP_C_API_ELASTIC_FRAME_PROTOCOL_C_API_H
@@ -23,6 +23,7 @@ uint16_t efp_get_version();
 *
 * @mtu Send MTU
 * @*f Pointer to the send fragment function.
+* @return the object ID created during init to be used when calling the other methods
 */
 uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t*, size_t, uint8_t));
 
@@ -32,20 +33,31 @@ uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t*, size_t, uint8_t))
 * @bucketTimeout Timout for the bucket in x * 10ms
 * @holTimeout Timout for the hol in x * 10ms
 * @*f Pointer to the got superframe.
+* @return the object ID created during init to be used when calling the other methods
 */
 uint64_t efp_init_receive(uint32_t bucket_timeout, uint32_t hol_timeout,  void (*f)(uint8_t*, size_t, uint8_t, uint8_t, uint64_t, uint64_t, uint32_t, uint8_t, uint8_t, uint8_t));
 
 /**
 * efp_end
+* When the EFP object is no longer needed this method should be called together with the EFP id to close
 *
-* @efp_object efp_object to end
+* @efp_object object ID to end
 */
 int16_t efp_end(uint64_t efp_object);
 
 /**
-* efp_end
+* efp_send_data
 *
-* @efp_object efp_object to end
+* @efp_object object ID to address
+* @param pointer to the data to be sent
+* @param size of the data to be sent
+* @param data_content ElasticFrameContent::x where x is the type of data to be sent.
+* @param pts the pts value of the content
+* @param dts the dts value of the content
+* @param code if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
+* @param stream_id The EFP-stream ID the data is associated with.
+* @param flags signal what flags are used
+* @return ElasticFrameMessages cast to int16_t
 */
 int16_t efp_send_data(uint64_t efp_object,
                       const uint8_t *data,
@@ -57,6 +69,15 @@ int16_t efp_send_data(uint64_t efp_object,
                       uint8_t stream_id,
                       uint8_t flags);
 
+/**
+* efp_receive_fragment
+*
+* @efp_object object ID to address
+* @param pointer to the fragment
+* @param size of the fragment
+* @param from_source EFP stream ID
+* @return ElasticFrameMessages cast to int16_t
+*/
 int16_t efp_receive_fragment(uint64_t efp_object,
                              const uint8_t* fragment,
                              size_t size,

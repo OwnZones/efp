@@ -84,7 +84,7 @@ namespace ElasticFrameContentNamespace {
 
         //Formats defined below (MSB='1') must also use 'code' to define the data format in the superframe
 
-        didsdid = 0x80,           //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
+        didsdid = 0x80,         //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
         sdi,                    //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
         h264,                   //ITU-T H.264                   //ANXB = Annex B framing / AVCC = AVCC framing
         h265                    //ITU-T H.265                   //ANXB = Annex B framing / AVCC = AVCC framing

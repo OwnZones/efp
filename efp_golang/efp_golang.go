@@ -35,6 +35,15 @@ func main() {
 	efpReceiveID = C.initEFPReciever(10,5)
 
 	//Send data
+	//ID of EFP object to address
+	//Pointer to data
+	//Length of data
+    //Data content (Check ElasticFrameProtocol.h ElasticFrameContentDefines)
+    //PTS
+    //DTS
+    //EFP Code (see ElasticFrameContentDefines)
+    //EFP Stream ID
+    //Flags
 	C.efp_send_data(efpSendID,(*C.uchar)(&thisData[0]),testSetSize,4,103,100,50,3,0)
 
 	//Wait for 2 seconds before garbage collecting

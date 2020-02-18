@@ -90,7 +90,7 @@ int main() {
   }
 
   printf("\nTransmit data.\n\n");
-  int16_t result = efp_send_data(efp_object_handle_send,&data[0],TEST_DATA_SIZE,10,100,100,100,2,0);
+  int16_t result = efp_send_data(efp_object_handle_send,&data[0],TEST_DATA_SIZE,10,100,100,EFP_CODE('A','V','C','C'),2,0);
   if (result < 0) {
     printf("Error %d sending\n", result);
   } else if (result > 0) {
