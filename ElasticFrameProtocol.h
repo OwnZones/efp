@@ -23,9 +23,7 @@
 #include <thread>
 
 #ifndef _WIN64
-
 #include <unistd.h>
-
 #endif
 
 #include <functional>
@@ -63,7 +61,7 @@ extern "C" {
 #define UNDEFINED_FLAG3 0b10000000
 
 #define EFP_MAJOR_VERSION 0
-#define EFP_MINOR_VERSION 1
+#define EFP_MINOR_VERSION 2
 
 //bitwise operations are used on members therefore the namespace is wrapping enum instead of 'enum class'
 /// Definition of the data types supported by EFP
@@ -91,7 +89,6 @@ namespace ElasticFrameContentNamespace {
     };
 
     ///Embedded data types
-    //Embedded data defines ----- START ------
     enum ElasticFrameEmbeddedContentDefines : uint8_t {
         illegal               = 0x00,    //may not be used
         embeddedprivatedata   = 0x01,    //private data
@@ -102,7 +99,6 @@ namespace ElasticFrameContentNamespace {
     };
 
     ///Embedded header define
-    //Embedded data header ----- START ------
     struct ElasticEmbeddedHeader {
         uint8_t embeddedFrameType = ElasticFrameEmbeddedContentDefines::illegal;
         uint16_t size = 0;
@@ -117,55 +113,53 @@ using ElasticEmbeddedFrameContent = ElasticFrameContentNamespace::ElasticFrameEm
 // Positive numbers are informative
 /// ElasticFrameMessages definitions
 enum class ElasticFrameMessages : int16_t {
-    tooLargeFrame = -10000,     //The frame is to large for EFP sender to handle
-    tooLargeEmbeddedData,       //The embedded data frame is too large.
-    unknownFrameType,           //The frame type is unknown by EFP receiver
-    frameSizeMismatch,          //The receiver received data less than the header size
-    internalCalculationError,   //The sender encountered a condition it can't handle
-    endOfPacketError,           //The receiver received a type2 fragment not saying it was the last
-    bufferOutOfBounds,          //The receiver circular buffer has wrapped around and all data in the buffer is from now untrusted also data prior to this may have been wrong.
+    tooLargeFrame             = -19,  //The frame is to large for EFP sender to handle
+    tooLargeEmbeddedData      = -18,  //The embedded data frame is too large.
+    unknownFrameType          = -17,  //The frame type is unknown by EFP receiver
+    frameSizeMismatch         = -16,  //The receiver received data less than the header size
+    internalCalculationError  = -15,  //The sender encountered a condition it can't handle
+    endOfPacketError          = -14,  //The receiver received a type2 fragment not saying it was the last
+    bufferOutOfBounds         = -13,  //The receiver circular buffer has wrapped around and all data in the buffer is from now untrusted also data prior to this may have been wrong.
     //This error can be triggered if there is a super high data rate data coming in with a large gap/loss of the incoming fragments in the flow
-            bufferOutOfResources,       //This error is indicating there are no more buffer resources. In the unlikely event where all frames miss fragment(s) and the timeout is set high
     //then broken superFrames will be buffered and new incoming data will claim buffers. When there are no more buffers to claim this error will be triggered.
-            reservedPTSValue,           //UINT64_MAX is a EFP reserved value
-    reservedDTSValue,           //UINT64_MAX is a EFP reserved value
-    reservedCodeValue,          //UINT32_MAX is a EFP reserved value
-    reservedStreamValue,        //0 is a EFP reserved value for signaling manifests
-    memoryAllocationError,      //Failed allocating system memory. This is fatal and results in unknown behaviour.
-    illegalEmbeddedData,        //illegal embedded data
-    type1And3SizeError,         //Type1 and Type3 must have the same header size
-    receiverNotRunning,         //The EFP receiver is not running
-    dtsptsDiffToLarge,          //PTS - DTS > UINT32_MAX
-    type2FrameOutOfBounds,      //The user provided a packet with type2 data but the size of the packet is smaller than the declared content
-    efpCAPIfailure,             //failure in the C-API
+    bufferOutOfResources      = -12,  //This error is indicating there are no more buffer resources. In the unlikely event where all frames miss fragment(s) and the timeout is set high
+    reservedPTSValue          = -11,  //UINT64_MAX is a EFP reserved value
+    reservedDTSValue          = -10,  //UINT64_MAX is a EFP reserved value
+    reservedCodeValue         = -9,   //UINT32_MAX is a EFP reserved value
+    reservedStreamValue       = -8,   //0 is a EFP reserved value for signaling manifests
+    memoryAllocationError     = -7,   //Failed allocating system memory. This is fatal and results in unknown behaviour.
+    illegalEmbeddedData       = -6,   //illegal embedded data
+    type1And3SizeError        = -5,   //Type1 and Type3 must have the same header size
+    receiverNotRunning        = -4,   //The EFP receiver is not running
+    dtsptsDiffToLarge         = -3,   //PTS - DTS > UINT32_MAX
+    type2FrameOutOfBounds     = -2,   //The user provided a packet with type2 data but the size of the packet is smaller than the declared content
+    efpCAPIfailure            = -1,   //failure in the C-API
 
-    noError = 0,
+    noError                   = 0,
 
-    notImplemented,             //feature/function/level/method/system aso. not implemented.
-    duplicatePacketReceived,    //If the underlying infrastructure is handing EFP duplicate segments the second packet of the duplicate will generate this error if the
+    notImplemented            = 1,     //feature/function/level/method/system aso. not implemented.
+    duplicatePacketReceived   = 2,     //If the underlying infrastructure is handing EFP duplicate segments the second packet of the duplicate will generate this error if the
     //the superFrame is still not delivered to the host system. if it has then tooOldFragment will be returned instead.
-            tooOldFragment,             //if the superFrame has been delivered 100% complete or fragments of it due to a timeout and a fragment belonging to the superFrame arrives then it's
     //discarded and the tooOldFragment is triggered.
-            receiverAlreadyStarted,     //The EFP receiver is already started no need to start it again. (Stop it and start it again to change parameters)
-    failedStoppingReceiver,     //The EFP receiver failed stopping it's resources.
-    parameterError,             //When starting the receiver the parameters given where not valid.
-    type0Frame                  //Type0 frame
+    tooOldFragment            = 3,     //if the superFrame has been delivered 100% complete or fragments of it due to a timeout and a fragment belonging to the superFrame arrives then it's
+    failedStoppingReceiver    = 5,     //The EFP receiver failed stopping it's resources.
+    type0Frame                = 7      //Type0 frame
 };
 
-///The mode set when constructing the class
-enum class ElasticFrameMode : uint8_t {
-    unknown,
-    sender,
-    receiver,
-};
-
+//---------------------------------------------------------------------------------------------------------------------
+//
+//
+// ElasticFrameProtocolSender
+//
+//
+//---------------------------------------------------------------------------------------------------------------------
 
 /**
  * \class ElasticFrameProtocolSender
  *
  * \brief
  *
- *
+ * ElasticFrameProtocolSender can be used to frame elementary streams to EFP fragments for transport over any network technology
  *
  * \author UnitX
  *
@@ -175,8 +169,12 @@ enum class ElasticFrameMode : uint8_t {
 class ElasticFrameProtocolSender {
 public:
 
-  ///Constructor
-  explicit ElasticFrameProtocolSender(uint16_t setMTU = 0);
+  /**
+  * ElasticFrameProtocolSender constructor
+  *@param setMTU The MTU to be used by the sender. Must be more than 256 and less than UINT16_MAX
+  * 
+  */
+  explicit ElasticFrameProtocolSender(uint16_t setMTU);
 
   ///Destructor
   virtual ~ElasticFrameProtocolSender();
@@ -272,21 +270,32 @@ public:
 
 private:
 
-  // Dummy callback
+  //Private methods ----- START ------
+  // Used by the C - API
   void sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID);
+  //Private methods ----- END ------
 
+  // Internal lists and variables ----- START ------
   std::mutex mSendMtx; //Mutex protecting the send part
   uint32_t mCurrentMTU = 0; //current MTU used by the sender
   uint16_t mSuperFrameNoGenerator = 0;
+  // Internal lists and variables ----- END -_-----
 };
 
+//---------------------------------------------------------------------------------------------------------------------
+//
+//
+// ElasticFrameProtocolReceiver
+//
+//
+//---------------------------------------------------------------------------------------------------------------------
 
 /**
- * \class ElasticFrameProtocol
+ * \class ElasticFrameProtocolReceiver
  *
- * \brief Class for framing media on top of transport protocols
+ * \brief Class for receiving EFP fragments and assembling them to elementary data
  *
- * ElasticFrameProtocol can be used to frame elementary streams on top of network protocols such as UDP, TCP, RIST and SRT
+ * ElasticFrameProtocolReceiver is used for creating elementary data frames from EFP fragments
  *
  * \author UnitX
  *
@@ -298,7 +307,8 @@ public:
     /**
     * \class SuperFrame
     *
-    * \brief Reserve frame-data aligned 32-byte addresses in memory
+    * \brief Contains the data and all parameters acosiated to that data
+     * The data is 32-byte aligned in memory. 
     */
     class SuperFrame {
     public:
@@ -437,8 +447,7 @@ public:
     ElasticFrameMessages extractEmbeddedData(pFramePtr &rPacket, std::vector<std::vector<uint8_t>> *pEmbeddedDataList,
                                              std::vector<uint8_t> *pDataContent, size_t *pPayloadDataPosition);
     //Help methods ----------- END ----------
-
-
+    
 private:
 
     //Bucket  ----- START ------

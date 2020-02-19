@@ -15,7 +15,6 @@
 //
 //---------------------------------------------------------------------------------------------------------------------
 
-//FIXME - comment
 ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster) {
 
   c_recieveCallback = 0;
