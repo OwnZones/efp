@@ -39,12 +39,21 @@ uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t*, size_t, uint8_t))
 uint64_t efp_init_receive(uint32_t bucket_timeout, uint32_t hol_timeout,  void (*f)(uint8_t*, size_t, uint8_t, uint8_t, uint64_t, uint64_t, uint32_t, uint8_t, uint8_t, uint8_t));
 
 /**
-* efp_end
-* When the EFP object is no longer needed this method should be called together with the EFP id to close
+* efp_end_send
+* When the EFP object is no longer needed this method should be called together with the
+* EFP id to garbage collect the resources used
 *
 * @efp_object object ID to end
 */
 int16_t efp_end_send(uint64_t efp_object);
+
+/**
+* efp_end_receive
+* When the EFP object is no longer needed this method should be called together with the
+* EFP id to garbage collect the resources used
+*
+* @efp_object object ID to end
+*/
 int16_t efp_end_receive(uint64_t efp_object);
 
 /**
