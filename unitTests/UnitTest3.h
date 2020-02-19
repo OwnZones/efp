@@ -14,10 +14,10 @@ public:
     bool startUnitTest();
 private:
     void sendData(const std::vector<uint8_t> &subPacket);
-    void gotData(ElasticFrameProtocol::pFramePtr &packet);
+    void gotData(ElasticFrameProtocolReceiver::pFramePtr &packet);
     bool waitForCompletion();
-    ElasticFrameProtocol *myEFPReciever = nullptr;
-    ElasticFrameProtocol *myEFPPacker = nullptr;
+    ElasticFrameProtocolReceiver *myEFPReciever = nullptr;
+    ElasticFrameProtocolSender *myEFPPacker = nullptr;
     std::atomic_bool unitTestActive;
     std::atomic_bool unitTestFailed;
     int activeUnitTest = 3;

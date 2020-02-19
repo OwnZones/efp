@@ -97,7 +97,7 @@ void UnitTest16::sendData(const std::vector<uint8_t> &subPacket) {
 }
 
 void
-UnitTest16::gotData(ElasticFrameProtocol::pFramePtr &packet) {
+UnitTest16::gotData(ElasticFrameProtocolReceiver::pFramePtr &packet) {
 
     testDataMtx.lock();
     bool isLoss = false;
@@ -160,8 +160,8 @@ bool UnitTest16::startUnitTest() {
     ElasticFrameMessages result;
     std::vector<uint8_t> mydata;
     uint8_t streamID = 1;
-    myEFPReciever = new(std::nothrow) ElasticFrameProtocol();
-    myEFPPacker = new(std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameMode::sender);
+    myEFPReciever = new(std::nothrow) ElasticFrameProtocolReceiver(5, 2);
+    myEFPPacker = new(std::nothrow) ElasticFrameProtocolSender(MTU);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;
         if (myEFPPacker) delete myEFPPacker;
@@ -169,7 +169,6 @@ bool UnitTest16::startUnitTest() {
     }
     myEFPPacker->sendCallback = std::bind(&UnitTest16::sendData, this, std::placeholders::_1);
     myEFPReciever->receiveCallback = std::bind(&UnitTest16::gotData, this, std::placeholders::_1);
-    myEFPReciever->startReceiver(5, 2);
 
     unitTestPacketNumberReciever = 0;
 
@@ -227,22 +226,19 @@ bool UnitTest16::startUnitTest() {
             std::cout << "Unit test number: " << unsigned(activeUnitTest)
                       << " Failed in the packAndSend method. Error-> " << signed(result)
                       << std::endl;
-            myEFPReciever->stopReceiver();
-            delete myEFPReciever;
             delete myEFPPacker;
+            delete myEFPReciever;
             return false;
         }
     }
 
     if (waitForCompletion()) {
-        myEFPReciever->stopReceiver();
-        delete myEFPReciever;
         delete myEFPPacker;
+        delete myEFPReciever;
         return false;
     } else {
-        myEFPReciever->stopReceiver();
-        delete myEFPReciever;
         delete myEFPPacker;
+        delete myEFPReciever;
         return true;
     }
 }

@@ -15,9 +15,9 @@ public:
     bool startUnitTest();
 private:
     void sendData(const std::vector<uint8_t> &subPacket);
-    void gotData(ElasticFrameProtocol::pFramePtr &packet);
-    ElasticFrameProtocol *myEFPReciever = nullptr;
-    ElasticFrameProtocol *myEFPPacker = nullptr;
+    void gotData(ElasticFrameProtocolReceiver::pFramePtr &packet);
+    ElasticFrameProtocolReceiver *myEFPReciever = nullptr;
+    ElasticFrameProtocolSender *myEFPPacker = nullptr;
     int unitTestPacketNumberReciever = 0;
 };
 

@@ -50,8 +50,8 @@ func main() {
 	time.Sleep(2 * time.Second)
 
 	//Garbage collect
-	C.efp_end(efpSendID)
-	C.efp_end(efpReceiveID)
+	C.efp_end_send(efpSendID)
+	C.efp_end_receive(efpReceiveID)
 }
 
 //export sendDataEFP

@@ -103,13 +103,13 @@ int main() {
   Sleep(1000);
 #endif
 
-  result = efp_end(efp_object_handle_send);
+  result = efp_end_send(efp_object_handle_send);
   if (result < 0) {
     printf("Error %d efp_end\n", result);
   } else if (result > 0) {
     printf("Notification %d efp_end\n", result);
   }
-  result = efp_end(efp_object_handle_receive);
+  result = efp_end_receive(efp_object_handle_receive);
   if (result < 0) {
     printf("Error %d efp_end\n", result);
   } else if (result > 0) {

@@ -32,7 +32,7 @@ void UnitTest12::sendData(const std::vector<uint8_t> &subPacket) {
     unitTestsSavedData2D.push_back(subPacket);
 }
 
-void UnitTest12::gotData(ElasticFrameProtocol::pFramePtr &packet) {
+void UnitTest12::gotData(ElasticFrameProtocolReceiver::pFramePtr &packet) {
     if (packet->mBroken) {
         unitTestFailed = true;
         unitTestActive = false;
@@ -133,8 +133,8 @@ bool UnitTest12::startUnitTest() {
     ElasticFrameMessages result;
     std::vector<uint8_t> mydata;
     uint8_t streamID=1;
-    myEFPReciever = new (std::nothrow) ElasticFrameProtocol();
-    myEFPPacker = new (std::nothrow) ElasticFrameProtocol(MTU, ElasticFrameMode::sender);
+    myEFPReciever = new (std::nothrow) ElasticFrameProtocolReceiver(10, 4);
+    myEFPPacker = new (std::nothrow) ElasticFrameProtocolSender(MTU);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;
         if (myEFPPacker) delete myEFPPacker;
@@ -142,7 +142,7 @@ bool UnitTest12::startUnitTest() {
     }
     myEFPPacker->sendCallback = std::bind(&UnitTest12::sendData, this, std::placeholders::_1);
     myEFPReciever->receiveCallback = std::bind(&UnitTest12::gotData, this, std::placeholders::_1);
-    myEFPReciever->startReceiver(10, 4);
+
     mydata.clear();
     unitTestsSavedData2D.clear();
     unitTestsSavedData3D.clear();
@@ -158,22 +158,19 @@ bool UnitTest12::startUnitTest() {
             std::cout << "Unit test number: " << unsigned(activeUnitTest)
                       << " Failed in the packAndSend method. Error-> " << signed(result)
                       << std::endl;
-            myEFPReciever->stopReceiver();
-            delete myEFPReciever;
             delete myEFPPacker;
+            delete myEFPReciever;
             return false;
         }
     }
 
     if (waitForCompletion()){
-        myEFPReciever->stopReceiver();
-        delete myEFPReciever;
         delete myEFPPacker;
+        delete myEFPReciever;
         return false;
     } else {
-        myEFPReciever->stopReceiver();
-        delete myEFPReciever;
         delete myEFPPacker;
+        delete myEFPReciever;
         return true;
     }
 }

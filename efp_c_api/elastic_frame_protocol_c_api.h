@@ -5,6 +5,7 @@
 #ifndef EFP_EFP_C_API_ELASTIC_FRAME_PROTOCOL_C_API_H
 #define EFP_EFP_C_API_ELASTIC_FRAME_PROTOCOL_C_API_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 ///Generate the uint32_t 'code' out of 4 characters provided
@@ -43,7 +44,8 @@ uint64_t efp_init_receive(uint32_t bucket_timeout, uint32_t hol_timeout,  void (
 *
 * @efp_object object ID to end
 */
-int16_t efp_end(uint64_t efp_object);
+int16_t efp_end_send(uint64_t efp_object);
+int16_t efp_end_receive(uint64_t efp_object);
 
 /**
 * efp_send_data

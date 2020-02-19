@@ -7,30 +7,31 @@
 
 #define WORKER_THREAD_SLEEP_US 1000 * 10
 
-// Constructor setting the MTU (Only needed if sending, ElasticFrameMode == sender)
-// Limit the MTU to uint16_t MAX and UINT8_MAX min.
-// The lower limit is actually type2frameSize+1, keep it at 255 for now
-ElasticFrameProtocol::ElasticFrameProtocol(uint16_t setMTU, ElasticFrameMode mode) {
+//---------------------------------------------------------------------------------------------------------------------
+//
+//
+// ElasticFrameProtocolReceiver
+//
+//
+//---------------------------------------------------------------------------------------------------------------------
 
-  c_sendCallback = 0;
+//FIXME - comment
+ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster) {
+
   c_recieveCallback = 0;
+  receiveCallback = std::bind(&ElasticFrameProtocolReceiver::gotData, this, std::placeholders::_1);
 
-  if ((setMTU < UINT8_MAX) && mode != ElasticFrameMode::receiver) {
-    LOGGER(true, LOGG_ERROR, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.")
-    mCurrentMTU = UINT8_MAX;
-  } else {
-    mCurrentMTU = setMTU;
-  }
-  mCurrentMode = mode;
-  mThreadActive = false;
-  mIsWorkerThreadActive = false;
-  mIsDeliveryThreadActive = false;
-  sendCallback = std::bind(&ElasticFrameProtocol::sendData, this, std::placeholders::_1, std::placeholders::_2);
-  receiveCallback = std::bind(&ElasticFrameProtocol::gotData, this, std::placeholders::_1);
+  mBucketTimeout = bucketTimeoutMaster;
+  mHeadOfLineBlockingTimeout = holTimeoutMaster;
+  mThreadActive = true;
+  mIsWorkerThreadActive = true;
+  mIsDeliveryThreadActive = true;
+  std::thread(std::bind(&ElasticFrameProtocolReceiver::receiverWorker, this, bucketTimeoutMaster)).detach();
+  std::thread(std::bind(&ElasticFrameProtocolReceiver::deliveryWorker, this)).detach();
   LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol constructed")
 }
 
-ElasticFrameProtocol::~ElasticFrameProtocol() {
+ElasticFrameProtocolReceiver::~ElasticFrameProtocolReceiver() {
   // If our worker is active we need to stop it.
   if (mThreadActive) {
     if (stopReceiver() != ElasticFrameMessages::noError) {
@@ -40,17 +41,8 @@ ElasticFrameProtocol::~ElasticFrameProtocol() {
   LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol destruct")
 }
 
-// Dummy callback for transmitter
-void ElasticFrameProtocol::sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID) {
-  if (c_sendCallback) {
-    c_sendCallback(rSubPacket.data(), rSubPacket.size(), streamID);
-  } else {
-    LOGGER(true, LOGG_ERROR, "Implement the sendCallback method for the protocol to work.")
-  }
-}
-
-// Dummy callback for reciever
-void ElasticFrameProtocol::gotData(ElasticFrameProtocol::pFramePtr &rPacket) {
+// C API callback. Dummy callback if C++
+void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFramePtr &rPacket) {
   if (c_recieveCallback) {
     c_recieveCallback(rPacket->pFrameData,
                       rPacket->mFrameSize,
@@ -69,7 +61,7 @@ void ElasticFrameProtocol::gotData(ElasticFrameProtocol::pFramePtr &rPacket) {
 
 // This method is generating a uint64_t counter from the uint16_t counter
 // The maximum count-gap this calculator can handle is ((about) INT16_MAX / 2)
-uint64_t ElasticFrameProtocol::superFrameRecalculator(uint16_t superFrame) {
+uint64_t ElasticFrameProtocolReceiver::superFrameRecalculator(uint16_t superFrame) {
   if (mSuperFrameFirstTime) {
     mOldSuperFrameNumber = superFrame;
     mSuperFrameRecalc = superFrame;
@@ -92,7 +84,7 @@ uint64_t ElasticFrameProtocol::superFrameRecalculator(uint16_t superFrame) {
 
 // Unpack method for type1 packets. Type1 packets are the parts of superFrames larger than the MTU
 ElasticFrameMessages
-ElasticFrameProtocol::unpackType1(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource) {
+ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource) {
   std::lock_guard<std::mutex> lock(mNetMtx);
 
   ElasticFrameType1 lType1Frame = *(ElasticFrameType1 *) pSubPacket;
@@ -186,7 +178,7 @@ ElasticFrameProtocol::unpackType1(const uint8_t *pSubPacket, size_t packetSize, 
 // Type2 packets are also parts of frames smaller than the MTU
 // The data IS the last data of a sequence
 
-ElasticFrameMessages ElasticFrameProtocol::unpackType2(const uint8_t *pSubPacket, size_t packetSize,
+ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pSubPacket, size_t packetSize,
                                                        uint8_t fromSource) {
   std::lock_guard<std::mutex> lock(mNetMtx);
   ElasticFrameType2 lType2Frame = *(ElasticFrameType2 *) pSubPacket;
@@ -302,7 +294,7 @@ ElasticFrameMessages ElasticFrameProtocol::unpackType2(const uint8_t *pSubPacket
 // in front of a type2 packet to catch the data overshoot.
 // Type 3 frames MUST be the same header size as type1 headers (FIXME part of the oportunistic data discussion)
 ElasticFrameMessages
-ElasticFrameProtocol::unpackType3(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource) {
+ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource) {
   std::lock_guard<std::mutex> lock(mNetMtx);
 
   ElasticFrameType3 lType3Frame = *(ElasticFrameType3 *) pSubPacket;
@@ -399,7 +391,7 @@ ElasticFrameProtocol::unpackType3(const uint8_t *pSubPacket, size_t packetSize, 
 }
 
 //This thread is delivering the superframes to the host
-void ElasticFrameProtocol::deliveryWorker() {
+void ElasticFrameProtocolReceiver::deliveryWorker() {
   while (mThreadActive) {
     pFramePtr lSuperframe = nullptr;
     {
@@ -429,7 +421,7 @@ void ElasticFrameProtocol::deliveryWorker() {
 
 // This is the thread going trough the buckets to see if they should be delivered to
 // the 'user'
-void ElasticFrameProtocol::receiverWorker(uint32_t timeout) {
+void ElasticFrameProtocolReceiver::receiverWorker(uint32_t timeout) {
   //Set the defaults. meaning the thread is running and there is no head of line blocking action going on.
   bool lFoundHeadOfLineBlocking = false;
   bool lFistDelivery = mHeadOfLineBlockingTimeout ==
@@ -697,48 +689,9 @@ void ElasticFrameProtocol::receiverWorker(uint32_t timeout) {
   mIsWorkerThreadActive = false;
 }
 
-// Start reciever worker thread
-ElasticFrameMessages ElasticFrameProtocol::startReceiver(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster) {
-  if (mCurrentMode != ElasticFrameMode::receiver) {
-    return ElasticFrameMessages::wrongMode;
-  }
-
-  if (mIsWorkerThreadActive) {
-    LOGGER(true, LOGG_WARN, "Worker thread is already running")
-    return ElasticFrameMessages::receiverAlreadyStarted;
-  }
-  if (mIsDeliveryThreadActive) {
-    LOGGER(true, LOGG_WARN, "Delivery thread is already running")
-    return ElasticFrameMessages::receiverAlreadyStarted;
-  }
-  if (bucketTimeoutMaster == 0) {
-    LOGGER(true, LOGG_WARN, "bucketTimeoutMaster can't be 0")
-    return ElasticFrameMessages::parameterError;
-  }
-  if (holTimeoutMaster >= bucketTimeoutMaster) {
-    LOGGER(true, LOGG_WARN, "holTimeoutMaster can't be less or equal to bucketTimeoutMaster")
-    return ElasticFrameMessages::parameterError;
-  }
-
-  mBucketTimeout = bucketTimeoutMaster;
-  mHeadOfLineBlockingTimeout = holTimeoutMaster;
-  mThreadActive =
-      true; //you must set these parameters here to avoid races. For example calling start then stop before the thread actually starts.
-  mIsWorkerThreadActive = true;
-  mIsDeliveryThreadActive = true;
-  std::thread(std::bind(&ElasticFrameProtocol::receiverWorker, this, bucketTimeoutMaster)).detach();
-  std::thread(std::bind(&ElasticFrameProtocol::deliveryWorker, this)).detach();
-
-  return ElasticFrameMessages::noError;
-}
-
 // Stop reciever worker thread
-ElasticFrameMessages ElasticFrameProtocol::stopReceiver() {
+ElasticFrameMessages ElasticFrameProtocolReceiver::stopReceiver() {
   std::lock_guard<std::mutex> lock(mReceiveMtx);
-
-  if (mCurrentMode != ElasticFrameMode::receiver) {
-    return ElasticFrameMessages::wrongMode;
-  }
 
   //Set the semaphore to stop thread
   mThreadActive = false;
@@ -762,13 +715,13 @@ ElasticFrameMessages ElasticFrameProtocol::stopReceiver() {
   return ElasticFrameMessages::noError;
 }
 
-ElasticFrameMessages ElasticFrameProtocol::receiveFragment(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource) {
+ElasticFrameMessages ElasticFrameProtocolReceiver::receiveFragment(const std::vector<uint8_t> &rSubPacket, uint8_t fromSource) {
   return receiveFragmentFromPtr(rSubPacket.data(), rSubPacket.size(), fromSource);
 }
 
 // Unpack method. We recieved a fragment of data or a full frame. Lets unpack it
 ElasticFrameMessages
-ElasticFrameProtocol::receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource) {
+ElasticFrameProtocolReceiver::receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource) {
   // Type 0 packet. Discard and continue
   // Type 0 packets can be used to fill with user data outside efp protocol packets just put a uint8_t = Frametype::type0 at position 0 and then any data.
   // Type 1 are frames larger than MTU
@@ -777,10 +730,6 @@ ElasticFrameProtocol::receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t p
   // Type 3 frames carry the reminder of data when it's too large for type2 to carry.
 
   std::lock_guard<std::mutex> lock(mReceiveMtx);
-
-  if (mCurrentMode != ElasticFrameMode::receiver) {
-    return ElasticFrameMessages::wrongMode;
-  }
 
   if (!(mIsWorkerThreadActive & mIsDeliveryThreadActive)) {
     LOGGER(true, LOGG_ERROR, "Receiver not running")
@@ -815,9 +764,77 @@ ElasticFrameProtocol::receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t p
   return ElasticFrameMessages::unknownFrameType;
 }
 
+ElasticFrameMessages ElasticFrameProtocolReceiver::extractEmbeddedData(ElasticFrameProtocolReceiver::pFramePtr &rPacket,
+                                                               std::vector<std::vector<uint8_t>> *pEmbeddedDataList,
+                                                               std::vector<uint8_t> *pDataContent,
+                                                               size_t *pPayloadDataPosition) {
+  bool lMoreData = true;
+  size_t lHeaderSize = sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader);
+  do {
+    ElasticFrameContentNamespace::ElasticEmbeddedHeader lEmbeddedHeader =
+        *(ElasticFrameContentNamespace::ElasticEmbeddedHeader *) (rPacket->pFrameData + *pPayloadDataPosition);
+    if (lEmbeddedHeader.embeddedFrameType == ElasticEmbeddedFrameContent::illegal) {
+      return ElasticFrameMessages::illegalEmbeddedData;
+    }
+    pDataContent->emplace_back((lEmbeddedHeader.embeddedFrameType & 0x7f));
+    std::vector<uint8_t> lEmbeddedData(lEmbeddedHeader.size);
+
+    std::memmove(lEmbeddedData.data(),
+                 rPacket->pFrameData + lHeaderSize + *pPayloadDataPosition,
+                 lEmbeddedHeader.size);
+
+    pEmbeddedDataList->emplace_back(lEmbeddedData);
+    lMoreData = lEmbeddedHeader.embeddedFrameType & 0x80;
+    *pPayloadDataPosition += (lEmbeddedHeader.size + lHeaderSize);
+    if (*pPayloadDataPosition >= rPacket->mFrameSize) {
+      return ElasticFrameMessages::bufferOutOfBounds;
+    }
+  } while (!lMoreData);
+  return ElasticFrameMessages::noError;
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------
+//
+//
+// ElasticFrameProtocolSender
+//
+//
+//---------------------------------------------------------------------------------------------------------------------
+
+
+// Constructor setting the MTU
+// Limit the MTU to uint16_t MAX and UINT8_MAX min.
+// The lower limit is actually type2frameSize+1, keep it at 255 for now
+ElasticFrameProtocolSender::ElasticFrameProtocolSender(uint16_t setMTU) {
+  c_sendCallback = 0;
+  if (setMTU < UINT8_MAX) {
+    LOGGER(true, LOGG_ERROR, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.")
+    mCurrentMTU = UINT8_MAX;
+  } else {
+    mCurrentMTU = setMTU;
+  }
+
+  sendCallback = std::bind(&ElasticFrameProtocolSender::sendData, this, std::placeholders::_1, std::placeholders::_2);
+  LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocolSender constructed")
+}
+
+ElasticFrameProtocolSender::~ElasticFrameProtocolSender() {
+  LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocolSender destruct")
+}
+
+// Dummy callback for transmitter
+void ElasticFrameProtocolSender::sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID) {
+  if (c_sendCallback) {
+    c_sendCallback(rSubPacket.data(), rSubPacket.size(), streamID);
+  } else {
+    LOGGER(true, LOGG_ERROR, "Implement the sendCallback method for the protocol to work.")
+  }
+}
+
 // Pack data method. Fragments the data and calls the sendCallback method at the host level.
 ElasticFrameMessages
-ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts,
+ElasticFrameProtocolSender::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts,
                                   uint64_t dts,
                                   uint32_t code, uint8_t streamID, uint8_t flags) {
   return packAndSendFromPtr(rPacket.data(), rPacket.size(), dataContent, pts, dts, code, streamID, flags);
@@ -826,7 +843,7 @@ ElasticFrameProtocol::packAndSend(const std::vector<uint8_t> &rPacket, ElasticFr
 
 // Pack data method. Fragments the data and calls the sendCallback method at the host level.
 ElasticFrameMessages
-ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSize, ElasticFrameContent dataContent,
+ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSize, ElasticFrameContent dataContent,
                                          uint64_t pts, uint64_t dts,
                                          uint32_t code, uint8_t streamID, uint8_t flags) {
 
@@ -834,10 +851,6 @@ ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSi
 
   if (sizeof(ElasticFrameType1) != sizeof(ElasticFrameType3)) {
     return ElasticFrameMessages::type1And3SizeError;
-  }
-
-  if (mCurrentMode != ElasticFrameMode::sender) {
-    return ElasticFrameMessages::wrongMode;
   }
 
   if (pts == UINT64_MAX) {
@@ -1005,7 +1018,7 @@ ElasticFrameProtocol::packAndSendFromPtr(const uint8_t *rPacket, size_t packetSi
 
 // Helper methods for embeding/extracting data in the payload part. It's not recommended to use these methods in production code as it's better to build the
 // frames externally to avoid insert and copy of data.
-ElasticFrameMessages ElasticFrameProtocol::addEmbeddedData(std::vector<uint8_t> *pPacket,
+ElasticFrameMessages ElasticFrameProtocolSender::addEmbeddedData(std::vector<uint8_t> *pPacket,
                                                            void *pPrivateData,
                                                            size_t privateDataSize,
                                                            ElasticEmbeddedFrameContent content,
@@ -1024,41 +1037,12 @@ ElasticFrameMessages ElasticFrameProtocol::addEmbeddedData(std::vector<uint8_t> 
   return ElasticFrameMessages::noError;
 }
 
-ElasticFrameMessages ElasticFrameProtocol::extractEmbeddedData(ElasticFrameProtocol::pFramePtr &rPacket,
-                                                               std::vector<std::vector<uint8_t>> *pEmbeddedDataList,
-                                                               std::vector<uint8_t> *pDataContent,
-                                                               size_t *pPayloadDataPosition) {
-  bool lMoreData = true;
-  size_t lHeaderSize = sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader);
-  do {
-    ElasticFrameContentNamespace::ElasticEmbeddedHeader lEmbeddedHeader =
-        *(ElasticFrameContentNamespace::ElasticEmbeddedHeader *) (rPacket->pFrameData + *pPayloadDataPosition);
-    if (lEmbeddedHeader.embeddedFrameType == ElasticEmbeddedFrameContent::illegal) {
-      return ElasticFrameMessages::illegalEmbeddedData;
-    }
-    pDataContent->emplace_back((lEmbeddedHeader.embeddedFrameType & 0x7f));
-    std::vector<uint8_t> lEmbeddedData(lEmbeddedHeader.size);
-
-    std::memmove(lEmbeddedData.data(),
-                 rPacket->pFrameData + lHeaderSize + *pPayloadDataPosition,
-                 lEmbeddedHeader.size);
-
-    pEmbeddedDataList->emplace_back(lEmbeddedData);
-    lMoreData = lEmbeddedHeader.embeddedFrameType & 0x80;
-    *pPayloadDataPosition += (lEmbeddedHeader.size + lHeaderSize);
-    if (*pPayloadDataPosition >= rPacket->mFrameSize) {
-      return ElasticFrameMessages::bufferOutOfBounds;
-    }
-  } while (!lMoreData);
-  return ElasticFrameMessages::noError;
-}
-
 // Used by the unit tests
-size_t ElasticFrameProtocol::geType1Size() {
+size_t ElasticFrameProtocolSender::geType1Size() {
   return sizeof(ElasticFrameType1);
 }
 
-size_t ElasticFrameProtocol::geType2Size() {
+size_t ElasticFrameProtocolSender::geType2Size() {
   return sizeof(ElasticFrameType2);
 }
 
@@ -1070,16 +1054,17 @@ size_t ElasticFrameProtocol::geType2Size() {
 // ****************************************************
 
 #include <map>
-std::map<uint64_t, std::shared_ptr<ElasticFrameProtocol>> efp_base_map;
+std::map<uint64_t, std::shared_ptr<ElasticFrameProtocolReceiver>> efp_receive_base_map;
+std::map<uint64_t, std::shared_ptr<ElasticFrameProtocolSender>> efp_send_base_map;
 uint64_t c_object_handle = {1};
-std::mutex efp_mutex;
+std::mutex efp_send_mutex;
+std::mutex efp_receive_mutex;
 
 uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t *, size_t, uint8_t)) {
-  efp_mutex.lock();
-  auto result = efp_base_map.insert(std::make_pair(c_object_handle,
-                                                   std::make_shared<ElasticFrameProtocol>(mtu,
-                                                                                          ElasticFrameMode::sender)));
-  efp_mutex.unlock();
+  efp_send_mutex.lock();
+  auto result = efp_send_base_map.insert(std::make_pair(c_object_handle,
+                                                   std::make_shared<ElasticFrameProtocolSender>(mtu)));
+  efp_send_mutex.unlock();
   if (!result.first->second) {
     return 0;
   }
@@ -1099,14 +1084,13 @@ uint64_t efp_init_receive(uint32_t bucketTimeout,
                                     uint8_t,
                                     uint8_t,
                                     uint8_t)) {
-  efp_mutex.lock();
-  auto result = efp_base_map.insert(std::make_pair(c_object_handle, std::make_shared<ElasticFrameProtocol>()));
-  efp_mutex.unlock();
+  efp_receive_mutex.lock();
+  auto result = efp_receive_base_map.insert(std::make_pair(c_object_handle, std::make_shared<ElasticFrameProtocolReceiver>()));
+  efp_receive_mutex.unlock();
   if (!result.first->second) {
     return 0;
   }
   result.first->second->c_recieveCallback = f;
-  result.first->second->startReceiver(bucketTimeout, holTimeout);
   return c_object_handle++;
 }
 
@@ -1119,9 +1103,9 @@ int16_t efp_send_data(uint64_t efp_object,
                       uint32_t code,
                       uint8_t streamID,
                       uint8_t flags) {
-  efp_mutex.lock();
-  auto efp_base = efp_base_map.find(efp_object)->second;
-  efp_mutex.unlock();
+  efp_send_mutex.lock();
+  auto efp_base = efp_send_base_map.find(efp_object)->second;
+  efp_send_mutex.unlock();
   if (efp_base == nullptr) {
     return (int16_t) ElasticFrameMessages::efpCAPIfailure;
   }
@@ -1139,26 +1123,41 @@ int16_t efp_receive_fragment(uint64_t efp_object,
                              const uint8_t *pSubPacket,
                              size_t packetSize,
                              uint8_t fromSource) {
-  efp_mutex.lock();
-  auto efp_base = efp_base_map.find(efp_object)->second;
-  efp_mutex.unlock();
+  efp_receive_mutex.lock();
+  auto efp_base = efp_receive_base_map.find(efp_object)->second;
+  efp_receive_mutex.unlock();
   if (efp_base == nullptr) {
     return (int16_t) ElasticFrameMessages::efpCAPIfailure;
   }
   return (int16_t) efp_base->receiveFragmentFromPtr(pSubPacket, packetSize, fromSource);
 }
 
-int16_t efp_end(uint64_t efp_object) {
-  efp_mutex.lock();
-  auto efp_base = efp_base_map.find(efp_object)->second;
-  efp_mutex.unlock();
+int16_t efp_end_send(uint64_t efp_object) {
+  efp_send_mutex.lock();
+  auto efp_base = efp_send_base_map.find(efp_object)->second;
+  efp_send_mutex.unlock();
   if (efp_base == nullptr) {
     return (int16_t) ElasticFrameMessages::efpCAPIfailure;
   }
-  efp_base->stopReceiver();
-  efp_mutex.lock();
-  auto num_deleted = efp_base_map.erase(efp_object);
-  efp_mutex.unlock();
+  efp_send_mutex.lock();
+  auto num_deleted = efp_send_base_map.erase(efp_object);
+  efp_send_mutex.unlock();
+  if (num_deleted) {
+    return (int16_t) ElasticFrameMessages::noError;
+  }
+  return (int16_t) ElasticFrameMessages::efpCAPIfailure;
+}
+
+int16_t efp_end_receive(uint64_t efp_object) {
+  efp_receive_mutex.lock();
+  auto efp_base = efp_receive_base_map.find(efp_object)->second;
+  efp_receive_mutex.unlock();
+  if (efp_base == nullptr) {
+    return (int16_t) ElasticFrameMessages::efpCAPIfailure;
+  }
+  efp_receive_mutex.lock();
+  auto num_deleted = efp_receive_base_map.erase(efp_object);
+  efp_receive_mutex.unlock();
   if (num_deleted) {
     return (int16_t) ElasticFrameMessages::noError;
   }

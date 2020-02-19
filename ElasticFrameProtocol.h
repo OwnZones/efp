@@ -71,34 +71,34 @@ namespace ElasticFrameContentNamespace {
     ///Payload data types
     //Payload data defines ----- START ------
     enum ElasticFrameContentDefines : uint8_t {
-        unknown,                //Standard                      //code
-        privatedata,            //Any user defined format       //USER (not needed)
-        adts,                   //Mpeg-4 AAC ADTS framing       //ADTS (not needed)
-        mpegts,                 //ITU-T H.222 188byte TS        //TSDT (not needed)
-        mpegpes,                //ITU-T H.222 PES packets       //MPES (not needed)
-        jpeg2000,               //ITU-T T.800 Annex M           //J2KV (not needed)
-        jpeg,                   //ITU-T.81                      //JPEG (not needed)
-        jpegxs,                 //ISO/IEC 21122-3               //JPXS (not needed)
-        pcmaudio,               //AES-3 framing                 //AES3 (not needed)
-        ndi,                    //*TBD*                         //NNDI (not needed)
+        unknown     = 0x00, //Standard                      //code
+        privatedata = 0x01, //Any user defined format       //USER (not needed)
+        adts        = 0x02, //Mpeg-4 AAC ADTS framing       //ADTS (not needed)
+        mpegts      = 0x03, //ITU-T H.222 188byte TS        //TSDT (not needed)
+        mpegpes     = 0x04, //ITU-T H.222 PES packets       //MPES (not needed)
+        jpeg2000    = 0x05, //ITU-T T.800 Annex M           //J2KV (not needed)
+        jpeg        = 0x06, //ITU-T.81                      //JPEG (not needed)
+        jpegxs      = 0x07, //ISO/IEC 21122-3               //JPXS (not needed)
+        pcmaudio    = 0x08, //AES-3 framing                 //AES3 (not needed)
+        ndi         = 0x09, //*TBD*                         //NNDI (not needed)
 
         //Formats defined below (MSB='1') must also use 'code' to define the data format in the superframe
 
-        didsdid = 0x80,         //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
-        sdi,                    //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
-        h264,                   //ITU-T H.264                   //ANXB = Annex B framing / AVCC = AVCC framing
-        h265                    //ITU-T H.265                   //ANXB = Annex B framing / AVCC = AVCC framing
+        didsdid     = 0x80, //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
+        sdi         = 0x81, //FOURCC format                 //(FOURCC) (Must be the fourcc code for the format used)
+        h264        = 0x82, //ITU-T H.264                   //ANXB = Annex B framing / AVCC = AVCC framing
+        h265        = 0x83  //ITU-T H.265                   //ANXB = Annex B framing / AVCC = AVCC framing
     };
 
     ///Embedded data types
     //Embedded data defines ----- START ------
     enum ElasticFrameEmbeddedContentDefines : uint8_t {
-        illegal,                //may not be used
-        embeddedprivatedata,    //private data
-        h222pmt,                //pmt from h222 pids should be truncated to uint8_t leaving the LSB bits only then map to streams
-        mp4fragbox,             //All boxes from a mp4 fragment excluding the payload
-        lastembeddedcontent = 0x80
-        //defines below here do not allow following embedded data.
+        illegal               = 0x00,    //may not be used
+        embeddedprivatedata   = 0x01,    //private data
+        h222pmt               = 0x02,    //PMT from h222 PIDs should be truncated to uint8_t leaving the LSB bits only then map to EFP-streams
+        mp4fragbox            = 0x03,    //All boxes from a mp4 fragment excluding the payload
+      lastembeddedcontent     = 0x80
+        //Data type defines below here do not allow following fragments of embedded data.
     };
 
     ///Embedded header define
@@ -134,7 +134,6 @@ enum class ElasticFrameMessages : int16_t {
     memoryAllocationError,      //Failed allocating system memory. This is fatal and results in unknown behaviour.
     illegalEmbeddedData,        //illegal embedded data
     type1And3SizeError,         //Type1 and Type3 must have the same header size
-    wrongMode,                  //mode is set to receiver when using the class as sender or the other way around
     receiverNotRunning,         //The EFP receiver is not running
     dtsptsDiffToLarge,          //PTS - DTS > UINT32_MAX
     type2FrameOutOfBounds,      //The user provided a packet with type2 data but the size of the packet is smaller than the declared content
@@ -160,6 +159,128 @@ enum class ElasticFrameMode : uint8_t {
     receiver,
 };
 
+
+/**
+ * \class ElasticFrameProtocolSender
+ *
+ * \brief
+ *
+ *
+ *
+ * \author UnitX
+ *
+ * Contact: bitbucket:andersced
+ *
+ */
+class ElasticFrameProtocolSender {
+public:
+
+  ///Constructor
+  explicit ElasticFrameProtocolSender(uint16_t setMTU = 0);
+
+  ///Destructor
+  virtual ~ElasticFrameProtocolSender();
+
+  ///Return the version of the current implementation
+  uint16_t getVersion() { return (EFP_MAJOR_VERSION << 8) | EFP_MINOR_VERSION; }
+
+  /**
+* Segments data and call the send callback when the data is a vector
+*
+* @param rPacket The Data to be sent
+* @param dataContent ElasticFrameContent::x where x is the type of data to be sent.
+* @param pts the pts value of the content
+* @param dts the dts value of the content
+* @param code if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
+* @param streamID The EFP-stream ID the data is associated with.
+* @param flags signal what flags are used
+* @return ElasticFrameMessages
+*/
+  ElasticFrameMessages
+  packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
+              uint32_t code,
+              uint8_t streamID, uint8_t flags);
+
+  /**
+  * Segments data and call the send callback when the data is a pointer
+  *
+  * @param pPacket pointer to the data to be sent
+  * @param packetSize size of the data to be sent
+  * @param dataContent ElasticFrameContent::x where x is the type of data to be sent.
+  * @param pts the pts value of the content
+  * @param dts the dts value of the content
+  * @param code if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
+  * @param streamID The EFP-stream ID the data is associated with.
+  * @param flags signal what flags are used
+  * @return ElasticFrameMessages
+  */
+  ElasticFrameMessages
+  packAndSendFromPtr(const uint8_t* pPacket, size_t packetSize, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
+                     uint32_t code, uint8_t streamID, uint8_t flags);
+
+
+  /**
+  * Send packet callback
+  *
+  * @param rSubPacket The data to send
+  * @streamID EFP stream ID
+  */
+  std::function<void(const std::vector<uint8_t> &rSubPacket, uint8_t streamID)> sendCallback = nullptr;
+
+  /**
+  * Send packet callback (C-API version)
+  *
+  * @data Pointer to the data
+  * @size Size of the data
+  * @stream_id EFP stream ID
+  */
+  void (*c_sendCallback)(const uint8_t* data, size_t size, uint8_t stream_id);
+
+  //Help methods ----------- START ----------
+  /**
+  * Add embedded data in front of a superFrame
+  * These helper methods should not be used in production code
+  * the embedded data should be embedded prior to filling the payload content
+  *
+  * @param pPacket pointer to packet (superFrame)
+  * @param pPrivateData pointer to the private data
+  * @param privateDataSize size of private data
+  * @param content what the private data contains
+  * @param isLast is the last embedded data
+  * @return ElasticFrameMessages
+  */
+  ElasticFrameMessages addEmbeddedData(std::vector<uint8_t> *pPacket, void *pPrivateData, size_t privateDataSize,
+                                       ElasticEmbeddedFrameContent content = ElasticEmbeddedFrameContent::illegal,
+                                       bool isLast = false);
+  //Help methods ----------- END ----------
+
+  ///Delete copy and move constructors and assign operators
+  ElasticFrameProtocolSender(ElasticFrameProtocolSender const &) = delete;              // Copy construct
+  ElasticFrameProtocolSender(ElasticFrameProtocolSender &&) = delete;                   // Move construct
+  ElasticFrameProtocolSender &operator=(ElasticFrameProtocolSender const &) = delete;   // Copy assign
+  ElasticFrameProtocolSender &operator=(ElasticFrameProtocolSender &&) = delete;        // Move assign
+
+  //Used by unitTests ----START-----------------
+#ifdef UNIT_TESTS
+
+  size_t geType1Size();
+
+  size_t geType2Size();
+
+#endif
+  //Used by unitTests ----END-----------------
+
+private:
+
+  // Dummy callback
+  void sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID);
+
+  std::mutex mSendMtx; //Mutex protecting the send part
+  uint32_t mCurrentMTU = 0; //current MTU used by the sender
+  uint16_t mSuperFrameNoGenerator = 0;
+};
+
+
 /**
  * \class ElasticFrameProtocol
  *
@@ -172,7 +293,7 @@ enum class ElasticFrameMode : uint8_t {
  * Contact: bitbucket:andersced
  *
  */
-class ElasticFrameProtocol {
+class ElasticFrameProtocolReceiver {
 public:
     /**
     * \class SuperFrame
@@ -225,78 +346,14 @@ public:
 
     using pFramePtr = std::unique_ptr<SuperFrame>;
 
-    ///Constructor
-    explicit ElasticFrameProtocol(uint16_t setMTU = 0, ElasticFrameMode mode = ElasticFrameMode::receiver);
+    ///Constructor (defaults to 100ms timeout)
+    explicit ElasticFrameProtocolReceiver(uint32_t bucketTimeoutMaster = 10, uint32_t holTimeoutMaster = 0);
 
     ///Destructor
-    virtual ~ElasticFrameProtocol();
+    virtual ~ElasticFrameProtocolReceiver();
 
     ///Return the version of the current implementation
     uint16_t getVersion() { return (EFP_MAJOR_VERSION << 8) | EFP_MINOR_VERSION; }
-
-    /**
-    * Segments data and call the send callback when the data is a vector
-    *
-    * @param rPacket The Data to be sent
-    * @param dataContent ElasticFrameContent::x where x is the type of data to be sent.
-    * @param pts the pts value of the content
-    * @param dts the dts value of the content
-    * @param code if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
-    * @param streamID The EFP-stream ID the data is associated with.
-    * @param flags signal what flags are used
-    * @return ElasticFrameMessages
-    */
-    ElasticFrameMessages
-    packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
-                uint32_t code,
-                uint8_t streamID, uint8_t flags);
-
-    /**
-    * Segments data and call the send callback when the data is a pointer
-    *
-    * @param pPacket pointer to the data to be sent
-    * @param packetSize size of the data to be sent
-    * @param dataContent ElasticFrameContent::x where x is the type of data to be sent.
-    * @param pts the pts value of the content
-    * @param dts the dts value of the content
-    * @param code if msb (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
-    * @param streamID The EFP-stream ID the data is associated with.
-    * @param flags signal what flags are used
-    * @return ElasticFrameMessages
-    */
-    ElasticFrameMessages
-    packAndSendFromPtr(const uint8_t* pPacket, size_t packetSize, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
-                                             uint32_t code, uint8_t streamID, uint8_t flags);
-
-
-    /**
-    * Send packet callback
-    *
-    * @param rSubPacket The data to send
-    * @streamID EFP stream ID
-    */
-    std::function<void(const std::vector<uint8_t> &rSubPacket, uint8_t streamID)> sendCallback = nullptr;
-
-    /**
-    * Send packet callback (C-API version)
-    *
-    * @data Pointer to the data
-    * @size Size of the data
-    * @stream_id EFP stream ID
-    */
-    void (*c_sendCallback)(const uint8_t* data, size_t size, uint8_t stream_id);
-
-    /**
-    * Start the receiver worker
-    *
-    * @param bucketTimeoutMaster The time in bucketTimeoutMaster x 10m to wait for missing fragments
-    * @param holTimeoutMaster The time in holTimeoutMaster x 10m to wait for missing superFrames
-    * @return ElasticFrameMessages
-    */
-    ElasticFrameMessages startReceiver(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster);
-
-    /// Stop the reciever worker
-    ElasticFrameMessages stopReceiver();
 
     /**
     * Method to feed the network fragments received when the data is a vector
@@ -331,7 +388,7 @@ public:
     * -> mStreamID The EFP-stream ID the data is associated with.
     * -> mFlags signal what flags are used
     */
-    std::function<void(ElasticFrameProtocol::pFramePtr &rPacket)> receiveCallback = nullptr;
+    std::function<void(pFramePtr &rPacket)> receiveCallback = nullptr;
 
     /**
     * Recieve data callback (C-API version)
@@ -359,28 +416,13 @@ public:
                             uint8_t flags);
 
     ///Delete copy and move constructors and assign operators
-    ElasticFrameProtocol(ElasticFrameProtocol const &) = delete;              // Copy construct
-    ElasticFrameProtocol(ElasticFrameProtocol &&) = delete;                   // Move construct
-    ElasticFrameProtocol &operator=(ElasticFrameProtocol const &) = delete;   // Copy assign
-    ElasticFrameProtocol &operator=(ElasticFrameProtocol &&) = delete;        // Move assign
+    ElasticFrameProtocolReceiver(ElasticFrameProtocolReceiver const &) = delete;              // Copy construct
+    ElasticFrameProtocolReceiver(ElasticFrameProtocolReceiver &&) = delete;                   // Move construct
+    ElasticFrameProtocolReceiver &operator=(ElasticFrameProtocolReceiver const &) = delete;   // Copy assign
+    ElasticFrameProtocolReceiver &operator=(ElasticFrameProtocolReceiver &&) = delete;        // Move assign
+
 
     //Help methods ----------- START ----------
-    /**
-    * Add embedded data in front of a superFrame
-    * These helper methods should not be used in production code
-    * the embedded data should be embedded prior to filling the payload content
-    *
-    * @param pPacket pointer to packet (superFrame)
-    * @param pPrivateData pointer to the private data
-    * @param privateDataSize size of private data
-    * @param content what the private data contains
-    * @param isLast is the last embedded data
-    * @return ElasticFrameMessages
-    */
-    ElasticFrameMessages addEmbeddedData(std::vector<uint8_t> *pPacket, void *pPrivateData, size_t privateDataSize,
-                                         ElasticEmbeddedFrameContent content = ElasticEmbeddedFrameContent::illegal,
-                                         bool isLast = false);
-
     /**
     * Add embedded data in front of a superFrame
     * These helper methods should not be used in production code
@@ -396,17 +438,9 @@ public:
                                              std::vector<uint8_t> *pDataContent, size_t *pPayloadDataPosition);
     //Help methods ----------- END ----------
 
-    //Used by unitTests ----START-----------------
-#ifdef UNIT_TESTS
-
-    size_t geType1Size();
-
-    size_t geType2Size();
-
-#endif
-    //Used by unitTests ----END-----------------
 
 private:
+
     //Bucket  ----- START ------
     class Bucket {
     public:
@@ -438,11 +472,11 @@ private:
 
     //Private methods ----- START ------
 
-    // Dummy callback
-    void sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID);
+    // Stop the reciever worker
+    ElasticFrameMessages stopReceiver();
 
-    // Dummy callback
-    void gotData(ElasticFrameProtocol::pFramePtr &rPacket);
+    // C-API callback if C++ mode it's a Dummy callback
+    void gotData(pFramePtr &rPacket);
 
     // Method assembling Type1 fragments
     ElasticFrameMessages unpackType1(const uint8_t* pSubPacket, size_t packetSize, uint8_t fromSource);
@@ -469,9 +503,7 @@ private:
     uint32_t mBucketTimeout = 0; // Time out passed to receiver
     uint32_t mHeadOfLineBlockingTimeout = 0; // HOL time out passed to receiver
     std::mutex mNetMtx; //Mutex protecting the bucket queue
-    uint32_t mCurrentMTU = 0; //current MTU used by the sender
     // Various counters to keep track of the different frames
-    uint16_t mSuperFrameNoGenerator = 0;
     uint16_t mOldSuperFrameNumber = 0;
     uint64_t mSuperFrameRecalc = 0;
     bool mSuperFrameFirstTime = true;
@@ -480,11 +512,7 @@ private:
     std::atomic_bool mIsDeliveryThreadActive;
     std::atomic_bool mThreadActive;
     // Mutex for thread safety
-    std::mutex mSendMtx; //Mutex protecting the send part
     std::mutex mReceiveMtx; //Mutex protecting the recieve part
-    // Current mode
-    ElasticFrameMode mCurrentMode = ElasticFrameMode::unknown;
-    //
     std::deque<pFramePtr> mSuperFrameQueue;
     std::mutex mSuperFrameMtx;
     std::condition_variable mSuperFrameDeliveryConditionVariable;

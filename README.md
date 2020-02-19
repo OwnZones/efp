@@ -17,7 +17,7 @@ The ElasticFrameProtocol is acting as a bridge between elementary data and the u
 
 The elasticity comes from the protocols ability to adapt to incoming frame size, type, number of concurrent streams and underlying infrastructure. The layer between the transport layer and producers/consumers of the data can be kept thin without driving overhead, complexity and delay. 
 
-Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:/g/personal/anders_cedronius_edgeware_tv/ERnSit7j6udBsZOqkQcMLrQBpKmnfdApG3lehRk4zE-qgQ?e=qXzjfX) for more information.
+Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:/g/personal/anders_cedronius_edgeware_tv/ERnSit7j6udBsZOqkQcMLrQBpKmnfdApG3lehRk4zE-qgQ?e=Ha2VrP) for more information.
 
 
 ## Installation
@@ -60,12 +60,7 @@ The dynamic EFP library
 
 ---
 
-**EFP** is built on Ubuntu 18.04 in the bitbucket [pipeline](https://bitbucket.org/unitxtra/efp/addon/pipelines/home).
-
-MacOS by us during development.
-
-Aidan from Nvidia developer forum helped us building a Windows version
-(Windows is not currently verified during commits)
+**EFP** Is built on Ubuntu, Windows10 and MacOS every commit by us.
  
 
 ---
@@ -79,7 +74,7 @@ The EFP class/library can be made a reciever or sender. This is configured durin
 
 ```cpp
 // The callback function referenced as 'sendCallback'
-void sendData(const std::vector<uint8_t> &subPacket) {
+void sendData(const std::vector<uint8_t> &subPacket, uint8_t streamID) {
 // Send the subPacket data 
 // UDP.send(subPacket);
 }
@@ -87,13 +82,13 @@ void sendData(const std::vector<uint8_t> &subPacket) {
 // The data to be sent
 std::vector<uint8_t> myData;
 
-// Create your sender passing the MTU of the underlying protocol and set EFP to mode sender
-ElasticFrameProtocol myEFPSender(MTU, ElasticFrameProtocolModeNamespace::sender);
+// Create your sender passing the MTU of the underlying protocol.
+ElasticFrameProtocolSender myEFPSender(MTU);
 
 // Register your callback sending the packets
 // The callback will be called on the same thread calling 'packAndSend'
 //optionally also a std::placeholders::_2 if you want the EFP streamID
-myEFPSender.sendCallback = std::bind(&sendData, std::placeholders::_1);
+myEFPSender.sendCallback = std::bind(&sendData, std::placeholders::_1, std::placeholders::_2);
 
 // Send the data
 // param1 = The data
@@ -134,21 +129,16 @@ void gotData(ElasticFrameProtocol::pFramePtr &rFrame)
 }
 
 // Create your receiver
-ElasticFrameProtocol myEFPReceiver();
+// Passing fragment time out and HOL time out if wanted else set HOL to 0
+ElasticFrameProtocol myEFPReceiver(5, 2);
 
 // Register the callback
 myEFPReceiver.receiveCallback = std::bind(&gotData, std::placeholders::_1);
-
-// Start the reciever worker
-myEFPReceiver.startReceiver(5, 2);
 
 // Receive a EFP fragment
 myEFPReceiver.receiveFragment(subPacket,0);
 
 //If you got your data as a pointer there is also the method 'receiveFragmentFromPtr' so you don't need to copy your data into a vector first.
-
-// When done stop the worker
-myEFPReceiver.stopReciever();
 
 ```
 
