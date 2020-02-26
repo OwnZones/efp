@@ -265,6 +265,8 @@ public:
 
   size_t geType2Size();
 
+  void setSuperFrameNo(uint16_t superFrameNo);
+
 #endif
   //Used by unitTests ----END-----------------
 
@@ -496,9 +498,10 @@ private:
     // Method assembling Type3 fragments
     ElasticFrameMessages unpackType3(const uint8_t* pSubPacket, size_t packetSize, uint8_t fromSource);
 
-    // The worker thread assembling fragments and delivering the superFrames
-    void receiverWorker(uint32_t timeout);
+    // The worker thread assembling fragments and delivering the superFrames to the deliveryWorker()
+    void receiverWorker();
 
+    // The worker thread acting as a bridge between EFP and the user
     void deliveryWorker();
 
     // Recalculate the 16-bit vector to a 64-bit vector

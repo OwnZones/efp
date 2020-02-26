@@ -25,7 +25,7 @@ ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t bucketTimeou
   mThreadActive = true;
   mIsWorkerThreadActive = true;
   mIsDeliveryThreadActive = true;
-  std::thread(std::bind(&ElasticFrameProtocolReceiver::receiverWorker, this, bucketTimeoutMaster)).detach();
+  std::thread(std::bind(&ElasticFrameProtocolReceiver::receiverWorker, this)).detach();
   std::thread(std::bind(&ElasticFrameProtocolReceiver::deliveryWorker, this)).detach();
   LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol constructed")
 }
@@ -420,7 +420,7 @@ void ElasticFrameProtocolReceiver::deliveryWorker() {
 
 // This is the thread going trough the buckets to see if they should be delivered to
 // the 'user'
-void ElasticFrameProtocolReceiver::receiverWorker(uint32_t timeout) {
+void ElasticFrameProtocolReceiver::receiverWorker() {
   //Set the defaults. meaning the thread is running and there is no head of line blocking action going on.
   bool lFoundHeadOfLineBlocking = false;
   bool lFistDelivery = mHeadOfLineBlockingTimeout ==
@@ -1043,6 +1043,10 @@ size_t ElasticFrameProtocolSender::geType1Size() {
 
 size_t ElasticFrameProtocolSender::geType2Size() {
   return sizeof(ElasticFrameType2);
+}
+
+void ElasticFrameProtocolSender::setSuperFrameNo(uint16_t superFrameNo) {
+  mSuperFrameNoGenerator = superFrameNo;
 }
 
 
