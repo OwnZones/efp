@@ -130,7 +130,7 @@ void gotData(ElasticFrameProtocol::pFramePtr &rFrame)
 
 // Create your receiver
 // Passing fragment time out and HOL time out if wanted else set HOL to 0
-ElasticFrameProtocol myEFPReceiver(5, 2);
+ElasticFrameProtocolReceiver myEFPReceiver(5, 2);
 
 // Register the callback
 myEFPReceiver.receiveCallback = std::bind(&gotData, std::placeholders::_1);
