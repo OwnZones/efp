@@ -44,8 +44,10 @@ extern "C" {
 }
 #endif
 
+//CutPointBridgeON
 ///Generate the uint32_t 'code' out of 4 characters provided
 #define EFP_CODE(c0, c1, c2, c3) (((c0)<<24) | ((c1)<<16) | ((c2)<<8) | (c3))
+//CutPointBridgeOFF
 
 ///Enable or disable the APIs used by the unit tests
 #define UNIT_TESTS
@@ -53,6 +55,7 @@ extern "C" {
 ///The size of the circular buffer. Must be contiguous set bits defining the size  0b1111111111111 == 8191
 #define CIRCULAR_BUFFER_SIZE 0b1111111111111
 
+//CutPointBridgeON
 /// Flag defines used py EFP
 #define NO_FLAGS        0b00000000
 #define INLINE_PAYLOAD  0b00010000
@@ -145,6 +148,7 @@ enum class ElasticFrameMessages : int16_t {
     failedStoppingReceiver    = 5,     //The EFP receiver failed stopping it's resources.
     type0Frame                = 7      //Type0 frame
 };
+//CutPointBridgeOFF
 
 //---------------------------------------------------------------------------------------------------------------------
 //
