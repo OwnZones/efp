@@ -143,7 +143,8 @@ enum class ElasticFrameMessages : int16_t {
     //discarded and the tooOldFragment is triggered.
     tooOldFragment            = 3,     //if the superFrame has been delivered 100% complete or fragments of it due to a timeout and a fragment belonging to the superFrame arrives then it's
     failedStoppingReceiver    = 5,     //The EFP receiver failed stopping it's resources.
-    type0Frame                = 7      //Type0 frame
+    type0Frame                = 7,     //Type0 frame
+    efpSignalDropped          = 8      //EFPSignal did drop the content since it's not declared
 };
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -172,7 +173,7 @@ public:
   /**
   * ElasticFrameProtocolSender constructor
   *@param setMTU The MTU to be used by the sender. Must be more than 256 and less than UINT16_MAX
-  * 
+  *
   */
   explicit ElasticFrameProtocolSender(uint16_t setMTU);
 
