@@ -144,7 +144,8 @@ enum class ElasticFrameMessages : int16_t {
     tooOldFragment            = 3,     //if the superFrame has been delivered 100% complete or fragments of it due to a timeout and a fragment belonging to the superFrame arrives then it's
     failedStoppingReceiver    = 5,     //The EFP receiver failed stopping it's resources.
     type0Frame                = 7,     //Type0 frame
-    efpSignalDropped          = 8      //EFPSignal did drop the content since it's not declared
+    efpSignalDropped          = 8,     //EFPSignal did drop the content since it's not declared
+    contentAlreadyListed      = 9      //The content is already noted as listed.
 };
 
 //---------------------------------------------------------------------------------------------------------------------
