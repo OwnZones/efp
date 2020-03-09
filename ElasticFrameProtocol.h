@@ -145,7 +145,8 @@ enum class ElasticFrameMessages : int16_t {
     failedStoppingReceiver    = 5,     //The EFP receiver failed stopping it's resources.
     type0Frame                = 7,     //Type0 frame
     efpSignalDropped          = 8,     //EFPSignal did drop the content since it's not declared
-    contentAlreadyListed      = 9      //The content is already noted as listed.
+    contentAlreadyListed      = 9,     //The content is already noted as listed.
+    contentNotListed          = 10     //The content is not noted as listed.
 };
 
 //---------------------------------------------------------------------------------------------------------------------
