@@ -864,7 +864,7 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
     return ElasticFrameMessages::reservedCodeValue;
   }
 
-  if (streamID == 0) {
+  if (streamID == 0 && dataContent != ElasticFrameContent::efpsig) {
     return ElasticFrameMessages::reservedStreamValue;
   }
 
