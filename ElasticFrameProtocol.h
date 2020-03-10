@@ -114,6 +114,8 @@ using ElasticEmbeddedFrameContent = ElasticFrameContentNamespace::ElasticFrameEm
 // Positive numbers are informative
 /// ElasticFrameMessages definitions
 enum class ElasticFrameMessages : int16_t {
+    noDataForKey              = -21,  //No data found for the key value given
+    dataNotJSON               = -20,  //the data is not JSON
     tooLargeFrame             = -19,  //The frame is to large for EFP sender to handle
     tooLargeEmbeddedData      = -18,  //The embedded data frame is too large.
     unknownFrameType          = -17,  //The frame type is unknown by EFP receiver
