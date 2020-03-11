@@ -201,7 +201,7 @@ public:
 * @param flags signal what flags are used
 * @return ElasticFrameMessages
 */
-  ElasticFrameMessages
+  virtual ElasticFrameMessages
   packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
               uint32_t code,
               uint8_t streamID, uint8_t flags);
@@ -219,7 +219,7 @@ public:
   * @param flags signal what flags are used
   * @return ElasticFrameMessages
   */
-  ElasticFrameMessages
+  virtual ElasticFrameMessages
   packAndSendFromPtr(const uint8_t* pPacket, size_t packetSize, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
                      uint32_t code, uint8_t streamID, uint8_t flags);
 
