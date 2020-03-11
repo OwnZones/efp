@@ -194,6 +194,10 @@ EFP is all about framing data and checking the integrity of the content. For oth
 
 EFPBond makes it possible for all streams to use multiple underlying transport interfaces for protection or to increase the capacity. 
 
+[**EFPSignal**](https://bitbucket.org/unitxtra/efpsignal/src/master/)
+
+EFPSignal adds signaling, content declaration and dynamic/static subscription to EFP-Streams.  
+
 ## Contributing
 
 1. Fork it!
