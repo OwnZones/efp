@@ -121,7 +121,7 @@ enum class ElasticFrameMessages : int16_t {
     unknownFrameType          = -17,  //The frame type is unknown by EFP receiver
     frameSizeMismatch         = -16,  //The receiver received data less than the header size
     internalCalculationError  = -15,  //The sender encountered a condition it can't handle
-    endOfPacketError          = -14,  //The receiver received a type2 fragment not saying it was the last
+    notDefinedError           = -14,  //Not defined
     bufferOutOfBounds         = -13,  //The receiver circular buffer has wrapped around and all data in the buffer is from now untrusted also data prior to this may have been wrong.
     //This error can be triggered if there is a super high data rate data coming in with a large gap/loss of the incoming fragments in the flow
     //then broken superFrames will be buffered and new incoming data will claim buffers. When there are no more buffers to claim this error will be triggered.

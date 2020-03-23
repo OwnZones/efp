@@ -182,7 +182,7 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pS
   std::lock_guard<std::mutex> lock(mNetMtx);
   ElasticFrameType2 lType2Frame = *(ElasticFrameType2 *) pSubPacket;
 
-  if (packetSize < (sizeof(ElasticFrameType2) + lType2Frame.hSizeOfData)) {
+  if (packetSize < ((sizeof(ElasticFrameType2) + lType2Frame.hSizeOfData))) {
     return ElasticFrameMessages::type2FrameOutOfBounds;
   }
 
@@ -746,12 +746,7 @@ ElasticFrameProtocolReceiver::receiveFragmentFromPtr(const uint8_t *pSubPacket, 
     if (packetSize < sizeof(ElasticFrameType2)) {
       return ElasticFrameMessages::frameSizeMismatch;
     }
-    ElasticFrameType2 lType2Frame = *(ElasticFrameType2 *) pSubPacket;
-    if (lType2Frame.hOfFragmentNo == lType2Frame.hOfFragmentNo) {
-      return unpackType2(pSubPacket, packetSize, fromSource);
-    } else {
-      return ElasticFrameMessages::endOfPacketError;
-    }
+    return unpackType2(pSubPacket, packetSize, fromSource);
   } else if ((pSubPacket[0] & 0x0f) == Frametype::type3) {
     if (packetSize < sizeof(ElasticFrameType3)) {
       return ElasticFrameMessages::frameSizeMismatch;
