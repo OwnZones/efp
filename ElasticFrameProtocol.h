@@ -114,43 +114,47 @@ using ElasticEmbeddedFrameContent = ElasticFrameContentNamespace::ElasticFrameEm
 // Positive numbers are informative
 /// ElasticFrameMessages definitions
 enum class ElasticFrameMessages : int16_t {
-    noDataForKey              = -21,  //No data found for the key value given
-    dataNotJSON               = -20,  //the data is not JSON
-    tooLargeFrame             = -19,  //The frame is to large for EFP sender to handle
-    tooLargeEmbeddedData      = -18,  //The embedded data frame is too large.
-    unknownFrameType          = -17,  //The frame type is unknown by EFP receiver
-    frameSizeMismatch         = -16,  //The receiver received data less than the header size
-    internalCalculationError  = -15,  //The sender encountered a condition it can't handle
-    notDefinedError           = -14,  //Not defined
-    bufferOutOfBounds         = -13,  //The receiver circular buffer has wrapped around and all data in the buffer is from now untrusted also data prior to this may have been wrong.
-    //This error can be triggered if there is a super high data rate data coming in with a large gap/loss of the incoming fragments in the flow
-    //then broken superFrames will be buffered and new incoming data will claim buffers. When there are no more buffers to claim this error will be triggered.
-    bufferOutOfResources      = -12,  //This error is indicating there are no more buffer resources. In the unlikely event where all frames miss fragment(s) and the timeout is set high
-    reservedPTSValue          = -11,  //UINT64_MAX is a EFP reserved value
-    reservedDTSValue          = -10,  //UINT64_MAX is a EFP reserved value
-    reservedCodeValue         = -9,   //UINT32_MAX is a EFP reserved value
-    reservedStreamValue       = -8,   //0 is a EFP reserved value for signaling manifests
-    memoryAllocationError     = -7,   //Failed allocating system memory. This is fatal and results in unknown behaviour.
-    illegalEmbeddedData       = -6,   //illegal embedded data
-    type1And3SizeError        = -5,   //Type1 and Type3 must have the same header size
-    receiverNotRunning        = -4,   //The EFP receiver is not running
-    dtsptsDiffToLarge         = -3,   //PTS - DTS > UINT32_MAX
-    type2FrameOutOfBounds     = -2,   //The user provided a packet with type2 data but the size of the packet is smaller than the declared content
-    efpCAPIfailure            = -1,   //failure in the C-API
+  dmsgSourceMissing         = -25,  //The sender handle is missing DMSG can't control the sender
+  versionNotSupported       = -24,  //the received version is not supported
+  tooHighversion            = -23,  //the received version number is too high
+  lessDataThanExpected      = -22,  //The data provided is less than expected
+  noDataForKey              = -21,  //No data found for the key value given
+  dataNotJSON               = -20,  //the data is not JSON
+  tooLargeFrame             = -19,  //The frame is to large for EFP sender to handle
+  tooLargeEmbeddedData      = -18,  //The embedded data frame is too large.
+  unknownFrameType          = -17,  //The frame type is unknown by EFP receiver
+  frameSizeMismatch         = -16,  //The receiver received data less than the header size
+  internalCalculationError  = -15,  //The sender encountered a condition it can't handle
+  notDefinedError           = -14,  //Not defined
+  bufferOutOfBounds         = -13,  //The receiver circular buffer has wrapped around and all data in the buffer is from now untrusted also data prior to this may have been wrong.
+  //This error can be triggered if there is a super high data rate data coming in with a large gap/loss of the incoming fragments in the flow
+  //then broken superFrames will be buffered and new incoming data will claim buffers. When there are no more buffers to claim this error will be triggered.
+      bufferOutOfResources      = -12,  //This error is indicating there are no more buffer resources. In the unlikely event where all frames miss fragment(s) and the timeout is set high
+  reservedPTSValue          = -11,  //UINT64_MAX is a EFP reserved value
+  reservedDTSValue          = -10,  //UINT64_MAX is a EFP reserved value
+  reservedCodeValue         = -9,   //UINT32_MAX is a EFP reserved value
+  reservedStreamValue       = -8,   //0 is a EFP reserved value for signaling manifests
+  memoryAllocationError     = -7,   //Failed allocating system memory. This is fatal and results in unknown behaviour.
+  illegalEmbeddedData       = -6,   //illegal embedded data
+  type1And3SizeError        = -5,   //Type1 and Type3 must have the same header size
+  receiverNotRunning        = -4,   //The EFP receiver is not running
+  dtsptsDiffToLarge         = -3,   //PTS - DTS > UINT32_MAX
+  type2FrameOutOfBounds     = -2,   //The user provided a packet with type2 data but the size of the packet is smaller than the declared content
+  efpCAPIfailure            = -1,   //failure in the C-API
 
-    noError                   = 0,
+  noError                   = 0,
 
-    notImplemented            = 1,     //feature/function/level/method/system aso. not implemented.
-    duplicatePacketReceived   = 2,     //If the underlying infrastructure is handing EFP duplicate segments the second packet of the duplicate will generate this error if the
-    //the superFrame is still not delivered to the host system. if it has then tooOldFragment will be returned instead.
-    //discarded and the tooOldFragment is triggered.
-    tooOldFragment            = 3,     //if the superFrame has been delivered 100% complete or fragments of it due to a timeout and a fragment belonging to the superFrame arrives then it's
-    failedStoppingReceiver    = 5,     //The EFP receiver failed stopping it's resources.
-    type0Frame                = 7,     //Type0 frame
-    efpSignalDropped          = 8,     //EFPSignal did drop the content since it's not declared
-    contentAlreadyListed      = 9,     //The content is already noted as listed.
-    contentNotListed          = 10,    //The content is not noted as listed.
-    deleteContentFail         = 11     //Failed finding the content to be deleted
+  notImplemented            = 1,     //feature/function/level/method/system aso. not implemented.
+  duplicatePacketReceived   = 2,     //If the underlying infrastructure is handing EFP duplicate segments the second packet of the duplicate will generate this error if the
+  //the superFrame is still not delivered to the host system. if it has then tooOldFragment will be returned instead.
+  //discarded and the tooOldFragment is triggered.
+      tooOldFragment            = 3,     //if the superFrame has been delivered 100% complete or fragments of it due to a timeout and a fragment belonging to the superFrame arrives then it's
+  failedStoppingReceiver    = 5,     //The EFP receiver failed stopping it's resources.
+  type0Frame                = 7,     //Type0 frame
+  efpSignalDropped          = 8,     //EFPSignal did drop the content since it's not declared
+  contentAlreadyListed      = 9,     //The content is already noted as listed.
+  contentNotListed          = 10,    //The content is not noted as listed.
+  deleteContentFail         = 11     //Failed finding the content to be deleted
 };
 
 //---------------------------------------------------------------------------------------------------------------------
