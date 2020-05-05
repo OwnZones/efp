@@ -4,6 +4,7 @@
 
 #include "ElasticFrameProtocol.h"
 #include "ElasticInternal.h"
+#include "logger.h"
 
 #define WORKER_THREAD_SLEEP_US 1000 * 10
 
@@ -27,17 +28,17 @@ ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t bucketTimeou
     mIsDeliveryThreadActive = true;
     std::thread(std::bind(&ElasticFrameProtocolReceiver::receiverWorker, this)).detach();
     std::thread(std::bind(&ElasticFrameProtocolReceiver::deliveryWorker, this)).detach();
-    LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol constructed")
+    EFP_LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol constructed")
 }
 
 ElasticFrameProtocolReceiver::~ElasticFrameProtocolReceiver() {
     // If our worker is active we need to stop it.
     if (mThreadActive) {
         if (stopReceiver() != ElasticFrameMessages::noError) {
-            LOGGER(true, LOGG_ERROR, "Failed stopping worker thread.")
+            EFP_LOGGER(true, LOGG_ERROR, "Failed stopping worker thread.")
         }
     }
-    LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol destruct")
+    EFP_LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol destruct")
 }
 
 // C API callback. Dummy callback if C++
@@ -54,7 +55,7 @@ void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFrameP
                           rPacket->mSource,
                           rPacket->mFlags);
     } else {
-        LOGGER(true, LOGG_ERROR, "Implement the recieveCallback method for the protocol to work.")
+        EFP_LOGGER(true, LOGG_ERROR, "Implement the recieveCallback method for the protocol to work.")
     }
 }
 
@@ -88,11 +89,11 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t pack
 
     ElasticFrameType1 lType1Frame = *(ElasticFrameType1 *) pSubPacket;
     Bucket *pThisBucket = &mBucketList[lType1Frame.hSuperFrameNo & CIRCULAR_BUFFER_SIZE];
-    //LOGGER(false, LOGG_NOTIFY, "superFrameNo1-> " << unsigned(type1Frame.superFrameNo))
+    //EFP_LOGGER(false, LOGG_NOTIFY, "superFrameNo1-> " << unsigned(type1Frame.superFrameNo))
 
     // Is this entry in the buffer active? If no, create a new else continue filling the bucket with fragments.
     if (!pThisBucket->mActive) {
-        //LOGGER(false,LOGG_NOTIFY,"Setting: " << unsigned(type1Frame.superFrameNo));
+        //EFP_LOGGER(false,LOGG_NOTIFY,"Setting: " << unsigned(type1Frame.superFrameNo));
         uint64_t lDeliveryOrderCandidate = superFrameRecalculator(lType1Frame.hSuperFrameNo);
         //Is this a old fragment where we already delivered the superframe?
         if (lDeliveryOrderCandidate == pThisBucket->mDeliveryOrder) {
@@ -145,7 +146,7 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t pack
 
     if (pThisBucket->mOfFragmentNo < lType1Frame.hFragmentNo ||
         lType1Frame.hOfFragmentNo != pThisBucket->mOfFragmentNo) {
-        LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
+        EFP_LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
         pThisBucket->mActive = false;
         return ElasticFrameMessages::bufferOutOfBounds;
     }
@@ -240,7 +241,7 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pS
 
     if (pThisBucket->mOfFragmentNo < lType2Frame.hOfFragmentNo ||
         lType2Frame.hOfFragmentNo != pThisBucket->mOfFragmentNo) {
-        LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
+        EFP_LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
         pThisBucket->mActive = false;
         return ElasticFrameMessages::bufferOutOfBounds;
     }
@@ -304,7 +305,7 @@ ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t pack
 
     // Is this entry in the buffer active? If no, create a new else continue filling the bucket with data.
     if (!pThisBucket->mActive) {
-        //LOGGER(false,LOGG_NOTIFY,"Setting: " << unsigned(type1Frame.superFrameNo));
+        //EFP_LOGGER(false,LOGG_NOTIFY,"Setting: " << unsigned(type1Frame.superFrameNo));
         uint64_t lDeliveryOrderCandidate = superFrameRecalculator(lType3Frame.hSuperFrameNo);
         //Is this a old fragment where we already delivered the superframe?
         if (lDeliveryOrderCandidate == pThisBucket->mDeliveryOrder) {
@@ -356,7 +357,7 @@ ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t pack
     // I invalidate this bucket to save me but the user should be notified somehow about this state. FIXME
 
     if (pThisBucket->mOfFragmentNo < lThisFragmentNo || lType3Frame.hOfFragmentNo != pThisBucket->mOfFragmentNo) {
-        LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
+        EFP_LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
         pThisBucket->mActive = false;
         return ElasticFrameMessages::bufferOutOfBounds;
     }
@@ -463,7 +464,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                 if (lOverloadCount++ == 100) {
                     //Ok we have been overloaded for quite some time now..
                     lOverloadCount = 0;
-                    LOGGER(true, LOGG_WARN, "Worker thread overloaded by " << signed(lTimeCompensation) << " us")
+                    EFP_LOGGER(true, LOGG_WARN, "Worker thread overloaded by " << signed(lTimeCompensation) << " us")
                 }
             } else {
                 lOverloadCount = 0;
@@ -485,9 +486,9 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
             // If some one instructed me to timeout then let's timeout first
             if (lHeadOfLineBlockingCounter) {
                 lHeadOfLineBlockingCounter--;
-                // LOGGER(true, LOGG_NOTIFY, "Flush head countdown " << unsigned(headOfLineBlockingCounter))
+                // EFP_LOGGER(true, LOGG_NOTIFY, "Flush head countdown " << unsigned(headOfLineBlockingCounter))
             } else {
-                // LOGGER(true, LOGG_NOTIFY, "Flush trigger " << unsigned(headOfLineBlockingCounter))
+                // EFP_LOGGER(true, LOGG_NOTIFY, "Flush trigger " << unsigned(headOfLineBlockingCounter))
                 // Timeout triggered.. Let's garbage collect the head.
                 lClearHeadOfLineBuckets = true;
                 lFoundHeadOfLineBlocking = false;
@@ -510,7 +511,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                 }
                 // Are we cleaning out old buckets and did we found a head to timout?
                 if ((mBucketList[i].mDeliveryOrder < lHeadOfLineBlockingTail) && lClearHeadOfLineBuckets) {
-                    //LOGGER(true, LOGG_NOTIFY, "BOOM clear-> " << unsigned(bucketList[i].deliveryOrder))
+                    //EFP_LOGGER(true, LOGG_NOTIFY, "BOOM clear-> " << unsigned(bucketList[i].deliveryOrder))
                     mBucketList[i].mTimeout = 1;
                 }
 
@@ -562,7 +563,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
 
             // So ok we have cleared the head send it all out
             if (lClearHeadOfLineBuckets) {
-                //LOGGER(true, LOGG_NOTIFY, "FLUSH HEAD!")
+                //EFP_LOGGER(true, LOGG_NOTIFY, "FLUSH HEAD!")
 
                 uint64_t lAndTheNextIs = lCandidates[0].deliveryOrder;
 
@@ -631,7 +632,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                     lFoundHeadOfLineBlocking = true; //Found hole
                     lHeadOfLineBlockingCounter = mHeadOfLineBlockingTimeout; //Number of times to spin this loop
                     lHeadOfLineBlockingTail = mBucketList[lCandidates[0].bucket].mDeliveryOrder; //This is the tail
-                    //LOGGER(true, LOGG_NOTIFY, "HOL " << unsigned(expectedNextFrameToDeliver) << " "
+                    //EFP_LOGGER(true, LOGG_NOTIFY, "HOL " << unsigned(expectedNextFrameToDeliver) << " "
                     //<< unsigned(bucketList[candidates[0].bucket].deliveryOrder)
                     //<< " tail " << unsigned(headOfLineBlockingTail)
                     //<< " savedPTS " << unsigned(savedPTS))
@@ -646,7 +647,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                             lHeadOfLineBlockingCounter = mHeadOfLineBlockingTimeout; //Number of times to spin this loop
                             lHeadOfLineBlockingTail =
                                     x.deliveryOrder; //So we basically give the non existing data a chance to arrive..
-                            //LOGGER(true, LOGG_NOTIFY, "HOL2 " << unsigned(expectedNextFrameToDeliver) << " " << unsigned(x.deliveryOrder) << " tail " << unsigned(headOfLineBlockingTail))
+                            //EFP_LOGGER(true, LOGG_NOTIFY, "HOL2 " << unsigned(expectedNextFrameToDeliver) << " " << unsigned(x.deliveryOrder) << " tail " << unsigned(headOfLineBlockingTail))
                             break;
                         }
                         lExpectedNextFrameToDeliver = x.deliveryOrder + 1;
@@ -682,7 +683,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
 
         // Is more than 75% of the buffer used. //FIXME notify the user in some way
         if (lActiveCount > (CIRCULAR_BUFFER_SIZE / 4) * 3) {
-            LOGGER(true, LOGG_WARN, "Current active buckets are more than 75% of the circular buffer.")
+            EFP_LOGGER(true, LOGG_WARN, "Current active buckets are more than 75% of the circular buffer.")
         }
     }
     mIsWorkerThreadActive = false;
@@ -707,7 +708,7 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::stopReceiver() {
         std::this_thread::sleep_for(std::chrono::microseconds(1000));
         if (!--lLockProtect) {
             //we gave it a second now exit anyway
-            LOGGER(true, LOGG_FATAL, "Threads not stopping. Now crash and burn baby!!")
+            EFP_LOGGER(true, LOGG_FATAL, "Threads not stopping. Now crash and burn baby!!")
             return ElasticFrameMessages::failedStoppingReceiver;
         }
     }
@@ -732,7 +733,7 @@ ElasticFrameProtocolReceiver::receiveFragmentFromPtr(const uint8_t *pSubPacket, 
     std::lock_guard<std::mutex> lock(mReceiveMtx);
 
     if (!(mIsWorkerThreadActive & mIsDeliveryThreadActive)) {
-        LOGGER(true, LOGG_ERROR, "Receiver not running")
+        EFP_LOGGER(true, LOGG_ERROR, "Receiver not running")
         return ElasticFrameMessages::receiverNotRunning;
     }
 
@@ -804,18 +805,18 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::extractEmbeddedData(ElasticFr
 ElasticFrameProtocolSender::ElasticFrameProtocolSender(uint16_t setMTU) {
     c_sendCallback = 0;
     if (setMTU < UINT8_MAX) {
-        LOGGER(true, LOGG_ERROR, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.")
+        EFP_LOGGER(true, LOGG_ERROR, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.")
         mCurrentMTU = UINT8_MAX;
     } else {
         mCurrentMTU = setMTU;
     }
 
     sendCallback = std::bind(&ElasticFrameProtocolSender::sendData, this, std::placeholders::_1, std::placeholders::_2);
-    LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocolSender constructed")
+    EFP_LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocolSender constructed")
 }
 
 ElasticFrameProtocolSender::~ElasticFrameProtocolSender() {
-    LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocolSender destruct")
+    EFP_LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocolSender destruct")
 }
 
 // Dummy callback for transmitter
@@ -823,7 +824,7 @@ void ElasticFrameProtocolSender::sendData(const std::vector<uint8_t> &rSubPacket
     if (c_sendCallback) {
         c_sendCallback(rSubPacket.data(), rSubPacket.size(), streamID);
     } else {
-        LOGGER(true, LOGG_ERROR, "Implement the sendCallback method for the protocol to work.")
+        EFP_LOGGER(true, LOGG_ERROR, "Implement the sendCallback method for the protocol to work.")
     }
 }
 
@@ -1000,7 +1001,7 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
 
     //Debug me for calculation errors
     if (lDataLeftToSend + sizeof(ElasticFrameType2) > mCurrentMTU) {
-        LOGGER(true, LOGG_FATAL, "Calculation bug.. Value that made me sink -> " << unsigned(packetSize))
+        EFP_LOGGER(true, LOGG_FATAL, "Calculation bug.. Value that made me sink -> " << unsigned(packetSize))
         return ElasticFrameMessages::internalCalculationError;
     }
 
