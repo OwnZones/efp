@@ -36,7 +36,10 @@ uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t*, size_t, uint8_t))
 * @*f Pointer to the got superframe.
 * @return the object ID created during init to be used when calling the other methods
 */
-uint64_t efp_init_receive(uint32_t bucket_timeout, uint32_t hol_timeout,  void (*f)(uint8_t*, size_t, uint8_t, uint8_t, uint64_t, uint64_t, uint32_t, uint8_t, uint8_t, uint8_t));
+uint64_t efp_init_receive(uint32_t bucket_timeout, uint32_t hol_timeout,
+        void (*f)(uint8_t*, size_t, uint8_t, uint8_t, uint64_t, uint64_t, uint32_t, uint8_t, uint8_t, uint8_t),
+        void (*g)(uint8_t *, size_t,uint8_t)
+        );
 
 /**
 * efp_end_send
@@ -94,6 +97,30 @@ int16_t efp_receive_fragment(uint64_t efp_object,
                              size_t size,
                              uint8_t from_source);
 
+/**
+* efp_add_embedded_data
+*
+* It's not reccomended using this method in production since it moves all the data. It's better preparing the frame
+* then handing it to EFP including the embedded data. However for testing and small data masses this method is provided.
+*
+* @param pDst pointer to the destination. set to nullptr then call the method for getting the size to be allocated
+* all other parameters should be set when pDst is set to nullptr. Please see efp_c_api/main.c for details.
+* @param pESrc pointer to the embedded data
+* @param pDSrc pointer to the main frame content
+* @param embeddedDatasize size of the embedded data
+* @param dataSize size of the main content
+* @param type must conform to the enum ElasticFrameEmbeddedContentDefines
+* @param isLast if <> 0 this frame is marked as the last embedded data. Observe that this method is adding embedded data to
+* the beginning of the payload so if more than one embedded payload is added the first time this method is called the last flag should be set.
+* @return size_t   If pDst == nullptr then the return is num bytes that should be reserved else the return is 0.
+*/
+size_t efp_add_embedded_data(uint8_t *pDst,
+                             uint8_t *pESrc,
+                             uint8_t *pDSrc,
+                             size_t embeddedDatasize,
+                             size_t dataSize,
+                             uint8_t type,
+                             uint8_t isLast);
 
 
 #endif //EFP_EFP_C_API_ELASTIC_FRAME_PROTOCOL_C_API_H

@@ -19,6 +19,7 @@
 ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster) {
 
     c_recieveCallback = 0;
+    c_recieveEmbeddedDataCallback = 0;
     receiveCallback = std::bind(&ElasticFrameProtocolReceiver::gotData, this, std::placeholders::_1);
 
     mBucketTimeout = bucketTimeoutMaster;
@@ -44,8 +45,29 @@ ElasticFrameProtocolReceiver::~ElasticFrameProtocolReceiver() {
 // C API callback. Dummy callback if C++
 void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFramePtr &rPacket) {
     if (c_recieveCallback) {
-        c_recieveCallback(rPacket->pFrameData,
-                          rPacket->mFrameSize,
+        size_t payloadDataPosition = 0;
+        if (c_recieveEmbeddedDataCallback && (rPacket->mFlags & INLINE_PAYLOAD)) {
+            std::vector<std::vector<uint8_t>> embeddedData;
+            std::vector<uint8_t> embeddedContentFlag;
+
+            //This method is not optimal since it moves data.. and there is no need to move any data. FIXME.
+            ElasticFrameMessages info = extractEmbeddedData(rPacket, &embeddedData, &embeddedContentFlag,
+                                                                      &payloadDataPosition);
+            if (info != ElasticFrameMessages::noError) {
+                EFP_LOGGER(true, LOGG_ERROR, "extractEmbeddedData fail")
+                return;
+            }
+            for (int x = 0; x<embeddedData.size(); x++) {
+                c_recieveEmbeddedDataCallback(embeddedData[x].data(), embeddedData[x].size(), embeddedContentFlag[x]);
+            }
+            //Adjust the pointers for the payload callback
+            if (rPacket->mFrameSize < payloadDataPosition) {
+                EFP_LOGGER(true, LOGG_ERROR, "extractEmbeddedData out of bounds")
+                return;
+            }
+        }
+        c_recieveCallback(rPacket->pFrameData + payloadDataPosition, //compensate for the embedded data
+                          rPacket->mFrameSize - payloadDataPosition, //compensate for the embedded data
                           rPacket->mDataContent,
                           (uint8_t) rPacket->mBroken,
                           rPacket->mPts,
@@ -1093,14 +1115,17 @@ std::mutex efp_receive_mutex;
 
 uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t *, size_t, uint8_t)) {
     efp_send_mutex.lock();
-    auto result = efp_send_base_map.insert(std::make_pair(c_object_handle,
+    uint64_t local_c_object_handle = c_object_handle;
+    auto result = efp_send_base_map.insert(std::make_pair(local_c_object_handle,
                                                           std::make_shared<ElasticFrameProtocolSender>(mtu)));
-    efp_send_mutex.unlock();
     if (!result.first->second) {
+        efp_send_mutex.unlock();
         return 0;
     }
     result.first->second->c_sendCallback = f;
-    return c_object_handle++;
+    c_object_handle++;
+    efp_send_mutex.unlock();
+    return local_c_object_handle;
 }
 
 uint64_t efp_init_receive(uint32_t bucketTimeout,
@@ -1114,16 +1139,24 @@ uint64_t efp_init_receive(uint32_t bucketTimeout,
                                     uint32_t,
                                     uint8_t,
                                     uint8_t,
-                                    uint8_t)) {
+                                    uint8_t),
+                          void (*g)(uint8_t *,
+                                    size_t,
+                                    uint8_t)
+                                    ) {
     efp_receive_mutex.lock();
+    uint64_t local_c_object_handle = c_object_handle;
     auto result = efp_receive_base_map.insert(
-            std::make_pair(c_object_handle, std::make_shared<ElasticFrameProtocolReceiver>()));
-    efp_receive_mutex.unlock();
+            std::make_pair(local_c_object_handle, std::make_shared<ElasticFrameProtocolReceiver>(bucketTimeout, holTimeout)));
     if (!result.first->second) {
+        efp_receive_mutex.unlock();
         return 0;
     }
     result.first->second->c_recieveCallback = f;
-    return c_object_handle++;
+    result.first->second->c_recieveEmbeddedDataCallback = g;
+    c_object_handle++;
+    efp_receive_mutex.unlock();
+    return local_c_object_handle;
 }
 
 int16_t efp_send_data(uint64_t efp_object,
@@ -1149,6 +1182,30 @@ int16_t efp_send_data(uint64_t efp_object,
                                                   code,
                                                   streamID,
                                                   flags);
+}
+
+//This is a helper method for embedding data.
+//The prefered way of embedding data is to do that when assembling the frame to avoid memory copy
+size_t efp_add_embedded_data(uint8_t *pDst, uint8_t *pESrc, uint8_t *pDSrc, size_t embeddedDatasize, size_t dataSize, uint8_t type, uint8_t isLast) {
+
+    if (pDst == nullptr) {
+        return (sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader) + embeddedDatasize + dataSize);
+    }
+
+    ElasticFrameContentNamespace::ElasticEmbeddedHeader lEmbeddedHeader;
+    lEmbeddedHeader.size = (uint16_t)embeddedDatasize;
+    if (isLast) {
+        type |= ElasticEmbeddedFrameContent::lastembeddedcontent;
+    }
+    lEmbeddedHeader.embeddedFrameType = type;
+
+    //Copy the header
+    memcpy(pDst, &lEmbeddedHeader, sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader));
+    //Copy the embedded data
+    memcpy(pDst + sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader) , pESrc, embeddedDatasize);
+    //Copy the data payoad
+    memcpy(pDst + sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader) + embeddedDatasize , pDSrc, dataSize);
+    return 0;
 }
 
 int16_t efp_receive_fragment(uint64_t efp_object,

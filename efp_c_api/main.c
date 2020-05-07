@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 #ifndef _WIN64
 #include <unistd.h>
@@ -11,6 +13,8 @@
 #define TEST_MTU 300
 #define TEST_DATA_SIZE 10000
 
+char *embedd_me = "This is a embedded string";
+
 uint8_t data[TEST_DATA_SIZE];
 uint64_t efp_object_handle_receive;
 
@@ -21,6 +25,11 @@ void send_data_callback(const uint8_t* data, size_t size, uint8_t stream_id) {
   } else if (result > 0) {
     printf("Notification %d sending\n", result);
   }
+}
+
+void receive_embedded_data_callback (uint8_t *data, size_t size, uint8_t data_type) {
+    printf("Got embedded data: %zu bytes size and of type %d \n", size, data_type);
+    printf("data: %s \n\n", data);
 }
 
 void receive_data_callback (uint8_t *data,
@@ -64,7 +73,7 @@ void receive_data_callback (uint8_t *data,
 }
 
 int main() {
-  printf("EFP Version %d.%d \n",efp_get_version() >> 8, efp_get_version() & 0x00ff);
+  printf("EFP Version %d.%d \n", efp_get_version() >> 8, efp_get_version() & 0x00ff);
 
   //EFP Send
   printf("Create sender.\n");
@@ -77,7 +86,7 @@ int main() {
 
   //EFP Recieve
   printf("Create reciever.\n");
-  efp_object_handle_receive = efp_init_receive(10,5,&receive_data_callback);
+  efp_object_handle_receive = efp_init_receive(10, 5, &receive_data_callback, &receive_embedded_data_callback);
   if (!efp_object_handle_receive) {
     printf("Fatal. Failed creating EFP reciever");
     return 1;
@@ -89,8 +98,18 @@ int main() {
     data[x] = (uint8_t)x;
   }
 
+  printf("\nEmbedd data.\n\n");
+  size_t alloc_size = efp_add_embedded_data(NULL, (uint8_t*)embedd_me, &data[0], strlen(embedd_me) + 1, TEST_DATA_SIZE, 1, 1);
+  uint8_t *sendThisData = (uint8_t*)malloc(alloc_size);
+  efp_add_embedded_data(sendThisData, (uint8_t*)embedd_me, &data[0], strlen(embedd_me) + 1, TEST_DATA_SIZE, 1, 1);
+
   printf("\nTransmit data.\n\n");
-  int16_t result = efp_send_data(efp_object_handle_send,&data[0],TEST_DATA_SIZE,10,100,100,EFP_CODE('A','V','C','C'),2,0);
+
+  //So this frame contains inline embedded payload. This is signaled using INLINE_PAYLOAD in C++ in the C-APi there are no defines so we need
+  //to follow the C++ api 0b00010000 == 16
+
+  int16_t result = efp_send_data(efp_object_handle_send,sendThisData, alloc_size, 10, 100, 100, EFP_CODE('A','V','C','C'), 2, 16);
+  free(sendThisData);
   if (result < 0) {
     printf("Error %d sending\n", result);
   } else if (result > 0) {
