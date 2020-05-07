@@ -36,7 +36,8 @@ Send Fragment.
 Send Fragment. 
 Send Fragment. 
 Send Fragment. 
-Got embedded data size: 19 and data type: 1
+ot embedded data size: 18 and data type: 1
+PTS: 103 broken: 0
 This is the data: Embed this string 
 The data I converted is 19 bytes
 Got frame: 

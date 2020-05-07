@@ -73,8 +73,9 @@ func sendDataEFP(data *C.uchar, size C.size_t, streamID uint8) {
 }
 
 //export gotEmbeddedDataEFP
-func gotEmbeddedDataEFP(data *C.uchar, size C.size_t, data_type uint8) {
+func gotEmbeddedDataEFP(data *C.uchar, size C.size_t, data_type uint8, pts uint64, broken uint8) {
 	fmt.Printf("Got embedded data size: %d and data type: %d\n", size, data_type)
+	fmt.Printf("PTS: %d broken: %d\n", pts, broken)
 	//In this example we know it's a C-String so we just cast it..
 	fmt.Printf("This is the data: %s \n", C.GoString((*C.char)(unsafe.Pointer(data))))
 	//But let's say it's the data you want then ->

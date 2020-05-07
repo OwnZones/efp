@@ -27,8 +27,8 @@ void send_data_callback(const uint8_t* data, size_t size, uint8_t stream_id) {
   }
 }
 
-void receive_embedded_data_callback (uint8_t *data, size_t size, uint8_t data_type) {
-    printf("Got embedded data: %zu bytes size and of type %d \n", size, data_type);
+void receive_embedded_data_callback (uint8_t *data, size_t size, uint8_t data_type, uint64_t pts, uint8_t broken) {
+    printf("Got embedded data: %zu bytes size and of type %d pts: %llu broken: %d\n", size, data_type, pts, broken);
     printf("data: %s \n\n", data);
 }
 

@@ -38,7 +38,7 @@ uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t*, size_t, uint8_t))
 */
 uint64_t efp_init_receive(uint32_t bucket_timeout, uint32_t hol_timeout,
         void (*f)(uint8_t*, size_t, uint8_t, uint8_t, uint64_t, uint64_t, uint32_t, uint8_t, uint8_t, uint8_t),
-        void (*g)(uint8_t *, size_t,uint8_t)
+        void (*g)(uint8_t*, size_t, uint8_t, uint64_t, uint8_t)
         );
 
 /**

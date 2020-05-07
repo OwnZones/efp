@@ -457,7 +457,9 @@ public:
     */
     void (*c_recieveEmbeddedDataCallback)(uint8_t *data,
                               size_t size,
-                              uint8_t data_type);
+                              uint8_t data_type,
+                              uint64_t pts,
+                              uint8_t broken);
 
     ///Delete copy and move constructors and assign operators
     ElasticFrameProtocolReceiver(ElasticFrameProtocolReceiver const &) = delete;              // Copy construct

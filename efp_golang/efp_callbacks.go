@@ -8,7 +8,7 @@ package main
 
 //The exported golang callback functions
 extern void sendDataEFP(const uint8_t*, size_t, uint8_t);
-extern void gotEmbeddedDataEFP(uint8_t *data, size_t size, uint8_t data_type);
+extern void gotEmbeddedDataEFP(uint8_t *data, size_t size, uint8_t data_type, uint64_t pts, uint8_t broken);
 extern void gotDataEFP(uint8_t *data,
                        size_t size,
                        uint8_t data_content,
@@ -26,8 +26,8 @@ void send_data_callbackGO(const uint8_t* data, size_t size, uint8_t stream_id) {
 }
 
 //C -> Golang bridge ()
-void receive_embedded_data_callbackGO (uint8_t *data, size_t size, uint8_t data_type) {
-	gotEmbeddedDataEFP(data, size, data_type);
+void receive_embedded_data_callbackGO (uint8_t *data, size_t size, uint8_t data_type, uint64_t pts, uint8_t broken) {
+	gotEmbeddedDataEFP(data, size, data_type, pts, broken);
 }
 
 //C -> Golang bridge ()

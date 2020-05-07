@@ -58,7 +58,7 @@ void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFrameP
                 return;
             }
             for (int x = 0; x<embeddedData.size(); x++) {
-                c_recieveEmbeddedDataCallback(embeddedData[x].data(), embeddedData[x].size(), embeddedContentFlag[x]);
+                c_recieveEmbeddedDataCallback(embeddedData[x].data(), embeddedData[x].size(), embeddedContentFlag[x], rPacket->mPts, (uint8_t)rPacket->mBroken);
             }
             //Adjust the pointers for the payload callback
             if (rPacket->mFrameSize < payloadDataPosition) {
@@ -1142,6 +1142,8 @@ uint64_t efp_init_receive(uint32_t bucketTimeout,
                                     uint8_t),
                           void (*g)(uint8_t *,
                                     size_t,
+                                    uint8_t,
+                                    uint64_t,
                                     uint8_t)
                                     ) {
     efp_receive_mutex.lock();
