@@ -2,7 +2,8 @@ package main
 
 /*
 #cgo CFLAGS: -g -Wall
-#cgo LDFLAGS: -L. -lefp -lstdc++
+#cgo darwin LDFLAGS: -L${SRCDIR}/efp_libs/darwin -lefp -lstdc++
+#cgo linux LDFLAGS: -L${SRCDIR}/efp_libs/linux -lefp -lstdc++
 #include <stdint.h>
 #include "elastic_frame_protocol_c_api.h"
 uint64_t initEFPSender(uint64_t mtu);
@@ -12,6 +13,7 @@ import "C"
 import (
 	"fmt"
 	"time"
+	"unsafe"
 )
 
 const testSetSize = 10000
@@ -34,6 +36,13 @@ func main() {
 	//Start a EFP reciever (bucket time-out 100ms, HOL timeout 50ms)
 	efpReceiveID = C.initEFPReciever(10,5)
 
+	//Create a data block containing a null terminated string"
+	stringtoEmbed := append([]byte("Embed this string"), byte(0))
+	//Pass nill fot the destination. Then the return will be the size of the data block I need to allocate
+	newDataSize := C.efp_add_embedded_data(nil,(*C.uchar)(&stringtoEmbed[0]),(*C.uchar)(&thisData[0]), (C.ulong)(len(stringtoEmbed)), testSetSize, 1, 1)
+	fmt.Printf("Allocating : %d bytes for embedded data + payload\n", newDataSize)
+	newData := make([]uint8, newDataSize)
+	C.efp_add_embedded_data((*C.uchar)(&newData[0]),(*C.uchar)(&stringtoEmbed[0]),(*C.uchar)(&thisData[0]), (C.ulong)(len(stringtoEmbed)), testSetSize, 1, 1)
 	//Send data
 	//ID of EFP object to address
 	//Pointer to data
@@ -43,8 +52,8 @@ func main() {
     //DTS
     //EFP Code (see ElasticFrameContentDefines)
     //EFP Stream ID
-    //Flags
-	C.efp_send_data(efpSendID,(*C.uchar)(&thisData[0]),testSetSize,4,103,100,50,3,0)
+    //Flags (See C++ header) 16 == embedded data
+	C.efp_send_data(efpSendID,(*C.uchar)(&newData[0]),newDataSize,4,103,100,50,3,16)
 
 	//Wait for 2 seconds before garbage collecting
 	time.Sleep(2 * time.Second)
@@ -55,13 +64,24 @@ func main() {
 }
 
 //export sendDataEFP
-func sendDataEFP(data *C.uchar,size C.size_t, streamID uint8) {
+func sendDataEFP(data *C.uchar, size C.size_t, streamID uint8) {
 	fmt.Printf("Send Fragment. \n")
 	result := C.efp_receive_fragment(efpReceiveID, data, size, 0);
 	 if (result < 0) {
 		 fmt.Printf("Send fragment error \n")
 	 }
 }
+
+//export gotEmbeddedDataEFP
+func gotEmbeddedDataEFP(data *C.uchar, size C.size_t, data_type uint8) {
+	fmt.Printf("Got embedded data size: %d and data type: %d\n", size, data_type)
+	//In this example we know it's a C-String so we just cast it..
+	fmt.Printf("This is the data: %s \n", C.GoString((*C.char)(unsafe.Pointer(data))))
+	//But let's say it's the data you want then ->
+	goData := C.GoBytes(unsafe.Pointer(data),  C.int(size))
+	fmt.Printf("The data I converted is %d bytes\n", len(goData))
+}
+
 
 //export gotDataEFP
 func gotDataEFP(data *C.uchar,
