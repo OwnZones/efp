@@ -451,15 +451,19 @@ public:
     /**
     * Receive embedded data callback (C-API version)
     *
+    * If the EFP frame is broken this callback will not be triggered since the data integrity is unknown.
+    * c_recieveCallback will be triggered with broken set (meaning != 0) and if any embedded data
+    * (flags & INLINE_PAYLOAD) it will be in the preamble of the broken EFP-Frame.
+    *
     * @data Pointer to the data.
     * @size Size of the data.
     * @data_type ElasticFrameEmbeddedContentDefines::x where x is the type of data received.
+    * @pts PTS of the frame (Can be used to associate with a EFP frame).
     */
     void (*c_recieveEmbeddedDataCallback)(uint8_t *data,
                               size_t size,
                               uint8_t data_type,
-                              uint64_t pts,
-                              uint8_t broken);
+                              uint64_t pts);
 
     ///Delete copy and move constructors and assign operators
     ElasticFrameProtocolReceiver(ElasticFrameProtocolReceiver const &) = delete;              // Copy construct
