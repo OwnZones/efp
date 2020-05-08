@@ -5,7 +5,6 @@ package main
 #include "stdio.h"
 #include <stdint.h>
 #include "elastic_frame_protocol_c_api.h"
-#include <stdbool.h>
 
 //The exported golang callback functions
 extern void sendDataEFP(const uint8_t*, size_t, uint8_t);
