@@ -1,4 +1,4 @@
-![alt text](https://bitbucket.org/unitxtra/efp/raw/690a192cf7ce9420cad999ad113b1b4246d9c2fd/elasticframe.png)
+![Logo](elasticframe.png)
 
 # ElasticFrameProtocol
 
@@ -27,30 +27,28 @@ Requires cmake version >= **3.10** and **C++14**
 **Release:**
 
 ```sh
-cmake -DCMAKE_BUILD_TYPE=Release .
-make
-
-//If building on a Windows platform 
-//cmake --build . --config Release
+mkdir build
+cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . --config Release
 ```
 
 ***Debug:***
 
 ```sh
+mkdir build
+cd build
 cmake -DCMAKE_BUILD_TYPE=Debug .
-make
-
-//If building on a Windows platform 
-//cmake --build . --config Debug
+cmake --build . --config Debug
 ```
 
 Output: 
 
-**libefp.a**
+**(platform specific)efp.(platform specific)** (Linux/MacOS -> libefp.a)
 
 The static EFP library 
 
-**libefp_shared.(platform specific)**
+**(platform specific)efp_shared.(platform specific)** 
 
 The dynamic EFP library 
 
@@ -152,7 +150,7 @@ Add this in your CMake file.
 #Include EFP
 include(ExternalProject)
 ExternalProject_Add(project_efp
-        GIT_REPOSITORY https://bitbucket.org/unitxtra/efp.git
+        GIT_REPOSITORY https://github.com/Unit-X/efp.git
         GIT_SUBMODULES ""
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
         BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
