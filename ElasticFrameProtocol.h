@@ -195,7 +195,7 @@ public:
     virtual ~ElasticFrameProtocolSender();
 
     ///Return the version of the current implementation (Uint16)((8 MSB Major) + (8 LSB Minor))
-    uint16_t getVersion() { return (EFP_MAJOR_VERSION << 8) | EFP_MINOR_VERSION; }
+    uint16_t getVersion() { return ((uint16_t)EFP_MAJOR_VERSION << 8) | (uint16_t)EFP_MINOR_VERSION; }
 
     /**
   * Segments data and call the send callback when the data is a vector
@@ -210,11 +210,11 @@ public:
   * @param sendFunction optional send function/lambda. Overrides the callback sendCallback
   * @return ElasticFrameMessages
   */
-    virtual ElasticFrameMessages
+    ElasticFrameMessages
     packAndSend(const std::vector<uint8_t> &rPacket, ElasticFrameContent dataContent, uint64_t pts, uint64_t dts,
                 uint32_t code,
                 uint8_t streamID, uint8_t flags,
-                std::function<void(const std::vector<uint8_t> &rSubPacket, uint8_t streamID)> sendFunction = nullptr);
+                const std::function<void(const std::vector<uint8_t> &rSubPacket, uint8_t streamID)>& sendFunction = nullptr);
 
     /**
     * Segments data and call the send callback when the data is a pointer
@@ -230,12 +230,12 @@ public:
     * @param sendFunction optional send function/lambda. Overrides the callback sendCallback
     * @return ElasticFrameMessages
     */
-    virtual ElasticFrameMessages
+    ElasticFrameMessages
     packAndSendFromPtr(const uint8_t *pPacket, size_t packetSize, ElasticFrameContent dataContent, uint64_t pts,
                        uint64_t dts,
                        uint32_t code, uint8_t streamID, uint8_t flags,
-                       std::function<void(const std::vector<uint8_t> &rSubPacket,
-                                          uint8_t streamID)> sendFunction = nullptr);
+                       const std::function<void(const std::vector<uint8_t> &rSubPacket,
+                                          uint8_t streamID)>& sendFunction = nullptr);
 
 
     /**
@@ -268,7 +268,7 @@ public:
     * @param isLast is the last embedded data
     * @return ElasticFrameMessages
     */
-    ElasticFrameMessages addEmbeddedData(std::vector<uint8_t> *pPacket, void *pPrivateData, size_t privateDataSize,
+    static ElasticFrameMessages addEmbeddedData(std::vector<uint8_t> *pPacket, void *pPrivateData, size_t privateDataSize,
                                          ElasticEmbeddedFrameContent content = ElasticEmbeddedFrameContent::illegal,
                                          bool isLast = false);
     //Help methods ----------- END ----------
@@ -282,9 +282,9 @@ public:
     //Used by unitTests ----START-----------------
 #ifdef UNIT_TESTS
 
-    size_t geType1Size();
+    static size_t geType1Size();
 
-    size_t geType2Size();
+    static size_t geType2Size();
 
     void setSuperFrameNo(uint16_t superFrameNo);
 
@@ -386,7 +386,7 @@ public:
     virtual ~ElasticFrameProtocolReceiver();
 
     ///Return the version of the current implementation
-    uint16_t getVersion() { return (EFP_MAJOR_VERSION << 8) | EFP_MINOR_VERSION; }
+    uint16_t getVersion() { return ((uint16_t)EFP_MAJOR_VERSION << 8) | (uint16_t)EFP_MINOR_VERSION; }
 
     /**
     * Method to feed the network fragments received when the data is a vector
@@ -407,14 +407,14 @@ public:
     ElasticFrameMessages receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource);
 
     /**
-    * Recieve data from the EFP worker thread
+    * Receive data from the EFP worker thread
     *
     * @param rPacket superframe received
     * rPacket contains
     * -> pFrameData Pointer to the data.
     * -> mFrameSize Size of the data.
     * -> mCcontent ElasticFrameContent::x where x is the type of data to be sent.
-    * -> mBbroken if true the data integrety is broken by the underlying protocol.
+    * -> mBbroken if true the data integrity is broken by the underlying protocol.
     * -> mPts the PTS value of the content
     * -> mDts the DTS value of the content
     * -> mCcode if MSB (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
@@ -484,7 +484,7 @@ public:
     * @param pPayloadDataPosition pointer to location of payload relative superFrame start.
     * @return ElasticFrameMessages
     */
-    ElasticFrameMessages extractEmbeddedData(pFramePtr &rPacket, std::vector<std::vector<uint8_t>> *pEmbeddedDataList,
+    static ElasticFrameMessages extractEmbeddedData(pFramePtr &rPacket, std::vector<std::vector<uint8_t>> *pEmbeddedDataList,
                                              std::vector<uint8_t> *pDataContent, size_t *pPayloadDataPosition);
     //Help methods ----------- END ----------
 
@@ -558,9 +558,9 @@ private:
     uint64_t mSuperFrameRecalc = 0;
     bool mSuperFrameFirstTime = true;
     // Receiver thread management
-    std::atomic_bool mIsWorkerThreadActive;
-    std::atomic_bool mIsDeliveryThreadActive;
-    std::atomic_bool mThreadActive;
+    std::atomic_bool mIsWorkerThreadActive{};
+    std::atomic_bool mIsDeliveryThreadActive{};
+    std::atomic_bool mThreadActive{};
     // Mutex for thread safety
     std::mutex mReceiveMtx; //Mutex protecting the recieve part
     std::deque<pFramePtr> mSuperFrameQueue;
