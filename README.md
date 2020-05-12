@@ -38,7 +38,7 @@ cmake --build . --config Release
 ```sh
 mkdir build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Debug .
+cmake -DCMAKE_BUILD_TYPE=Debug ..
 cmake --build . --config Debug
 ```
 
@@ -188,11 +188,11 @@ You should now be able to use EFP in your project and use any CMake supported ID
 
 EFP is all about framing data and checking the integrity of the content. For other functionality EFP uses plug-ins. Available plug-ins are listed below.
 
-[**EFPBonding**](https://bitbucket.org/unitxtra/efpbond/src/master/)
+[**EFPBonding**](https://github.com/Unit-X/efpbond)
 
 EFPBond makes it possible for all streams to use multiple underlying transport interfaces for protection or to increase the capacity. 
 
-[**EFPSignal**](https://bitbucket.org/unitxtra/efpsignal/src/master/)
+[**EFPSignal**](https://github.com/Unit-X/efpsignal)
 
 EFPSignal adds signaling, content declaration and dynamic/static subscription to EFP-Streams.  
 
@@ -227,15 +227,15 @@ Please feel free to use, clone / fork and contribute to this new way of intercon
 
 1. A client/server using EFP over SRT
 
-[EFP + SRT Client/Server](https://bitbucket.org/unitxtra/cppsrtframingexample/src/master/)
+[EFP + SRT Client/Server](https://github.com/Unit-X/efp_srt_example)
 
 2. A example showing how to use the EBPBond plug-in 
 
-[EFP + EFPBond](https://bitbucket.org/andersced/cppsrtbondingexample/src/master/)
+[EFP + EFPBond](https://github.com/Unit-X/efpbond)
 
 3. A simple example showing how to map UDP -> MPEG-TS -> EFP
 
-[UDP -> MPEG-TS -> EFP](https://bitbucket.org/unitxtra/ts2efp/src/master/)
+[UDP -> MPEG-TS -> EFP](https://github.com/Unit-X/ts2efp)
 
 
 ## Next steps
