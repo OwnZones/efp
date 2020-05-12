@@ -19,6 +19,13 @@ The elasticity comes from the protocols ability to adapt to incoming frame size,
 
 Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:/g/personal/anders_cedronius_edgeware_tv/ERnSit7j6udBsZOqkQcMLrQBpKmnfdApG3lehRk4zE-qgQ?e=Ha2VrP) for more information.
 
+## Current build status
+
+![efp_base_macos](https://github.com/Unit-X/efp/workflows/efp_base_macos/badge.svg) **(MacOS build)**
+
+![efp_base_win](https://github.com/Unit-X/efp/workflows/efp_base_win/badge.svg) **(Windows 10 build)**
+
+![efp_base_ubuntu](https://github.com/Unit-X/efp/workflows/efp_base_ubuntu/badge.svg) **(Ubuntu build)**
 
 ## Installation
 
