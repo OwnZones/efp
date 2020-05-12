@@ -1,4 +1,4 @@
-add libefp.a to the linux or darwin arhitecture and elastic_frame_protocol_c_api.h to this folder then the Golang example compiles. Expected output ->
+add libefp.a to the linux or darwin arhitecture (efp_libs/darwin or efp_libs/linux) and elastic_frame_protocol_c_api.h to this folder then the Golang example compiles. Expected output ->
 
 Allocating : 10023 bytes for embedded data + payload
 Send Fragment. 
