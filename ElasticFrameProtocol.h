@@ -46,8 +46,8 @@ extern "C" {
 }
 #endif
 
-///Generate the uint32_t 'code' out of 4 characters provided
-#define EFP_CODE(c0, c1, c2, c3) (((c0)<<24) | ((c1)<<16) | ((c2)<<8) | (c3))
+//Generate the uint32_t 'code' out of 4 characters provided
+// It's already defined in elastic_frame_protocol_c_api.h -> #define EFP_CODE(c0, c1, c2, c3) (((c0)<<24) | ((c1)<<16) | ((c2)<<8) | (c3))
 
 ///Enable or disable the APIs used by the unit tests
 #define UNIT_TESTS
@@ -302,7 +302,9 @@ private:
     std::mutex mSendMtx; //Mutex protecting the send part
     uint32_t mCurrentMTU = 0; //current MTU used by the sender
     uint16_t mSuperFrameNoGenerator = 0;
-    // Internal lists and variables ----- END -_-----
+    std::vector<uint8_t> mSendBufferFixed;
+    std::vector<uint8_t> mSendBufferEnd;
+    // Internal lists and variables ----- END -----
 };
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -39,7 +39,7 @@ bool PerformanceLab::startUnitTest() {
         mydata.clear();
         size_t randSize = rand() % 1000000 + 1;
         mydata.resize(randSize);
-        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber, packetNumber + 1000, EFP_CODE('A', 'N', 'X', 'B'), streamID, NO_FLAGS);
+        result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber, packetNumber, EFP_CODE('A', 'N', 'X', 'B'), streamID, NO_FLAGS);
         packetNumber++;
         if (result != ElasticFrameMessages::noError) {
             std::cout << " Failed in the packAndSend method. Error-> " << signed(result)

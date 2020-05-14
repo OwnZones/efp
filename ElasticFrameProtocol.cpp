@@ -92,7 +92,7 @@ uint64_t ElasticFrameProtocolReceiver::superFrameRecalculator(uint16_t superFram
     }
 
     int16_t lChangeValue = (int16_t) superFrame - (int16_t) mOldSuperFrameNumber;
-    int64_t lCval = (int64_t) lChangeValue;
+    auto lCval = (int64_t) lChangeValue;
     mOldSuperFrameNumber = superFrame;
 
     if (lCval > INT16_MAX) {
@@ -213,7 +213,7 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pS
 
     if (!pThisBucket->mActive) {
         uint64_t lDeliveryOrderCandidate = superFrameRecalculator(lType2Frame.hSuperFrameNo);
-        //Is this a old fragment where we already delivered the superframe?
+        //Is this a old fragment where we already delivered the super frame?
         if (lDeliveryOrderCandidate == pThisBucket->mDeliveryOrder) {
             return ElasticFrameMessages::tooOldFragment;
         }
@@ -314,7 +314,7 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pS
 
 // Unpack method for type3 packets. Type3 packets are the parts of frames where the reminder data does not fit a type2 packet. Then a type 3 is added
 // in front of a type2 packet to catch the data overshoot.
-// Type 3 frames MUST be the same header size as type1 headers (FIXME part of the oportunistic data discussion)
+// Type 3 frames MUST be the same header size as type1 headers (FIXME part of the opportunistic data discussion)
 ElasticFrameMessages
 ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource) {
     std::lock_guard<std::mutex> lock(mNetMtx);
@@ -825,7 +825,10 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::extractEmbeddedData(ElasticFr
 // Limit the MTU to uint16_t MAX and UINT8_MAX min.
 // The lower limit is actually type2frameSize+1, keep it at 255 for now
 ElasticFrameProtocolSender::ElasticFrameProtocolSender(uint16_t setMTU) {
-    c_sendCallback = 0;
+    c_sendCallback = nullptr;
+    mSendBufferEnd.reserve(setMTU);
+    mSendBufferFixed.resize(setMTU);
+
     if (setMTU < UINT8_MAX) {
         EFP_LOGGER(true, LOGG_ERROR, "MTU lower than " << unsigned(UINT8_MAX) << " is not accepted.")
         mCurrentMTU = UINT8_MAX;
@@ -919,20 +922,18 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
         lType2Frame.hDtsPtsDiff = (uint32_t) lPtsDtsDiff;
         lType2Frame.hCode = code;
         lType2Frame.hStreamID = streamID;
-        try {
-            std::vector<uint8_t> lFinalPacket(sizeof(ElasticFrameType2) + packetSize);
-            std::memmove(lFinalPacket.data(), (uint8_t *) &lType2Frame, sizeof(ElasticFrameType2));
-            std::memmove(lFinalPacket.data() + sizeof(ElasticFrameType2), rPacket, packetSize);
 
-            if (sendFunction) {
-                sendFunction(lFinalPacket, streamID);
-            } else {
-                sendCallback(lFinalPacket, streamID);
-            }
+        mSendBufferEnd.resize(sizeof(ElasticFrameType2) + packetSize);
+        //std::vector<uint8_t> lFinalPacket(sizeof(ElasticFrameType2) + packetSize);
+        std::memmove(mSendBufferEnd.data(), (uint8_t *) &lType2Frame, sizeof(ElasticFrameType2));
+        std::memmove(mSendBufferEnd.data() + sizeof(ElasticFrameType2), rPacket, packetSize);
+
+        if (sendFunction) {
+            sendFunction(mSendBufferEnd, streamID);
+        } else {
+            sendCallback(mSendBufferEnd, streamID);
         }
-        catch (std::bad_alloc const &) {
-            return ElasticFrameMessages::memoryAllocationError;
-        }
+
         mSuperFrameNoGenerator++;
         return ElasticFrameMessages::noError;
     }
@@ -959,58 +960,45 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
     }
 
     lType1Frame.hOfFragmentNo = lOfFragmentNo;
-    try {
-        std::vector<uint8_t> lFinalPacketLoop(sizeof(ElasticFrameType1) + lDataPayloadType1);
-        while (lFragmentNo < lOfFragmentNoType1) {
-            lType1Frame.hFragmentNo = lFragmentNo++;
 
-            std::memmove(lFinalPacketLoop.data(), (uint8_t *) &lType1Frame, sizeof(ElasticFrameType1));
-            std::memmove(lFinalPacketLoop.data() + sizeof(ElasticFrameType1),
-                         rPacket + lDataPointer,
-                         lDataPayloadType1);
-
-            lDataPointer += lDataPayloadType1;
-
-            if (sendFunction) {
-                sendFunction(lFinalPacketLoop, streamID);
-            } else {
-                sendCallback(lFinalPacketLoop, streamID);
-            }
-
+    while (lFragmentNo < lOfFragmentNoType1) {
+        lType1Frame.hFragmentNo = lFragmentNo++;
+        std::memmove(mSendBufferFixed.data(), (uint8_t *) &lType1Frame, sizeof(ElasticFrameType1));
+        std::memmove(mSendBufferFixed.data() + sizeof(ElasticFrameType1),
+                     rPacket + lDataPointer,
+                     lDataPayloadType1);
+        lDataPointer += lDataPayloadType1;
+        if (sendFunction) {
+            sendFunction(mSendBufferFixed, streamID);
+        } else {
+            sendCallback(mSendBufferFixed, streamID);
         }
-    } catch (std::bad_alloc const &) {
-        return ElasticFrameMessages::memoryAllocationError;
     }
 
     if (lType3needed) {
-        try {
-            lFragmentNo++;
-            std::vector<uint8_t> lType3PacketData(sizeof(ElasticFrameType3) + lReminderData);
-            ElasticFrameType3 lType3Frame;
-            lType3Frame.hFrameType |= flags;
-            lType3Frame.hStreamID = lType1Frame.hStream;
-            lType3Frame.hOfFragmentNo = lType1Frame.hOfFragmentNo;
-            lType3Frame.hType1PacketSize = (uint16_t) (mCurrentMTU - sizeof(ElasticFrameType1));
-            lType3Frame.hSuperFrameNo = lType1Frame.hSuperFrameNo;
+        lFragmentNo++;
+        mSendBufferEnd.resize(sizeof(ElasticFrameType3) + lReminderData);
+        ElasticFrameType3 lType3Frame;
+        lType3Frame.hFrameType |= flags;
+        lType3Frame.hStreamID = lType1Frame.hStream;
+        lType3Frame.hOfFragmentNo = lType1Frame.hOfFragmentNo;
+        lType3Frame.hType1PacketSize = (uint16_t) (mCurrentMTU - sizeof(ElasticFrameType1));
+        lType3Frame.hSuperFrameNo = lType1Frame.hSuperFrameNo;
 
-            std::memmove(lType3PacketData.data(), (uint8_t *) &lType3Frame, sizeof(ElasticFrameType3));
-            std::memmove(lType3PacketData.data() + sizeof(ElasticFrameType3),
-                         rPacket + lDataPointer,
-                         lReminderData);
+        std::memmove(mSendBufferEnd.data(), (uint8_t *) &lType3Frame, sizeof(ElasticFrameType3));
+        std::memmove(mSendBufferEnd.data() + sizeof(ElasticFrameType3),
+                     rPacket + lDataPointer,
+                     lReminderData);
 
-            lDataPointer += lReminderData;
-            if (lDataPointer != packetSize) {
-                return ElasticFrameMessages::internalCalculationError;
-            }
+        lDataPointer += lReminderData;
+        if (lDataPointer != packetSize) {
+            return ElasticFrameMessages::internalCalculationError;
+        }
 
-            if (sendFunction) {
-                sendFunction(lType3PacketData, streamID);
-            } else {
-                sendCallback(lType3PacketData, streamID);
-            }
-
-        } catch (std::bad_alloc const &) {
-            return ElasticFrameMessages::memoryAllocationError;
+        if (sendFunction) {
+            sendFunction(mSendBufferEnd, streamID);
+        } else {
+            sendCallback(mSendBufferEnd, streamID);
         }
     }
 
@@ -1042,23 +1030,19 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
     lType2Frame.hCode = code;
     lType2Frame.hStreamID = streamID;
     lType2Frame.hType1PacketSize = (uint16_t) (mCurrentMTU - sizeof(ElasticFrameType1));
-    try {
-        std::vector<uint8_t> lFinalPacket(sizeof(ElasticFrameType2) + lDataLeftToSend);
-        std::memmove(lFinalPacket.data(), (uint8_t *) &lType2Frame, sizeof(ElasticFrameType2));
-        if (lDataLeftToSend) {
-            std::memmove(lFinalPacket.data() + sizeof(ElasticFrameType2),
-                         rPacket + lDataPointer,
-                         lDataLeftToSend);
-        }
 
-        if (sendFunction) {
-            sendFunction(lFinalPacket, streamID);
-        } else {
-            sendCallback(lFinalPacket, streamID);
-        }
+    mSendBufferEnd.resize(sizeof(ElasticFrameType2) + lDataLeftToSend);
+    std::memmove(mSendBufferEnd.data(), (uint8_t *) &lType2Frame, sizeof(ElasticFrameType2));
+    if (lDataLeftToSend) {
+        std::memmove(mSendBufferEnd.data() + sizeof(ElasticFrameType2),
+                     rPacket + lDataPointer,
+                     lDataLeftToSend);
+    }
 
-    } catch (std::bad_alloc const &) {
-        return ElasticFrameMessages::memoryAllocationError;
+    if (sendFunction) {
+        sendFunction(mSendBufferEnd, streamID);
+    } else {
+        sendCallback(mSendBufferEnd, streamID);
     }
     mSuperFrameNoGenerator++;
     return ElasticFrameMessages::noError;
