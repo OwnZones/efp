@@ -455,8 +455,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
     uint64_t lSavedPTS = 0;
     int64_t lTimeReference = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::steady_clock::now().time_since_epoch()).count();
-    int lOverloadCount = 0;
-
+    
 //    uint32_t lTimedebuggerPointer = 0;
 //    int64_t lTimeDebugger[100];
 
@@ -481,20 +480,14 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
 //        }
 
         if (lTimeCompensation < 0) {
-            //we will get a jitter but if we're a milli off then we're probably overloaded.
-            if (lTimeCompensation < -1000) {
-                if (lOverloadCount++ == 100) {
-                    //Ok we have been overloaded for quite some time now..
-                    lOverloadCount = 0;
-                    EFP_LOGGER(true, LOGG_WARN, "Worker thread overloaded by " << signed(lTimeCompensation) << " us")
-                }
-            } else {
-                lOverloadCount = 0;
-            }
-            lTimeCompensation = 0;
+            EFP_LOGGER(true, LOGG_WARN, "Worker thread overloaded by " << signed(lTimeCompensation) << " us")
+            lTimeReference = lTimeNow;
+        } else {
+            // Check all active buckets 100 times a second compensated for the process
+            std::this_thread::sleep_for(std::chrono::microseconds(lTimeCompensation));
         }
-        // Check all active buckets 100 times a second compensated for the process
-        std::this_thread::sleep_for(std::chrono::microseconds(lTimeCompensation));
+
+        mNetMtx.lock();
 
         bool lTimeOutTrigger = false;
         uint32_t lActiveCount = 0;
@@ -523,7 +516,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
 
             // Only work with the buckets that are active
             if (mBucketList[i].mActive) {
-                mNetMtx.lock();
                 // Keep track of number of active buckets
                 lActiveCount++;
 
@@ -547,7 +539,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                 } else if (mBucketList[i].mFragmentCounter == mBucketList[i].mOfFragmentNo) {
                     lCandidates.emplace_back(CandidateToDeliver(mBucketList[i].mDeliveryOrder, i));
                 }
-                mNetMtx.unlock();
             }
         }
 
@@ -557,7 +548,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
             lExpectedNextFrameToDeliver = lDeliveryOrderOldest;
         }
 
-        mNetMtx.lock();
         // Do we got any timed out buckets or finished buckets?
         if (lNumCandidatesToDeliver && lFistDelivery) {
             //Sort them in delivery order
