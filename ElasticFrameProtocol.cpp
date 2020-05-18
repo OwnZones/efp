@@ -18,6 +18,9 @@
 
 ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster) {
 
+    //Throw if you can't reserve the data.
+    mBucketList = new Bucket[CIRCULAR_BUFFER_SIZE + 1];
+
     c_recieveCallback = nullptr;
     c_recieveEmbeddedDataCallback = nullptr;
     receiveCallback = std::bind(&ElasticFrameProtocolReceiver::gotData, this, std::placeholders::_1);
@@ -33,6 +36,10 @@ ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t bucketTimeou
 }
 
 ElasticFrameProtocolReceiver::~ElasticFrameProtocolReceiver() {
+
+    //We allocated so this cant be a nullptr
+    delete[] mBucketList;
+
     // If our worker is active we need to stop it.
     if (mThreadActive) {
         if (stopReceiver() != ElasticFrameMessages::noError) {
@@ -507,6 +514,8 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
 
         bool lTimeOutTrigger = false;
         std::vector<Bucket*> lCandidates;
+        lCandidates.reserve(lActiveCount); //Reserve our maximum possible number of candidates
+
         uint64_t lDeliveryOrderOldest = UINT64_MAX;
 
         // The default mode is not to clear any buckets

@@ -551,9 +551,8 @@ private:
 
     // Internal lists and variables ----- START ------
     Stream mStreams[UINT8_MAX]; //EFP-Stream information store
-    std::map<uint64_t , Bucket*> mBucketMap;
-    Bucket mBucketList[
-            CIRCULAR_BUFFER_SIZE + 1]; // Internal queue where all fragments are stored and superframes delivered from
+    std::map<uint64_t , Bucket*> mBucketMap; //Sorted (super frame number) pointers to mBucketList items
+    Bucket *mBucketList; // Internal queue where all fragments are stored and superframes delivered from
     uint32_t mBucketTimeout = 0; // Time out passed to receiver
     uint32_t mHeadOfLineBlockingTimeout = 0; // HOL time out passed to receiver
     std::mutex mNetMtx; //Mutex protecting the bucket queue
