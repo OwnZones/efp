@@ -25,8 +25,8 @@
 int main() {
 
     //PerformanceLab sends/receives a endless stream of packets (Used when profiling the code)
-    //PerformanceLab myPerformanceLab;
-    //myPerformanceLab.startUnitTest();
+    PerformanceLab myPerformanceLab;
+    myPerformanceLab.startUnitTest();
     //code will never get to here
 
     int returnCode = EXIT_SUCCESS;

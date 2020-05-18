@@ -109,41 +109,44 @@ ElasticFrameMessages
 ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource) {
     std::lock_guard<std::mutex> lock(mNetMtx);
 
-    ElasticFrameType1 lType1Frame = *(ElasticFrameType1 *) pSubPacket;
-    Bucket *pThisBucket = &mBucketList[lType1Frame.hSuperFrameNo & (uint16_t)CIRCULAR_BUFFER_SIZE];
+    ElasticFrameType1 *lType1Frame = (ElasticFrameType1 *) pSubPacket;
+    Bucket *pThisBucket = &mBucketList[lType1Frame->hSuperFrameNo & (uint16_t)CIRCULAR_BUFFER_SIZE];
     //EFP_LOGGER(false, LOGG_NOTIFY, "superFrameNo1-> " << unsigned(type1Frame.superFrameNo))
 
     // Is this entry in the buffer active? If no, create a new else continue filling the bucket with fragments.
     if (!pThisBucket->mActive) {
         //EFP_LOGGER(false,LOGG_NOTIFY,"Setting: " << unsigned(type1Frame.superFrameNo));
-        uint64_t lDeliveryOrderCandidate = superFrameRecalculator(lType1Frame.hSuperFrameNo);
+        uint64_t lDeliveryOrderCandidate = superFrameRecalculator(lType1Frame->hSuperFrameNo);
         //Is this a old fragment where we already delivered the superframe?
         if (lDeliveryOrderCandidate == pThisBucket->mDeliveryOrder) {
             return ElasticFrameMessages::tooOldFragment;
         }
+
         pThisBucket->mDeliveryOrder = lDeliveryOrderCandidate;
+        mBucketMap[pThisBucket->mDeliveryOrder] = pThisBucket;
         pThisBucket->mActive = true;
         pThisBucket->mSource = fromSource;
-        pThisBucket->mFlags = lType1Frame.hFrameType & (uint8_t)0xf0;
-        pThisBucket->mStream = lType1Frame.hStream;
-        Stream *pThisStream = &mStreams[lType1Frame.hStream];
+        pThisBucket->mFlags = lType1Frame->hFrameType & (uint8_t)0xf0;
+        pThisBucket->mStream = lType1Frame->hStream;
+        Stream *pThisStream = &mStreams[lType1Frame->hStream];
         pThisBucket->mDataContent = pThisStream->dataContent;
         pThisBucket->mCode = pThisStream->code;
-        pThisBucket->mSavedSuperFrameNo = lType1Frame.hSuperFrameNo;
+        pThisBucket->mSavedSuperFrameNo = lType1Frame->hSuperFrameNo;
         pThisBucket->mHaveReceivedPacket.reset();
         pThisBucket->mPts = UINT64_MAX;
         pThisBucket->mDts = UINT64_MAX;
-        pThisBucket->mHaveReceivedPacket[lType1Frame.hFragmentNo] = true;
+        pThisBucket->mHaveReceivedPacket[lType1Frame->hFragmentNo] = true;
         pThisBucket->mTimeout = mBucketTimeout;
         pThisBucket->mFragmentCounter = 0;
-        pThisBucket->mOfFragmentNo = lType1Frame.hOfFragmentNo;
+        pThisBucket->mOfFragmentNo = lType1Frame->hOfFragmentNo;
         pThisBucket->mFragmentSize = (packetSize - sizeof(ElasticFrameType1));
-        size_t lInsertDataPointer = pThisBucket->mFragmentSize * lType1Frame.hFragmentNo;
+        size_t lInsertDataPointer = pThisBucket->mFragmentSize * lType1Frame->hFragmentNo;
         pThisBucket->mBucketData = std::make_unique<SuperFrame>(
-                pThisBucket->mFragmentSize * ((size_t) lType1Frame.hOfFragmentNo + 1));
-        pThisBucket->mBucketData->mFrameSize = pThisBucket->mFragmentSize * lType1Frame.hOfFragmentNo;
+                pThisBucket->mFragmentSize * ((size_t) lType1Frame->hOfFragmentNo + 1));
+        pThisBucket->mBucketData->mFrameSize = pThisBucket->mFragmentSize * lType1Frame->hOfFragmentNo;
 
         if (pThisBucket->mBucketData->pFrameData == nullptr) {
+            mBucketMap.erase(pThisBucket->mDeliveryOrder);
             pThisBucket->mActive = false;
             return ElasticFrameMessages::memoryAllocationError;
         }
@@ -156,7 +159,7 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t pack
 
     // There is a gap in receiving the packets. Increase the bucket size list.. if the
     // bucket size list is == X*UINT16_MAX you will no longer detect any buffer errors
-    if (lType1Frame.hSuperFrameNo != pThisBucket->mSavedSuperFrameNo) {
+    if (lType1Frame->hSuperFrameNo != pThisBucket->mSavedSuperFrameNo) {
         return ElasticFrameMessages::bufferOutOfResources;
     }
 
@@ -166,18 +169,19 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t pack
     // be triggered by now.
     // I invalidate this bucket. The user
 
-    if (pThisBucket->mOfFragmentNo < lType1Frame.hFragmentNo ||
-        lType1Frame.hOfFragmentNo != pThisBucket->mOfFragmentNo) {
+    if (pThisBucket->mOfFragmentNo < lType1Frame->hFragmentNo ||
+        lType1Frame->hOfFragmentNo != pThisBucket->mOfFragmentNo) {
         EFP_LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
+        mBucketMap.erase(pThisBucket->mDeliveryOrder);
         pThisBucket->mActive = false;
         return ElasticFrameMessages::bufferOutOfBounds;
     }
 
     // Have I already received this packet before? (duplicate/1+n where n > 0, n can be fractional)
-    if (pThisBucket->mHaveReceivedPacket[lType1Frame.hFragmentNo] == 1) {
+    if (pThisBucket->mHaveReceivedPacket[lType1Frame->hFragmentNo] == 1) {
         return ElasticFrameMessages::duplicatePacketReceived;
     } else {
-        pThisBucket->mHaveReceivedPacket[lType1Frame.hFragmentNo] = true;
+        pThisBucket->mHaveReceivedPacket[lType1Frame->hFragmentNo] = true;
     }
 
     // Let's re-set the timout and let also add +1 to the fragment counter
@@ -190,7 +194,7 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t pack
     // linear array of -> |fragment start|fragment data|fragment end|
     // lInsertDataPointer will point to the fragment start above and fill with the incoming data
 
-    size_t lInsertDataPointer = pThisBucket->mFragmentSize * lType1Frame.hFragmentNo;
+    size_t lInsertDataPointer = pThisBucket->mFragmentSize * lType1Frame->hFragmentNo;
     std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
                  pSubPacket + sizeof(ElasticFrameType1), packetSize - sizeof(ElasticFrameType1));
     return ElasticFrameMessages::noError;
@@ -203,109 +207,113 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t pack
 ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pSubPacket, size_t packetSize,
                                                                uint8_t fromSource) {
     std::lock_guard<std::mutex> lock(mNetMtx);
-    ElasticFrameType2 lType2Frame = *(ElasticFrameType2 *) pSubPacket;
+    ElasticFrameType2 *lType2Frame = (ElasticFrameType2 *) pSubPacket;
 
-    if (packetSize < ((sizeof(ElasticFrameType2) + lType2Frame.hSizeOfData))) {
+    if (packetSize < ((sizeof(ElasticFrameType2) + lType2Frame->hSizeOfData))) {
         return ElasticFrameMessages::type2FrameOutOfBounds;
     }
 
-    Bucket *pThisBucket = &mBucketList[lType2Frame.hSuperFrameNo & (uint16_t)CIRCULAR_BUFFER_SIZE];
+    Bucket *pThisBucket = &mBucketList[lType2Frame->hSuperFrameNo & (uint16_t)CIRCULAR_BUFFER_SIZE];
 
     if (!pThisBucket->mActive) {
-        uint64_t lDeliveryOrderCandidate = superFrameRecalculator(lType2Frame.hSuperFrameNo);
+        uint64_t lDeliveryOrderCandidate = superFrameRecalculator(lType2Frame->hSuperFrameNo);
         //Is this a old fragment where we already delivered the super frame?
         if (lDeliveryOrderCandidate == pThisBucket->mDeliveryOrder) {
             return ElasticFrameMessages::tooOldFragment;
         }
+
         pThisBucket->mDeliveryOrder = lDeliveryOrderCandidate;
+        mBucketMap[pThisBucket->mDeliveryOrder] = pThisBucket;
         pThisBucket->mActive = true;
         pThisBucket->mSource = fromSource;
-        pThisBucket->mFlags = lType2Frame.hFrameType & (uint8_t)0xf0;
-        pThisBucket->mStream = lType2Frame.hStreamID;
-        Stream *pThisStream = &mStreams[lType2Frame.hStreamID];
-        pThisStream->dataContent = lType2Frame.hDataContent;
-        pThisStream->code = lType2Frame.hCode;
+        pThisBucket->mFlags = lType2Frame->hFrameType & (uint8_t)0xf0;
+        pThisBucket->mStream = lType2Frame->hStreamID;
+        Stream *pThisStream = &mStreams[lType2Frame->hStreamID];
+        pThisStream->dataContent = lType2Frame->hDataContent;
+        pThisStream->code = lType2Frame->hCode;
         pThisBucket->mDataContent = pThisStream->dataContent;
         pThisBucket->mCode = pThisStream->code;
-        pThisBucket->mSavedSuperFrameNo = lType2Frame.hSuperFrameNo;
+        pThisBucket->mSavedSuperFrameNo = lType2Frame->hSuperFrameNo;
         pThisBucket->mHaveReceivedPacket.reset();
-        pThisBucket->mPts = lType2Frame.hPts;
+        pThisBucket->mPts = lType2Frame->hPts;
 
-        if (lType2Frame.hDtsPtsDiff == UINT32_MAX) {
+        if (lType2Frame->hDtsPtsDiff == UINT32_MAX) {
             pThisBucket->mDts = UINT64_MAX;
         } else {
-            pThisBucket->mDts = lType2Frame.hPts - (uint64_t) lType2Frame.hDtsPtsDiff;
+            pThisBucket->mDts = lType2Frame->hPts - (uint64_t) lType2Frame->hDtsPtsDiff;
         }
 
-        pThisBucket->mHaveReceivedPacket[lType2Frame.hOfFragmentNo] = true;
+        pThisBucket->mHaveReceivedPacket[lType2Frame->hOfFragmentNo] = true;
         pThisBucket->mTimeout = mBucketTimeout;
-        pThisBucket->mOfFragmentNo = lType2Frame.hOfFragmentNo;
+        pThisBucket->mOfFragmentNo = lType2Frame->hOfFragmentNo;
         pThisBucket->mFragmentCounter = 0;
-        pThisBucket->mFragmentSize = lType2Frame.hType1PacketSize;
-        size_t lReserveThis = ((pThisBucket->mFragmentSize * lType2Frame.hOfFragmentNo) +
-                               lType2Frame.hSizeOfData);
+        pThisBucket->mFragmentSize = lType2Frame->hType1PacketSize;
+        size_t lReserveThis = ((pThisBucket->mFragmentSize * lType2Frame->hOfFragmentNo) +
+                               lType2Frame->hSizeOfData);
         pThisBucket->mBucketData = std::make_unique<SuperFrame>(lReserveThis);
         if (pThisBucket->mBucketData->pFrameData == nullptr) {
+            mBucketMap.erase(pThisBucket->mDeliveryOrder);
             pThisBucket->mActive = false;
             return ElasticFrameMessages::memoryAllocationError;
         }
-        size_t lInsertDataPointer = (size_t) lType2Frame.hType1PacketSize * (size_t) lType2Frame.hOfFragmentNo;
+        size_t lInsertDataPointer = (size_t) lType2Frame->hType1PacketSize * (size_t) lType2Frame->hOfFragmentNo;
 
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
-                     pSubPacket + sizeof(ElasticFrameType2), lType2Frame.hSizeOfData);
+                     pSubPacket + sizeof(ElasticFrameType2), lType2Frame->hSizeOfData);
 
         return ElasticFrameMessages::noError;
     }
 
-    if (lType2Frame.hSuperFrameNo != pThisBucket->mSavedSuperFrameNo) {
+    if (lType2Frame->hSuperFrameNo != pThisBucket->mSavedSuperFrameNo) {
         return ElasticFrameMessages::bufferOutOfResources;
     }
 
-    if (pThisBucket->mOfFragmentNo < lType2Frame.hOfFragmentNo ||
-        lType2Frame.hOfFragmentNo != pThisBucket->mOfFragmentNo) {
+    if (pThisBucket->mOfFragmentNo < lType2Frame->hOfFragmentNo ||
+        lType2Frame->hOfFragmentNo != pThisBucket->mOfFragmentNo) {
         EFP_LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
+        mBucketMap.erase(pThisBucket->mDeliveryOrder);
         pThisBucket->mActive = false;
         return ElasticFrameMessages::bufferOutOfBounds;
     }
 
-    if (pThisBucket->mHaveReceivedPacket[lType2Frame.hOfFragmentNo] == 1) {
+    if (pThisBucket->mHaveReceivedPacket[lType2Frame->hOfFragmentNo] == 1) {
         return ElasticFrameMessages::duplicatePacketReceived;
     } else {
-        pThisBucket->mHaveReceivedPacket[lType2Frame.hOfFragmentNo] = true;
+        pThisBucket->mHaveReceivedPacket[lType2Frame->hOfFragmentNo] = true;
     }
 
     // Type 2 frames contains the pts and code. If for some reason the type2 packet is missing or the frame is delivered
     // Before the type2 frame arrives PTS,DTS and CODE are set to it's respective 'illegal' value. meaning you cant't use them.
     pThisBucket->mTimeout = mBucketTimeout;
-    pThisBucket->mPts = lType2Frame.hPts;
+    pThisBucket->mPts = lType2Frame->hPts;
 
-    if (lType2Frame.hDtsPtsDiff == UINT32_MAX) {
+    if (lType2Frame->hDtsPtsDiff == UINT32_MAX) {
         pThisBucket->mDts = UINT64_MAX;
     } else {
-        pThisBucket->mDts = lType2Frame.hPts - (uint64_t) lType2Frame.hDtsPtsDiff;
+        pThisBucket->mDts = lType2Frame->hPts - (uint64_t) lType2Frame->hDtsPtsDiff;
     }
 
-    pThisBucket->mCode = lType2Frame.hCode;
-    pThisBucket->mFlags = lType2Frame.hFrameType & (uint8_t)0xf0;
+    pThisBucket->mCode = lType2Frame->hCode;
+    pThisBucket->mFlags = lType2Frame->hFrameType & (uint8_t)0xf0;
     pThisBucket->mFragmentCounter++;
 
     //set the content type
-    pThisBucket->mStream = lType2Frame.hStreamID;
-    Stream *thisStream = &mStreams[lType2Frame.hStreamID];
-    thisStream->dataContent = lType2Frame.hDataContent;
-    thisStream->code = lType2Frame.hCode;
+    pThisBucket->mStream = lType2Frame->hStreamID;
+    Stream *thisStream = &mStreams[lType2Frame->hStreamID];
+    thisStream->dataContent = lType2Frame->hDataContent;
+    thisStream->code = lType2Frame->hCode;
     pThisBucket->mDataContent = thisStream->dataContent;
     pThisBucket->mCode = thisStream->code;
 
     // When the type2 frames are received only then is the actual size to be delivered known... Now set the real size for the bucketData
-    if (lType2Frame.hSizeOfData) {
+    if (lType2Frame->hSizeOfData) {
         pThisBucket->mBucketData->mFrameSize =
-                (pThisBucket->mFragmentSize * lType2Frame.hOfFragmentNo) + lType2Frame.hSizeOfData;
+                (pThisBucket->mFragmentSize * lType2Frame->hOfFragmentNo) + lType2Frame->hSizeOfData;
         // Type 2 is always at the end and is always the highest number fragment
-        size_t lInsertDataPointer = (size_t) lType2Frame.hType1PacketSize * (size_t) lType2Frame.hOfFragmentNo;
+        size_t lInsertDataPointer = (size_t) lType2Frame->hType1PacketSize * (size_t) lType2Frame->hOfFragmentNo;
 
         std::memmove(pThisBucket->mBucketData->pFrameData + lInsertDataPointer,
-                     pSubPacket + sizeof(ElasticFrameType2), lType2Frame.hSizeOfData);
+                     pSubPacket + sizeof(ElasticFrameType2), lType2Frame->hSizeOfData);
 
     }
 
@@ -319,43 +327,46 @@ ElasticFrameMessages
 ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource) {
     std::lock_guard<std::mutex> lock(mNetMtx);
 
-    ElasticFrameType3 lType3Frame = *(ElasticFrameType3 *) pSubPacket;
-    Bucket *pThisBucket = &mBucketList[lType3Frame.hSuperFrameNo & (uint16_t)CIRCULAR_BUFFER_SIZE];
+    ElasticFrameType3 *lType3Frame = (ElasticFrameType3 *) pSubPacket;
+    Bucket *pThisBucket = &mBucketList[lType3Frame->hSuperFrameNo & (uint16_t)CIRCULAR_BUFFER_SIZE];
 
     // If there is a type3 frame it's the second last frame
-    uint16_t lThisFragmentNo = lType3Frame.hOfFragmentNo - 1;
+    uint16_t lThisFragmentNo = lType3Frame->hOfFragmentNo - 1;
 
     // Is this entry in the buffer active? If no, create a new else continue filling the bucket with data.
     if (!pThisBucket->mActive) {
         //EFP_LOGGER(false,LOGG_NOTIFY,"Setting: " << unsigned(type1Frame.superFrameNo));
-        uint64_t lDeliveryOrderCandidate = superFrameRecalculator(lType3Frame.hSuperFrameNo);
+        uint64_t lDeliveryOrderCandidate = superFrameRecalculator(lType3Frame->hSuperFrameNo);
         //Is this a old fragment where we already delivered the super frame?
         if (lDeliveryOrderCandidate == pThisBucket->mDeliveryOrder) {
             return ElasticFrameMessages::tooOldFragment;
         }
+
         pThisBucket->mDeliveryOrder = lDeliveryOrderCandidate;
+        mBucketMap[pThisBucket->mDeliveryOrder] = pThisBucket;
         pThisBucket->mActive = true;
         pThisBucket->mSource = fromSource;
-        pThisBucket->mFlags = lType3Frame.hFrameType & (uint8_t)0xf0;
-        pThisBucket->mStream = lType3Frame.hStreamID;
-        Stream *thisStream = &mStreams[lType3Frame.hStreamID];
+        pThisBucket->mFlags = lType3Frame->hFrameType & (uint8_t)0xf0;
+        pThisBucket->mStream = lType3Frame->hStreamID;
+        Stream *thisStream = &mStreams[lType3Frame->hStreamID];
         pThisBucket->mDataContent = thisStream->dataContent;
         pThisBucket->mCode = thisStream->code;
-        pThisBucket->mSavedSuperFrameNo = lType3Frame.hSuperFrameNo;
+        pThisBucket->mSavedSuperFrameNo = lType3Frame->hSuperFrameNo;
         pThisBucket->mHaveReceivedPacket.reset();
         pThisBucket->mPts = UINT64_MAX;
         pThisBucket->mDts = UINT64_MAX;
         pThisBucket->mHaveReceivedPacket[lThisFragmentNo] = true;
         pThisBucket->mTimeout = mBucketTimeout;
         pThisBucket->mFragmentCounter = 0;
-        pThisBucket->mOfFragmentNo = lType3Frame.hOfFragmentNo;
-        pThisBucket->mFragmentSize = lType3Frame.hType1PacketSize;
+        pThisBucket->mOfFragmentNo = lType3Frame->hOfFragmentNo;
+        pThisBucket->mFragmentSize = lType3Frame->hType1PacketSize;
         size_t lInsertDataPointer = pThisBucket->mFragmentSize * lThisFragmentNo;
-        size_t lReserveThis = ((pThisBucket->mFragmentSize * (lType3Frame.hOfFragmentNo - 1)) +
+        size_t lReserveThis = ((pThisBucket->mFragmentSize * (lType3Frame->hOfFragmentNo - 1)) +
                                (packetSize - sizeof(ElasticFrameType3)));
         pThisBucket->mBucketData = std::make_unique<SuperFrame>(lReserveThis);
 
         if (pThisBucket->mBucketData->pFrameData == nullptr) {
+            mBucketMap.erase(pThisBucket->mDeliveryOrder);
             pThisBucket->mActive = false;
             return ElasticFrameMessages::memoryAllocationError;
         }
@@ -368,7 +379,7 @@ ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t pack
 
     // There is a gap in receiving the packets. Increase the bucket size list.. if the
     // bucket size list is == X*UINT16_MAX you will no longer detect any buffer errors
-    if (lType3Frame.hSuperFrameNo != pThisBucket->mSavedSuperFrameNo) {
+    if (lType3Frame->hSuperFrameNo != pThisBucket->mSavedSuperFrameNo) {
         return ElasticFrameMessages::bufferOutOfResources;
     }
 
@@ -378,8 +389,9 @@ ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t pack
     // be triggered by now.
     // I invalidate this bucket to save me but the user should be notified somehow about this state. FIXME
 
-    if (pThisBucket->mOfFragmentNo < lThisFragmentNo || lType3Frame.hOfFragmentNo != pThisBucket->mOfFragmentNo) {
+    if (pThisBucket->mOfFragmentNo < lThisFragmentNo || lType3Frame->hOfFragmentNo != pThisBucket->mOfFragmentNo) {
         EFP_LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
+        mBucketMap.erase(pThisBucket->mDeliveryOrder);
         pThisBucket->mActive = false;
         return ElasticFrameMessages::bufferOutOfBounds;
     }
@@ -396,7 +408,7 @@ ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t pack
     pThisBucket->mFragmentCounter++;
 
     pThisBucket->mBucketData->mFrameSize =
-            (pThisBucket->mFragmentSize * (lType3Frame.hOfFragmentNo - 1)) +
+            (pThisBucket->mFragmentSize * (lType3Frame->hOfFragmentNo - 1)) +
             (packetSize - sizeof(ElasticFrameType3));
 
     // Move the data to the correct fragment position in the frame.
@@ -483,15 +495,18 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
             EFP_LOGGER(true, LOGG_WARN, "Worker thread overloaded by " << signed(lTimeCompensation) << " us")
             lTimeReference = lTimeNow;
         } else {
-            // Check all active buckets 100 times a second compensated for the process
             std::this_thread::sleep_for(std::chrono::microseconds(lTimeCompensation));
         }
 
         mNetMtx.lock();
+        uint32_t lActiveCount = mBucketMap.size();
+        if (!lActiveCount) {
+            mNetMtx.unlock();
+            continue; //Nothing to process
+        }
 
         bool lTimeOutTrigger = false;
-        uint32_t lActiveCount = 0;
-        std::vector<CandidateToDeliver> lCandidates;
+        std::vector<Bucket*> lCandidates;
         uint64_t lDeliveryOrderOldest = UINT64_MAX;
 
         // The default mode is not to clear any buckets
@@ -510,39 +525,29 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
             }
         }
 
-        // Scan trough all buckets
-
-        for (uint64_t i = 0; i < CIRCULAR_BUFFER_SIZE + 1; i++) {
-
-            // Only work with the buckets that are active
-            if (mBucketList[i].mActive) {
-                // Keep track of number of active buckets
-                lActiveCount++;
-
-                // Save the number of the oldest bucket in queue to be delivered
-                if (lDeliveryOrderOldest > mBucketList[i].mDeliveryOrder) {
-                    lDeliveryOrderOldest = mBucketList[i].mDeliveryOrder;
-                }
+        // Scan trough all active buckets
+        for( const auto& n : mBucketMap ) {
                 // Are we cleaning out old buckets and did we found a head to timout?
-                if ((mBucketList[i].mDeliveryOrder < lHeadOfLineBlockingTail) && lClearHeadOfLineBuckets) {
-                    //EFP_LOGGER(true, LOGG_NOTIFY, "BOOM clear-> " << unsigned(bucketList[i].deliveryOrder))
-                    mBucketList[i].mTimeout = 1;
+                if ((n.second->mDeliveryOrder < lHeadOfLineBlockingTail) && lClearHeadOfLineBuckets) {
+                    //EFP_LOGGER(true, LOGG_NOTIFY, "BOOM clear-> " << unsigned(n.second->mDeliveryOrder))
+                    n.second->mTimeout = 1;
                 }
-
-                mBucketList[i].mTimeout--;
-
+                n.second->mTimeout--;
                 // If the bucket is ready to be delivered or is the bucket timeout?
-                if (!mBucketList[i].mTimeout) {
+                if (!n.second->mTimeout) {
                     lTimeOutTrigger = true;
-                    lCandidates.emplace_back(CandidateToDeliver(mBucketList[i].mDeliveryOrder, i));
-                    mBucketList[i].mTimeout = 1; //We want to timeout this again if head of line blocking is on
-                } else if (mBucketList[i].mFragmentCounter == mBucketList[i].mOfFragmentNo) {
-                    lCandidates.emplace_back(CandidateToDeliver(mBucketList[i].mDeliveryOrder, i));
+                    lCandidates.emplace_back(n.second);
+                    n.second->mTimeout = 1; //We want to timeout this again if head of line blocking is on
+                } else if (n.second->mFragmentCounter == n.second->mOfFragmentNo) {
+                    lCandidates.emplace_back(n.second);
                 }
-            }
         }
 
         size_t lNumCandidatesToDeliver = lCandidates.size();
+        if (lNumCandidatesToDeliver) {
+            lDeliveryOrderOldest = lCandidates[0]->mDeliveryOrder;
+        }
+
         if ((!lFistDelivery && lNumCandidatesToDeliver >= 2) || lTimeOutTrigger) {
             lFistDelivery = true;
             lExpectedNextFrameToDeliver = lDeliveryOrderOldest;
@@ -550,8 +555,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
 
         // Do we got any timed out buckets or finished buckets?
         if (lNumCandidatesToDeliver && lFistDelivery) {
-            //Sort them in delivery order
-            std::sort(lCandidates.begin(), lCandidates.end(), sortDeliveryOrder());
 
             //FIXME - we could implement fast HOL clearing here
 
@@ -577,10 +580,10 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
             if (lClearHeadOfLineBuckets) {
                 //EFP_LOGGER(true, LOGG_NOTIFY, "FLUSH HEAD!")
 
-                uint64_t lAndTheNextIs = lCandidates[0].deliveryOrder;
+                uint64_t lAndTheNextIs = lCandidates[0]->mDeliveryOrder;
 
                 for (auto &x: lCandidates) {
-                    if (lOldestFrameDelivered <= x.deliveryOrder) {
+                    if (lOldestFrameDelivered <= x->mDeliveryOrder) {
 
                         // Here we introduce a new concept..
                         // If we are cleaning out the HOL. Only go soo far to either a gap (counter) or packet "non time out".
@@ -592,38 +595,39 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                         // If for example candidates.size() is larger than a certain size then maybe just flush to the end to avoid a blocking HOL situation
                         // If for example every second packet is lost then we will build a large queue
 
-                        if (lAndTheNextIs != x.deliveryOrder) {
+                        if (lAndTheNextIs != x->mDeliveryOrder) {
                             // We did not expect this. is the bucket timed out .. then continue...
-                            if (mBucketList[x.bucket].mTimeout > 1) {
+                            if (x->mTimeout > 1) {
                                 break;
                             }
                         }
-                        lAndTheNextIs = x.deliveryOrder + 1;
+                        lAndTheNextIs = x->mDeliveryOrder + 1;
 
-                        lOldestFrameDelivered = mHeadOfLineBlockingTimeout ? x.deliveryOrder : 0;
+                        lOldestFrameDelivered = mHeadOfLineBlockingTimeout ? x->mDeliveryOrder : 0;
 
                         //Create a scope for the lock
                         {
                             std::lock_guard<std::mutex> lk(mSuperFrameMtx);
-                            mBucketList[x.bucket].mBucketData->mDataContent = mBucketList[x.bucket].mDataContent;
-                            mBucketList[x.bucket].mBucketData->mBroken =
-                                    mBucketList[x.bucket].mFragmentCounter != mBucketList[x.bucket].mOfFragmentNo;
-                            mBucketList[x.bucket].mBucketData->mPts = mBucketList[x.bucket].mPts;
-                            mBucketList[x.bucket].mBucketData->mDts = mBucketList[x.bucket].mDts;
-                            mBucketList[x.bucket].mBucketData->mCode = mBucketList[x.bucket].mCode;
-                            mBucketList[x.bucket].mBucketData->mStreamID = mBucketList[x.bucket].mStream;
-                            mBucketList[x.bucket].mBucketData->mSource = mBucketList[x.bucket].mSource;
-                            mBucketList[x.bucket].mBucketData->mFlags = mBucketList[x.bucket].mFlags;
-                            mSuperFrameQueue.push_back(std::move(mBucketList[x.bucket].mBucketData));
+                            x->mBucketData->mDataContent = x->mDataContent;
+                            x->mBucketData->mBroken =
+                                    x->mFragmentCounter != x->mOfFragmentNo;
+                            x->mBucketData->mPts = x->mPts;
+                            x->mBucketData->mDts = x->mDts;
+                            x->mBucketData->mCode = x->mCode;
+                            x->mBucketData->mStreamID = x->mStream;
+                            x->mBucketData->mSource = x->mSource;
+                            x->mBucketData->mFlags = x->mFlags;
+                            mSuperFrameQueue.push_back(std::move(x->mBucketData));
                             mSuperFrameReady = true;
                         }
                         mSuperFrameDeliveryConditionVariable.notify_one();
                     }
-                    lExpectedNextFrameToDeliver = x.deliveryOrder + 1;
+                    lExpectedNextFrameToDeliver = x->mDeliveryOrder + 1;
                     // std::cout << " (y) " << unsigned(expectedNextFrameToDeliver) << std::endl;
-                    lSavedPTS = mBucketList[x.bucket].mPts;
-                    mBucketList[x.bucket].mActive = false;
-                    mBucketList[x.bucket].mBucketData = nullptr;
+                    lSavedPTS = x->mPts;
+                    mBucketMap.erase(x->mDeliveryOrder);
+                    x->mActive = false;
+                    x->mBucketData = nullptr;
                 }
             } else {
 
@@ -633,7 +637,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                 // So in out of order delivery we time out the buckets instead of flushing the head.
 
                 // Check for head of line blocking only if HOL-time out is set
-                if (lExpectedNextFrameToDeliver < mBucketList[lCandidates[0].bucket].mDeliveryOrder &&
+                if (lExpectedNextFrameToDeliver < lCandidates[0]->mDeliveryOrder &&
                     mHeadOfLineBlockingTimeout &&
                     !lFoundHeadOfLineBlocking) {
 
@@ -643,7 +647,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
 
                     lFoundHeadOfLineBlocking = true; //Found hole
                     lHeadOfLineBlockingCounter = mHeadOfLineBlockingTimeout; //Number of times to spin this loop
-                    lHeadOfLineBlockingTail = mBucketList[lCandidates[0].bucket].mDeliveryOrder; //This is the tail
+                    lHeadOfLineBlockingTail = lCandidates[0]->mDeliveryOrder; //This is the tail
                     //EFP_LOGGER(true, LOGG_NOTIFY, "HOL " << unsigned(expectedNextFrameToDeliver) << " "
                     //<< unsigned(bucketList[candidates[0].bucket].deliveryOrder)
                     //<< " tail " << unsigned(headOfLineBlockingTail)
@@ -654,39 +658,40 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                 if (!lFoundHeadOfLineBlocking) {
                     for (auto &x: lCandidates) {
 
-                        if (lExpectedNextFrameToDeliver != x.deliveryOrder && mHeadOfLineBlockingTimeout) {
+                        if (lExpectedNextFrameToDeliver != x->mDeliveryOrder && mHeadOfLineBlockingTimeout) {
                             lFoundHeadOfLineBlocking = true; //Found hole
                             lHeadOfLineBlockingCounter = mHeadOfLineBlockingTimeout; //Number of times to spin this loop
                             lHeadOfLineBlockingTail =
-                                    x.deliveryOrder; //So we basically give the non existing data a chance to arrive..
+                                    x->mDeliveryOrder; //So we basically give the non existing data a chance to arrive..
                             //EFP_LOGGER(true, LOGG_NOTIFY, "HOL2 " << unsigned(expectedNextFrameToDeliver) << " " << unsigned(x.deliveryOrder) << " tail " << unsigned(headOfLineBlockingTail))
                             break;
                         }
-                        lExpectedNextFrameToDeliver = x.deliveryOrder + 1;
+                        lExpectedNextFrameToDeliver = x->mDeliveryOrder + 1;
 
                         //std::cout << unsigned(oldestFrameDelivered) << " " << unsigned(x.deliveryOrder) << std::endl;
-                        if (lOldestFrameDelivered <= x.deliveryOrder) {
-                            lOldestFrameDelivered = mHeadOfLineBlockingTimeout ? x.deliveryOrder : 0;
+                        if (lOldestFrameDelivered <= x->mDeliveryOrder) {
+                            lOldestFrameDelivered = mHeadOfLineBlockingTimeout ? x->mDeliveryOrder : 0;
                             //Create a scope the lock
                             {
                                 std::lock_guard<std::mutex> lk(mSuperFrameMtx);
-                                mBucketList[x.bucket].mBucketData->mDataContent = mBucketList[x.bucket].mDataContent;
-                                mBucketList[x.bucket].mBucketData->mBroken =
-                                        mBucketList[x.bucket].mFragmentCounter != mBucketList[x.bucket].mOfFragmentNo;
-                                mBucketList[x.bucket].mBucketData->mPts = mBucketList[x.bucket].mPts;
-                                mBucketList[x.bucket].mBucketData->mDts = mBucketList[x.bucket].mDts;
-                                mBucketList[x.bucket].mBucketData->mCode = mBucketList[x.bucket].mCode;
-                                mBucketList[x.bucket].mBucketData->mStreamID = mBucketList[x.bucket].mStream;
-                                mBucketList[x.bucket].mBucketData->mSource = mBucketList[x.bucket].mSource;
-                                mBucketList[x.bucket].mBucketData->mFlags = mBucketList[x.bucket].mFlags;
-                                mSuperFrameQueue.push_back(std::move(mBucketList[x.bucket].mBucketData));
+                                x->mBucketData->mDataContent = x->mDataContent;
+                                x->mBucketData->mBroken =
+                                        x->mFragmentCounter != x->mOfFragmentNo;
+                                x->mBucketData->mPts = x->mPts;
+                                x->mBucketData->mDts = x->mDts;
+                                x->mBucketData->mCode = x->mCode;
+                                x->mBucketData->mStreamID = x->mStream;
+                                x->mBucketData->mSource = x->mSource;
+                                x->mBucketData->mFlags = x->mFlags;
+                                mSuperFrameQueue.push_back(std::move(x->mBucketData));
                                 mSuperFrameReady = true;
                             }
                             mSuperFrameDeliveryConditionVariable.notify_one();
                         }
-                        lSavedPTS = mBucketList[x.bucket].mPts;
-                        mBucketList[x.bucket].mActive = false;
-                        mBucketList[x.bucket].mBucketData = nullptr;
+                        lSavedPTS = x->mPts;
+                        mBucketMap.erase(x->mDeliveryOrder);
+                        x->mActive = false;
+                        x->mBucketData = nullptr;
                     }
                 }
             }

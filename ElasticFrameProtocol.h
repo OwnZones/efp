@@ -21,6 +21,7 @@
 #include <cstring>
 #include <cmath>
 #include <thread>
+#include <map>
 
 #ifndef _WIN64
 
@@ -550,6 +551,7 @@ private:
 
     // Internal lists and variables ----- START ------
     Stream mStreams[UINT8_MAX]; //EFP-Stream information store
+    std::map<uint64_t , Bucket*> mBucketMap;
     Bucket mBucketList[
             CIRCULAR_BUFFER_SIZE + 1]; // Internal queue where all fragments are stored and superframes delivered from
     uint32_t mBucketTimeout = 0; // Time out passed to receiver
