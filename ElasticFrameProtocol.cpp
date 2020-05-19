@@ -1153,13 +1153,13 @@ size_t efp_add_embedded_data(uint8_t *pDst, uint8_t *pESrc, uint8_t *pDSrc, size
         type |= ElasticEmbeddedFrameContent::lastembeddedcontent;
     }
     lEmbeddedHeader.embeddedFrameType = type;
-
+    
     //Copy the header
-    memcpy(pDst, &lEmbeddedHeader, sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader));
+    std::copy_n((uint8_t*)&lEmbeddedHeader, sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader), pDst);
     //Copy the embedded data
-    memcpy(pDst + sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader) , pESrc, embeddedDatasize);
+    std::copy_n(pESrc, embeddedDatasize, pDst + sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader));
     //Copy the data payoad
-    memcpy(pDst + sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader) + embeddedDatasize , pDSrc, dataSize);
+    std::copy_n(pDSrc, dataSize, pDst + sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader) + embeddedDatasize);
     return 0;
 }
 
