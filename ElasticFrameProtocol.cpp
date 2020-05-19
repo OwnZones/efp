@@ -931,7 +931,7 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
         pType2Frame->hPts = pts;
         pType2Frame->hDtsPtsDiff = (uint32_t) lPtsDtsDiff;
         pType2Frame->hCode = code;
-        std::memmove(mSendBufferEnd.data() + sizeof(ElasticFrameType2), rPacket, packetSize);
+        std::copy_n(rPacket, packetSize, mSendBufferEnd.data() + sizeof(ElasticFrameType2));
         if (sendFunction) {
             sendFunction(mSendBufferEnd, streamID);
         } else {
@@ -967,9 +967,7 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
 
     while (lFragmentNo < lOfFragmentNoType1) {
         pType1Frame->hFragmentNo = lFragmentNo++;
-        std::memmove(mSendBufferFixed.data() + sizeof(ElasticFrameType1),
-                     rPacket + lDataPointer,
-                     lDataPayloadType1);
+        std::copy_n(rPacket + lDataPointer, lDataPayloadType1, mSendBufferFixed.data() + sizeof(ElasticFrameType1));
         lDataPointer += lDataPayloadType1;
         if (sendFunction) {
             sendFunction(mSendBufferFixed, streamID);
@@ -987,10 +985,7 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
         pType3Frame->hSuperFrameNo = mSuperFrameNoGenerator;
         pType3Frame->hType1PacketSize = (uint16_t) (mCurrentMTU - sizeof(ElasticFrameType1));
         pType3Frame->hOfFragmentNo = lOfFragmentNo;
-        std::memmove(mSendBufferEnd.data() + sizeof(ElasticFrameType3),
-                     rPacket + lDataPointer,
-                     lReminderData);
-
+        std::copy_n(rPacket + lDataPointer, lReminderData, mSendBufferEnd.data() + sizeof(ElasticFrameType3));
         lDataPointer += lReminderData;
         if (lDataPointer != packetSize) {
             return ElasticFrameMessages::internalCalculationError;
@@ -1032,10 +1027,7 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
     pType2Frame->hPts = pts;
     pType2Frame->hDtsPtsDiff = (uint32_t) lPtsDtsDiff;
     pType2Frame->hCode = code;
-    std::memmove(mSendBufferEnd.data() + sizeof(ElasticFrameType2),
-                     rPacket + lDataPointer,
-                     lDataLeftToSend);
-
+    std::copy_n(rPacket + lDataPointer, lDataLeftToSend, mSendBufferEnd.data() + sizeof(ElasticFrameType2));
     if (sendFunction) {
         sendFunction(mSendBufferEnd, streamID);
     } else {

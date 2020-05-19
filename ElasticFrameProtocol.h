@@ -18,7 +18,6 @@
 #include <iostream>
 #include <sstream>
 #include <climits>
-#include <cstring>
 #include <cmath>
 #include <thread>
 #include <map>
