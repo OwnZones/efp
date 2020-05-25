@@ -5,22 +5,6 @@
 #ifndef EFP_ELASTICINTERNAL_H
 #define EFP_ELASTICINTERNAL_H
 
-//Internal buffer management ----- START ------
-struct CandidateToDeliver
-{
-    uint64_t deliveryOrder;
-    uint64_t bucket;
-    CandidateToDeliver(uint64_t k, uint64_t s) : deliveryOrder(k), bucket(s){}
-};
-
-struct sortDeliveryOrder
-{
-    inline bool operator() (const CandidateToDeliver& struct1, const CandidateToDeliver& struct2) {
-        return (struct1.deliveryOrder < struct2.deliveryOrder);
-    }
-};
-//Internal buffer management ----- END ------
-
 //Packet header part ----- START ------
 
 //Type 0,1,2 aso. are static from when defined. For new protocol functions/features add new types or flags
