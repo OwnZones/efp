@@ -238,7 +238,7 @@ Please feel free to use, clone / fork and contribute to this new way of intercon
 
 2. A example showing how to use the EBPBond plug-in 
 
-[EFP + EFPBond](https://github.com/Unit-X/efpbond)
+[EFP + EFPBond + SRT](https://github.com/Unit-X/efp_srt_bonding_example)
 
 3. A simple example showing how to map UDP -> MPEG-TS -> EFP
 
