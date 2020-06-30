@@ -99,11 +99,11 @@ uint64_t ElasticFrameProtocolReceiver::superFrameRecalculator(uint16_t superFram
     }
 
     int16_t lChangeValue = (int16_t) superFrame - (int16_t) mOldSuperFrameNumber;
-    auto lCval = (int64_t) lChangeValue;
+    int64_t lCval = (int64_t) lChangeValue;
     mOldSuperFrameNumber = superFrame;
 
-    if (lCval > INT16_MAX) {
-        lCval -= (UINT16_MAX - 1);
+    if (lCval > (int64_t)INT16_MAX) {
+        lCval -= ((int64_t)UINT16_MAX - 1);
         mSuperFrameRecalc = mSuperFrameRecalc - lCval;
     } else {
         mSuperFrameRecalc = mSuperFrameRecalc + lCval;
@@ -552,7 +552,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
         // Do we got any timed out buckets or finished buckets?
         if (lNumCandidatesToDeliver && lFistDelivery) {
 
-            //FIXME - we could implement fast HOL clearing here
+            //FIXME - we could implement fast HOL clearing here lgtm [cpp/fixme-comment]
 
             //Fast HOL candidate
             //We're not clearing buckets and we have found HOL
@@ -587,7 +587,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                         // Status of the packets in between. So HOL cleaning just wipes out all waiting. This might be a wanted behaviour to avoid time-stall
                         // However packets in queue are lost since they will 'falsely' be seen as coming late and then discarded.
 
-                        // FIXME
+                        // FIXME lgtm [cpp/fixme-comment]
                         // If for example candidates.size() is larger than a certain size then maybe just flush to the end to avoid a blocking HOL situation
                         // If for example every second packet is lost then we will build a large queue
 

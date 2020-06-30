@@ -17,7 +17,7 @@
 
 char *embedd_me = "This is a embedded string";
 
-uint8_t data[TEST_DATA_SIZE];
+uint8_t test_data[TEST_DATA_SIZE];
 uint64_t efp_object_handle_receive;
 
 int drop_counter = 0;
@@ -118,14 +118,14 @@ int main() {
 
     //Prepare data
     for (int x = 0; x < TEST_DATA_SIZE; x++) {
-        data[x] = (uint8_t) x;
+        test_data[x] = (uint8_t) x;
     }
 
     printf("\nEmbedd data.\n\n");
-    size_t alloc_size = efp_add_embedded_data(NULL, (uint8_t *) embedd_me, &data[0], strlen(embedd_me) + 1,
+    size_t alloc_size = efp_add_embedded_data(NULL, (uint8_t *) embedd_me, &test_data[0], strlen(embedd_me) + 1,
                                               TEST_DATA_SIZE, 1, 1);
     uint8_t *sendThisData = (uint8_t *) malloc(alloc_size);
-    efp_add_embedded_data(sendThisData, (uint8_t *) embedd_me, &data[0], strlen(embedd_me) + 1, TEST_DATA_SIZE, 1, 1);
+    efp_add_embedded_data(sendThisData, (uint8_t *) embedd_me, &test_data[0], strlen(embedd_me) + 1, TEST_DATA_SIZE, 1, 1);
 
     printf("\nTransmit data.\n\n");
 
