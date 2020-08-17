@@ -89,7 +89,8 @@ void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFrameP
 }
 
 // This method is generating a uint64_t counter from the uint16_t counter
-// The maximum count-gap this calculator can handle is ((about) INT16_MAX / 2)
+// The maximum count-gap this calculator can handle is INT16_MAX
+// It's not sure this is enough in all situations keep an eye on this
 uint64_t ElasticFrameProtocolReceiver::superFrameRecalculator(uint16_t superFrame) {
     if (mSuperFrameFirstTime) {
         mOldSuperFrameNumber = superFrame;
@@ -97,17 +98,9 @@ uint64_t ElasticFrameProtocolReceiver::superFrameRecalculator(uint16_t superFram
         mSuperFrameFirstTime = false;
         return mSuperFrameRecalc;
     }
-
     int16_t lChangeValue = (int16_t) superFrame - (int16_t) mOldSuperFrameNumber;
-    int64_t lCval = (int64_t) lChangeValue;
     mOldSuperFrameNumber = superFrame;
-
-    if (lCval > (int64_t)INT16_MAX) {
-        lCval -= ((int64_t)UINT16_MAX - 1);
-        mSuperFrameRecalc = mSuperFrameRecalc - lCval;
-    } else {
-        mSuperFrameRecalc = mSuperFrameRecalc + lCval;
-    }
+    mSuperFrameRecalc = mSuperFrameRecalc + (int64_t)lChangeValue;
     return mSuperFrameRecalc;
 }
 
