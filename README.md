@@ -21,11 +21,15 @@ Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:
 
 ## Current badge status
 
-![efp_base_macos](https://github.com/Unit-X/efp/workflows/efp_base_macos/badge.svg) **(MacOS build)**
+(Click the badge to get to the underlying information)
 
-![efp_base_win](https://github.com/Unit-X/efp/workflows/efp_base_win/badge.svg) **(Windows 10 build)**
+[![efp_base_macos](https://github.com/Unit-X/efp/workflows/efp_base_macos/badge.svg)](https://github.com/Unit-X/efp/actions?query=workflow%3Aefp_base_macos) **(MacOS build)**
 
-![efp_base_ubuntu](https://github.com/Unit-X/efp/workflows/efp_base_ubuntu/badge.svg) **(Ubuntu build)**
+[![efp_base_win](https://github.com/Unit-X/efp/workflows/efp_base_win/badge.svg)](https://github.com/Unit-X/efp/actions?query=workflow%3Aefp_base_win) **(Windows 10 build)**
+
+[![efp_base_ubuntu](https://github.com/Unit-X/efp/workflows/efp_base_ubuntu/badge.svg)](https://github.com/Unit-X/efp/actions?query=workflow%3Aefp_base_ubuntu) **(Ubuntu build)**
+
+[![unit_tests](https://github.com/Unit-X/efp/workflows/unit_tests/badge.svg?branch=master)](https://github.com/Unit-X/efp/actions?query=workflow%3Aunit_tests) **(Unit tests running on Ubuntu)**
 
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/Unit-X/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Unit-X/efp/alerts/)
 
