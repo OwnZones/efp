@@ -35,6 +35,8 @@ Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:
 
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/Unit-X/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Unit-X/efp/context:cpp)
 
+[![deepcode](https://www.deepcode.ai/api/gh/badge?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGF0Zm9ybTEiOiJnaCIsIm93bmVyMSI6IlVuaXQtWCIsInJlcG8xIjoiZWZwIiwiaW5jbHVkZUxpbnQiOmZhbHNlLCJhdXRob3JJZCI6MjE5MTYsImlhdCI6MTU5NzkzMzY5MX0.VMWvZfxEBy8Ib23oONlN65tNZUrubUqQt6eUnMIiWrA)](https://www.deepcode.ai/app/gh/Unit-X/efp/_/dashboard?utm_content=gh%2FUnit-X%2Fefp) **(AI - Semantic code analysis)**
+
 ## Installation
 
 Requires cmake version >= **3.10** and **C++14**

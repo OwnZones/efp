@@ -1061,17 +1061,15 @@ std::mutex efp_send_mutex;
 std::mutex efp_receive_mutex;
 
 uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t *, size_t, uint8_t)) {
-    efp_send_mutex.lock();
+    std::lock_guard<std::mutex> lock(efp_send_mutex);
     uint64_t local_c_object_handle = c_object_handle;
     auto result = efp_send_base_map.insert(std::make_pair(local_c_object_handle,
                                                           std::make_shared<ElasticFrameProtocolSender>(mtu)));
     if (!result.first->second) {
-        efp_send_mutex.unlock();
         return 0;
     }
     result.first->second->c_sendCallback = f;
     c_object_handle++;
-    efp_send_mutex.unlock();
     return local_c_object_handle;
 }
 
@@ -1092,18 +1090,16 @@ uint64_t efp_init_receive(uint32_t bucketTimeout,
                                     uint8_t,
                                     uint64_t)
                                     ) {
-    efp_receive_mutex.lock();
+    std::lock_guard<std::mutex> lock(efp_receive_mutex);
     uint64_t local_c_object_handle = c_object_handle;
     auto result = efp_receive_base_map.insert(
             std::make_pair(local_c_object_handle, std::make_shared<ElasticFrameProtocolReceiver>(bucketTimeout, holTimeout)));
     if (!result.first->second) {
-        efp_receive_mutex.unlock();
         return 0;
     }
     result.first->second->c_recieveCallback = f;
     result.first->second->c_recieveEmbeddedDataCallback = g;
     c_object_handle++;
-    efp_receive_mutex.unlock();
     return local_c_object_handle;
 }
 
@@ -1116,9 +1112,8 @@ int16_t efp_send_data(uint64_t efp_object,
                       uint32_t code,
                       uint8_t streamID,
                       uint8_t flags) {
-    efp_send_mutex.lock();
+    std::lock_guard<std::mutex> lock(efp_send_mutex);
     auto efp_base = efp_send_base_map.find(efp_object)->second;
-    efp_send_mutex.unlock();
     if (efp_base == nullptr) {
         return (int16_t) ElasticFrameMessages::efpCAPIfailure;
     }
@@ -1160,9 +1155,8 @@ int16_t efp_receive_fragment(uint64_t efp_object,
                              const uint8_t *pSubPacket,
                              size_t packetSize,
                              uint8_t fromSource) {
-    efp_receive_mutex.lock();
+    std::lock_guard<std::mutex> lock(efp_receive_mutex);
     auto efp_base = efp_receive_base_map.find(efp_object)->second;
-    efp_receive_mutex.unlock();
     if (efp_base == nullptr) {
         return (int16_t) ElasticFrameMessages::efpCAPIfailure;
     }
@@ -1170,15 +1164,12 @@ int16_t efp_receive_fragment(uint64_t efp_object,
 }
 
 int16_t efp_end_send(uint64_t efp_object) {
-    efp_send_mutex.lock();
+    std::lock_guard<std::mutex> lock(efp_send_mutex);
     auto efp_base = efp_send_base_map.find(efp_object)->second;
-    efp_send_mutex.unlock();
     if (efp_base == nullptr) {
         return (int16_t) ElasticFrameMessages::efpCAPIfailure;
     }
-    efp_send_mutex.lock();
     auto num_deleted = efp_send_base_map.erase(efp_object);
-    efp_send_mutex.unlock();
     if (num_deleted) {
         return (int16_t) ElasticFrameMessages::noError;
     }
@@ -1186,15 +1177,12 @@ int16_t efp_end_send(uint64_t efp_object) {
 }
 
 int16_t efp_end_receive(uint64_t efp_object) {
-    efp_receive_mutex.lock();
+    std::lock_guard<std::mutex> lock(efp_receive_mutex);
     auto efp_base = efp_receive_base_map.find(efp_object)->second;
-    efp_receive_mutex.unlock();
     if (efp_base == nullptr) {
         return (int16_t) ElasticFrameMessages::efpCAPIfailure;
     }
-    efp_receive_mutex.lock();
     auto num_deleted = efp_receive_base_map.erase(efp_object);
-    efp_receive_mutex.unlock();
     if (num_deleted) {
         return (int16_t) ElasticFrameMessages::noError;
     }
