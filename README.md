@@ -23,19 +23,27 @@ Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:
 
 (Click the badge to get to the underlying information)
 
+**Build**
+
 [![efp_base_macos](https://github.com/Unit-X/efp/workflows/efp_base_macos/badge.svg)](https://github.com/Unit-X/efp/actions?query=workflow%3Aefp_base_macos) **(MacOS build)**
 
 [![efp_base_win](https://github.com/Unit-X/efp/workflows/efp_base_win/badge.svg)](https://github.com/Unit-X/efp/actions?query=workflow%3Aefp_base_win) **(Windows 10 build)**
 
 [![efp_base_ubuntu](https://github.com/Unit-X/efp/workflows/efp_base_ubuntu/badge.svg)](https://github.com/Unit-X/efp/actions?query=workflow%3Aefp_base_ubuntu) **(Ubuntu build)**
 
-[![unit_tests](https://github.com/Unit-X/efp/workflows/unit_tests/badge.svg?branch=master)](https://github.com/Unit-X/efp/actions?query=workflow%3Aunit_tests) **(Unit tests running on Ubuntu)**
+**Code quality**
 
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/Unit-X/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Unit-X/efp/alerts/)
 
 [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/Unit-X/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Unit-X/efp/context:cpp)
 
 [![deepcode](https://www.deepcode.ai/api/gh/badge?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGF0Zm9ybTEiOiJnaCIsIm93bmVyMSI6IlVuaXQtWCIsInJlcG8xIjoiZWZwIiwiaW5jbHVkZUxpbnQiOmZhbHNlLCJhdXRob3JJZCI6MjE5MTYsImlhdCI6MTU5NzkzMzY5MX0.VMWvZfxEBy8Ib23oONlN65tNZUrubUqQt6eUnMIiWrA)](https://www.deepcode.ai/app/gh/Unit-X/efp/_/dashboard?utm_content=gh%2FUnit-X%2Fefp) **(AI - Semantic code analysis)**
+
+[![CodeFactor](https://www.codefactor.io/repository/github/unit-x/efp/badge)](https://www.codefactor.io/repository/github/unit-x/efp)
+
+**Tests**
+
+[![unit_tests](https://github.com/Unit-X/efp/workflows/unit_tests/badge.svg?branch=master)](https://github.com/Unit-X/efp/actions?query=workflow%3Aunit_tests) **(Unit tests running on Ubuntu)**
 
 ## Installation
 
