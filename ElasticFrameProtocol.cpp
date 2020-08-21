@@ -542,7 +542,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
 
         // Do we got any timed out buckets or finished buckets?
         if (lNumCandidatesToDeliver && lFistDelivery) {
-
             //FIXME - we could implement fast HOL clearing here lgtm [cpp/fixme-comment]
 
             //Fast HOL candidate
@@ -561,8 +560,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
             //    std::cout << ">>>" << unsigned(x.deliveryOrder) << std::endl;
             //}
 
-
-
             // So ok we have cleared the head send it all out
             if (lClearHeadOfLineBuckets) {
                 //EFP_LOGGER(true, LOGG_NOTIFY, "FLUSH HEAD!")
@@ -571,7 +568,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
 
                 for (auto &rBucket: lCandidates) {
                     if (lOldestFrameDelivered <= rBucket->mDeliveryOrder) {
-
                         // Here we introduce a new concept..
                         // If we are cleaning out the HOL. Only go soo far to either a gap (counter) or packet "non time out".
                         // If you remove the 'if' below HOL will clean out all super frames from the top of the buffer to the bottom of the buffer no matter the
@@ -617,7 +613,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                     rBucket->mBucketData = nullptr;
                 }
             } else {
-
                 // In this run we have not cleared the head.. is there a head to clear?
                 // We can't be in waiting for timout and we can't have a 0 time-out
                 // A 0 timout means out of order delivery else we-re here.
@@ -627,7 +622,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                 if (lExpectedNextFrameToDeliver < lCandidates[0]->mDeliveryOrder &&
                     mHeadOfLineBlockingTimeout &&
                     !lFoundHeadOfLineBlocking) {
-
                     //for (auto &x: candidates) { //DEBUG-Keep for now
                     //    std::cout << ">>>" << unsigned(x.deliveryOrder) << " is broken " << x.broken << std::endl;
                     //}
@@ -644,7 +638,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                 //Deliver only when head of line blocking is cleared and we're back to normal
                 if (!lFoundHeadOfLineBlocking) {
                     for (auto &rBucket: lCandidates) {
-
                         if (lExpectedNextFrameToDeliver != rBucket->mDeliveryOrder && mHeadOfLineBlockingTimeout) {
                             lFoundHeadOfLineBlocking = true; //Found hole
                             lHeadOfLineBlockingCounter = mHeadOfLineBlockingTimeout; //Number of times to spin this loop
@@ -841,7 +834,6 @@ ElasticFrameProtocolSender::packAndSend(const std::vector<uint8_t> &rPacket, Ela
                                                            uint8_t streamID)>& sendFunction) {
     return packAndSendFromPtr(rPacket.data(), rPacket.size(), dataContent, pts, dts, code, streamID, flags,
                               sendFunction);
-
 }
 
 // Pack data method. Fragments the data and calls the sendCallback method at the host level.
