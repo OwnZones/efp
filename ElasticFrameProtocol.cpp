@@ -17,7 +17,6 @@
 //---------------------------------------------------------------------------------------------------------------------
 
 ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster) {
-
     //Throw if you can't reserve the data.
     mBucketList = new Bucket[CIRCULAR_BUFFER_SIZE + 1];
 
@@ -36,7 +35,6 @@ ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t bucketTimeou
 }
 
 ElasticFrameProtocolReceiver::~ElasticFrameProtocolReceiver() {
-
     //We allocated so this cant be a nullptr
     delete[] mBucketList;
 
@@ -854,7 +852,6 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
                                                uint32_t code, uint8_t streamID, uint8_t flags,
                                                const std::function<void(const std::vector<uint8_t> &rSubPacket,
                                                                   uint8_t streamID)>& sendFunction) {
-
     std::lock_guard<std::mutex> lock(mSendMtx);
 
     if (sizeof(ElasticFrameType1) != sizeof(ElasticFrameType3)) {
@@ -1130,7 +1127,6 @@ int16_t efp_send_data(uint64_t efp_object,
 //This is a helper method for embedding data.
 //The preferred way of embedding data is to do that when assembling the frame to avoid memory copy
 size_t efp_add_embedded_data(uint8_t *pDst, uint8_t *pESrc, uint8_t *pDSrc, size_t embeddedDatasize, size_t dataSize, uint8_t type, uint8_t isLast) {
-
     if (pDst == nullptr) {
         return (sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader) + embeddedDatasize + dataSize);
     }
