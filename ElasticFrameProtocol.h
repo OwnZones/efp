@@ -74,7 +74,7 @@ namespace ElasticFrameContentNamespace {
     //Payload data defines ----- START ------
     enum ElasticFrameContentDefines : uint8_t {
         unknown     = 0x00, //Unknown content               //code
-        privatedata = 0x01, //Any user defined format       //USER (not needed)
+        privatedata = 0x01, //Any user defined format       //USER (not needed, the 32-bits may be used to define the private data)
         adts        = 0x02, //Mpeg-4 AAC ADTS framing       //ADTS (not needed)
         mpegts      = 0x03, //ITU-T H.222 188byte TS        //TSDT (not needed)
         mpegpes     = 0x04, //ITU-T H.222 PES packets       //MPES (not needed)
@@ -83,6 +83,7 @@ namespace ElasticFrameContentNamespace {
         jpegxs      = 0x07, //ISO/IEC 21122-3               //JPXS (not needed)
         pcmaudio    = 0x08, //AES-3 framing                 //AES3 (not needed)
         ndi         = 0x09, //*TBD*                         //NNDI (not needed)
+        json        = 0x0a, //RFC 8259                      //JSON (not needed)
 
         //Formats defined below (MSB='1') must also use 'code' to define the data format in the superframe
 
@@ -90,7 +91,9 @@ namespace ElasticFrameContentNamespace {
         didsdid = 0x81, //FOURCC format     //(FOURCC) (Must be the fourcc code for the format used)
         sdi     = 0x82, //FOURCC format     //(FOURCC) (Must be the fourcc code for the format used)
         h264    = 0x83, //ITU-T H.264       //ANXB = Annex B framing / AVCC = AVCC framing
-        h265    = 0x84  //ITU-T H.265       //ANXB = Annex B framing / AVCC = AVCC framing
+        h265    = 0x84, //ITU-T H.265       //ANXB = Annex B framing / AVCC = AVCC framing
+        h266    = 0x85, //ITU-T H.266       //ANXB = Annex B framing / AVCC = AVCC framing
+        av1     = 0x86  //ITU-T H.266       //XOBU = Open Bitstream Units framing
     };
 
     ///Embedded data types
@@ -156,8 +159,8 @@ enum class ElasticFrameMessages : int16_t {
     failedStoppingReceiver      = 5,  //The EFP receiver failed stopping it's resources.
     type0Frame                  = 7,  //Type0 frame
     efpSignalDropped            = 8,  //EFPSignal did drop the content since it's not declared
-    contentAlreadyListed        = 9,  //The content is already noted as listed.
-    contentNotListed            = 10, //The content is not noted as listed.
+    contentAlreadyListed        = 9,  //The content is already listed.
+    contentNotListed            = 10, //The content is not listed.
     deleteContentFail           = 11  //Failed finding the content to be deleted
 };
 
