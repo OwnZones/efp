@@ -1,5 +1,12 @@
-// ElasticFrameProtocol
 //
+//
+//   ______  _              _    _        ______
+//  |  ____|| |            | |  (_)      |  ____|
+//  | |__   | |  __ _  ___ | |_  _   ___ | |__  _ __  __ _  _ __ ___    ___
+//  |  __|  | | / _` |/ __|| __|| | / __||  __|| '__|/ _` || '_ ` _ \  / _ \
+//  | |____ | || (_| |\__ \| |_ | || (__ | |   | |  | (_| || | | | | ||  __/
+//  |______||_| \__,_||___/ \__||_| \___||_|   |_|   \__,_||_| |_| |_| \___|
+//                                                                  Protocol
 // UnitX Edgeware AB 2020
 //
 
@@ -532,16 +539,16 @@ private:
     // C-API callback if C++ mode it's a Dummy callback
     void gotData(pFramePtr &rPacket);
 
-    // Method assembling Type1 fragments
+    // Method unpacking Type1 fragments
     ElasticFrameMessages unpackType1(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource);
 
-    // Method assembling Type2 fragments
+    // Method unpacking Type2 fragments
     ElasticFrameMessages unpackType2(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource);
 
-    // Method assembling Type3 fragments
+    // Method unpacking Type3 fragments
     ElasticFrameMessages unpackType3(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource);
 
-    // The worker thread assembling fragments and delivering the superFrames to the deliveryWorker()
+    // The worker thread assembling unpacked fragments and delivering the superFrames to the deliveryWorker()
     void receiverWorker();
 
     // The worker thread acting as a bridge between EFP and the user
@@ -552,22 +559,25 @@ private:
     // Private methods ----- END ------
 
     // Internal lists and variables ----- START ------
-    Stream mStreams[UINT8_MAX]; //EFP-Stream information store
-    std::map<uint64_t , Bucket*> mBucketMap; //Sorted (super frame number) pointers to mBucketList items
-    Bucket *mBucketList; // Internal queue where all fragments are stored and superframes delivered from
-    uint32_t mBucketTimeout = 0; // Time out passed to receiver
-    uint32_t mHeadOfLineBlockingTimeout = 0; // HOL time out passed to receiver
-    std::mutex mNetMtx; //Mutex protecting the bucket queue
+    Stream mStreams[UINT8_MAX];                 // EFP-Stream information store
+    std::map<uint64_t , Bucket*> mBucketMap;    // Sorted (super frame number) pointers to mBucketList items
+    Bucket *mBucketList;                        // Internal queue where all fragments are stored and superframes delivered from
+    uint32_t mBucketTimeout = 0;                // Time out passed to receiver
+    uint32_t mHeadOfLineBlockingTimeout = 0;    // HOL time out passed to receiver
+    std::mutex mNetMtx;                         // Mutex protecting the bucket queue
+
     // Various counters to keep track of the different frames
     uint16_t mOldSuperFrameNumber = 0;
     uint64_t mSuperFrameRecalc = 0;
     bool mSuperFrameFirstTime = true;
+
     // Receiver thread management
     std::atomic_bool mIsWorkerThreadActive{};
     std::atomic_bool mIsDeliveryThreadActive{};
     std::atomic_bool mThreadActive{};
+
     // Mutex for thread safety
-    std::mutex mReceiveMtx; //Mutex protecting the recieve part
+    std::mutex mReceiveMtx;                     //Mutex protecting the receive part
     std::deque<pFramePtr> mSuperFrameQueue;
     std::mutex mSuperFrameMtx;
     std::condition_variable mSuperFrameDeliveryConditionVariable;
