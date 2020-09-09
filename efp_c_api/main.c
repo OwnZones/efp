@@ -44,7 +44,7 @@ void receive_embedded_data_callback(uint8_t *data, size_t size, uint8_t data_typ
     printf("Data: %s \n\n", data);
 }
 
-void receive_data_callback(uint8_t *pata,
+void receive_data_callback(uint8_t *data,
                            size_t size,
                            uint8_t data_content,
                            uint8_t broken,
