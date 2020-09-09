@@ -14,7 +14,6 @@ class UnitTest16 {
 public:
     bool startUnitTest();
 private:
-
     std::mutex debugPrintMutex;
 
     void sendData(const std::vector<uint8_t> &subPacket);

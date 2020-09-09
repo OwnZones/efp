@@ -77,14 +77,11 @@ bool UnitTest18::startUnitTest() {
     for (int packetNumber = 0; packetNumber < 5; packetNumber++) {
         result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, packetNumber + 1001, packetNumber + 1, 0,
                                           streamID, NO_FLAGS, [&](const std::vector<uint8_t> &subPacket, uint8_t streamID) {
-
                     ElasticFrameMessages info = myEFPReciever->receiveFragment(subPacket, 0);
                     if (info != ElasticFrameMessages::noError) {
                         unitTestFailed = true;
                         unitTestActive = false;
                     }
-
-
         }
                                             );
         if (result != ElasticFrameMessages::noError) {

@@ -24,7 +24,6 @@ int drop_counter = 0;
 int first_frame_broken_counter = 0;
 
 void send_data_callback(const uint8_t *data, size_t size, uint8_t stream_id) {
-
     drop_counter++;
     if (drop_counter == 5) {
         //Drop the ^ fragment
@@ -45,7 +44,7 @@ void receive_embedded_data_callback(uint8_t *data, size_t size, uint8_t data_typ
     printf("Data: %s \n\n", data);
 }
 
-void receive_data_callback(uint8_t *data,
+void receive_data_callback(uint8_t *pata,
                            size_t size,
                            uint8_t data_content,
                            uint8_t broken,
@@ -55,7 +54,6 @@ void receive_data_callback(uint8_t *data,
                            uint8_t stream_id,
                            uint8_t source,
                            uint8_t flags) {
-
     if (first_frame_broken_counter == 0 && broken) {
         printf("The first frame is broken. We know that. Let's not parse it since we don't know the integrity\n");
         first_frame_broken_counter++;

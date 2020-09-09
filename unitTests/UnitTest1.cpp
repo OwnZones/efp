@@ -18,7 +18,6 @@ void UnitTest1::sendData(const std::vector<uint8_t> &subPacket) {
 }
 
 void UnitTest1::gotData(ElasticFrameProtocolReceiver::pFramePtr &packet) {
-
 }
 
 bool UnitTest1::waitForCompletion() {

@@ -7,7 +7,10 @@
 //  | |____ | || (_| |\__ \| |_ | || (__ | |   | |  | (_| || | | | | ||  __/
 //  |______||_| \__,_||___/ \__||_| \___||_|   |_|   \__,_||_| |_| |_| \___|
 //                                                                  Protocol
-// UnitX Edgeware AB 2020
+// UnitX @ Edgeware AB 2020
+//
+// For more information, example usage and plug-ins please see
+// https://github.com/Unit-X/efp
 //
 
 // Prefixes used
@@ -53,9 +56,6 @@ extern "C" {
 }
 #endif
 
-//Generate the uint32_t 'code' out of 4 characters provided
-// It's already defined in elastic_frame_protocol_c_api.h -> #define EFP_CODE(c0, c1, c2, c3) (((c0)<<24) | ((c1)<<16) | ((c2)<<8) | (c3))
-
 ///Enable or disable the APIs used by the unit tests
 #define UNIT_TESTS
 
@@ -63,22 +63,22 @@ extern "C" {
 #define CIRCULAR_BUFFER_SIZE 0b1111111111111
 
 /// Flag defines used py EFP
-#define NO_FLAGS        0b00000000
-#define INLINE_PAYLOAD  0b00010000
-#define PRIORITY_P0     0b00000000
-#define PRIORITY_P1     0b00100000
-#define PRIORITY_P2     0b01000000
-#define PRIORITY_P3     0b01100000
-#define UNDEFINED_FLAG  0b10000000
+#define NO_FLAGS        0b00000000 // Normal operation
+#define INLINE_PAYLOAD  0b00010000 // If the frame contains inline payload the flag must be set
+#define PRIORITY_P0     0b00000000 // Low priority (not implemented)
+#define PRIORITY_P1     0b00100000 // Normal priority (not implemented)
+#define PRIORITY_P2     0b01000000 // High priority (not implemented)
+#define PRIORITY_P3     0b01100000 // God-mode priority (not implemented)
+#define UNDEFINED_FLAG  0b10000000 // TBD
 
 #define EFP_MAJOR_VERSION 0
 #define EFP_MINOR_VERSION 2
 
-//bitwise operations are used on members therefore the namespace is wrapping enum instead of 'enum class'
+// Bitwise operations are used on members therefore the namespace is wrapping enum instead of 'enum class'
 /// Definition of the data types supported by EFP
 namespace ElasticFrameContentNamespace {
-    ///Payload data types
-    //Payload data defines ----- START ------
+    /// Payload data types
+    // Payload data defines ----- START ------
     enum ElasticFrameContentDefines : uint8_t {
         unknown     = 0x00, //Unknown content               //code
         privatedata = 0x01, //Any user defined format       //USER (not needed, the 32-bits may be used to define the private data)
@@ -92,7 +92,7 @@ namespace ElasticFrameContentNamespace {
         ndi         = 0x09, //*TBD*                         //NNDI (not needed)
         json        = 0x0a, //RFC 8259                      //JSON (not needed)
 
-        //Formats defined below (MSB='1') must also use 'code' to define the data format in the superframe
+        // Formats defined below (MSB='1') must also use 'code' to define the data format in the superframe
 
         efpsig  = 0x80, //content format    //JSON / BINR
         didsdid = 0x81, //FOURCC format     //(FOURCC) (Must be the fourcc code for the format used)
@@ -103,7 +103,7 @@ namespace ElasticFrameContentNamespace {
         av1     = 0x86  //ITU-T H.266       //XOBU = Open Bitstream Units framing
     };
 
-    ///Embedded data types
+    /// Embedded data types
     enum ElasticFrameEmbeddedContentDefines : uint8_t {
         illegal             = 0x00, //May not be used
         embeddedprivatedata = 0x01, //Private data
@@ -113,7 +113,7 @@ namespace ElasticFrameContentNamespace {
         //Data type defines below here do not allow following fragments of embedded data.
     };
 
-    ///Embedded header define
+    /// Embedded header define
     struct ElasticEmbeddedHeader {
         uint8_t embeddedFrameType = ElasticFrameEmbeddedContentDefines::illegal;
         uint16_t size = 0;
@@ -188,12 +188,11 @@ enum class ElasticFrameMessages : int16_t {
  *
  * \author UnitX
  *
- * Contact: bitbucket:andersced
+ * Contact: https://github.com/andersc or https://github.com/Unit-X
  *
  */
 class ElasticFrameProtocolSender {
 public:
-
     /**
     * ElasticFrameProtocolSender constructor
     *@param setMTU The MTU to be used by the sender. Interval 256 - UINT16_MAX
@@ -302,7 +301,6 @@ public:
     //Used by unitTests ----END-----------------
 
 private:
-
     //Private methods ----- START ------
     // Used by the C - API
     void sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID);
@@ -328,13 +326,13 @@ private:
 /**
  * \class ElasticFrameProtocolReceiver
  *
- * \brief Class for receiving EFP fragments and assembling them to elementary data
+ * \brief Class for receiving EFP fragments and assembling them to elementary data (super frames)
  *
  * ElasticFrameProtocolReceiver is used for creating elementary data frames from EFP fragments
  *
  * \author UnitX
  *
- * Contact: bitbucket:andersced
+ * Contact: https://github.com/andersc or https://github.com/Unit-X
  *
  */
 class ElasticFrameProtocolReceiver {
@@ -342,7 +340,7 @@ public:
     /**
     * \class SuperFrame
     *
-    * \brief Contains the data and all parameters acosiated to that data
+    * \brief Contains the data and all parameters associated to that data
      * The data is 32-byte aligned in memory. 
     */
     class SuperFrame {
@@ -350,31 +348,27 @@ public:
         size_t mFrameSize = 0;           // Number of bytes in frame
         uint8_t *pFrameData = nullptr;   // Received frame data
         ElasticFrameContent mDataContent = ElasticFrameContent::unknown; // Superframe type
-        bool mBroken = true;
-        uint64_t mPts = UINT64_MAX;
-        uint64_t mDts = UINT64_MAX;
-        uint32_t mCode = UINT32_MAX;
-        uint8_t mStreamID = 0;
-        uint8_t mSource = 0;
-        uint8_t mFlags = NO_FLAGS;
+        bool mBroken = true;             // Is the data intact (false) or not (true)
+        uint64_t mPts = UINT64_MAX;      // Presentation Time Stamp
+        uint64_t mDts = UINT64_MAX;      // Decode Time Stamp
+        uint32_t mCode = UINT32_MAX;     // Code as defined by ElasticFrameContentDefines
+        uint8_t mStreamID = 0;           // A streamID used for stream separation of same content type (if you got more than one H264 streams for example)
+        uint8_t mSource = 0;             // A transparent value 'passed by' the receivedFragment method to separate multiple parallel EFP streams
+        uint8_t mFlags = NO_FLAGS;       // Flags used by the frame
 
         SuperFrame(const SuperFrame &) = delete;
 
         SuperFrame &operator=(const SuperFrame &) = delete;
 
         explicit SuperFrame(size_t memAllocSize) {
-
             int result = 0;
-
             //32 byte memory alignment for AVX2 processing.
-
 #ifdef _WIN64
             pFrameData = (uint8_t*)_aligned_malloc(memAllocSize, 32);
 #else
             result = posix_memalign((void **) &pFrameData, 32,
                                     memAllocSize);
 #endif
-
             if (pFrameData && !result) mFrameSize = memAllocSize;
         }
 
@@ -391,7 +385,7 @@ public:
 
     using pFramePtr = std::unique_ptr<SuperFrame>;
 
-    ///Constructor (defaults to 100ms timeout)
+    ///Constructor (defaults to 100ms timeout of not 100% assembled super frames)
     explicit ElasticFrameProtocolReceiver(uint32_t bucketTimeoutMaster = 10, uint32_t holTimeoutMaster = 0);
 
     ///Destructor
@@ -501,26 +495,30 @@ public:
     //Help methods ----------- END ----------
 
 private:
+    // A bucket is filled with network data and is part of the circular buffer
+    // The bucket when finished contains all the data in order for EFP to deliver
+    // a super frame. The bucket can also be delivered 'broken' if a time out is
+    // triggered.
 
     //Bucket  ----- START ------
     class Bucket {
     public:
-        bool mActive = false;
+        bool mActive = false; // Is this bucket in use?
         ElasticFrameContent mDataContent = ElasticFrameContent::unknown;
-        uint16_t mSavedSuperFrameNo = 0; //the SuperFrameNumber using this bucket.
-        uint32_t mTimeout = 0;
-        uint16_t mFragmentCounter = 0;
-        uint16_t mOfFragmentNo = 0;
-        uint64_t mDeliveryOrder = UINT64_MAX;
-        size_t mFragmentSize = 0;
-        uint64_t mPts = UINT64_MAX;
-        uint64_t mDts = UINT64_MAX;
-        uint32_t mCode = UINT32_MAX;
-        uint8_t mStream = 0;
-        uint8_t mSource = 0;
-        uint8_t mFlags = NO_FLAGS;
-        std::bitset<UINT16_MAX> mHaveReceivedPacket;
-        pFramePtr mBucketData = nullptr;
+        uint16_t mSavedSuperFrameNo = 0; // The SuperFrameNumber using this bucket.
+        uint32_t mTimeout = 0;  // A time out counter. Will most likely be changed to a uint64_t and compared to steady_clock
+        uint16_t mFragmentCounter = 0; // Current amout of fragments filled in this bucket
+        uint16_t mOfFragmentNo = 0; // Number of fragments expected in this bucket before 100% full
+        uint64_t mDeliveryOrder = UINT64_MAX; // The super frame counter
+        size_t mFragmentSize = 0;   // Size in bytes for fragments
+        uint64_t mPts = UINT64_MAX; // Presentation Time Stamp
+        uint64_t mDts = UINT64_MAX; // Decode Time Stamp
+        uint32_t mCode = UINT32_MAX; // Code as defined by the content type
+        uint8_t mStream = 0; // TBD
+        uint8_t mSource = 0; // TBD
+        uint8_t mFlags = NO_FLAGS; // Flags used
+        std::bitset<UINT16_MAX> mHaveReceivedPacket; // Bit-mask representing the fragments received
+        pFramePtr mBucketData = nullptr; //Pointer to the data
     };
     //Bucket ----- END ------
 
@@ -536,7 +534,7 @@ private:
     // Stop the reciever worker
     ElasticFrameMessages stopReceiver();
 
-    // C-API callback if C++ mode it's a Dummy callback
+    // C-API callback. If C++ is used this is a dummy callback
     void gotData(pFramePtr &rPacket);
 
     // Method unpacking Type1 fragments

@@ -73,7 +73,6 @@ void UnitTest14::gotData(ElasticFrameProtocolReceiver::pFramePtr &packet) {
                 unitTestActive = false;
                 return;
             }
-
         }
 
         uint8_t vectorChecker = 0;

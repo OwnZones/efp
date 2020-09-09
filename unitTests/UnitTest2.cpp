@@ -19,7 +19,6 @@ void UnitTest2::sendData(const std::vector<uint8_t> &subPacket) {
 }
 
 void UnitTest2::gotData(ElasticFrameProtocolReceiver::pFramePtr &packet) {
-
     if (packet->mPts != 1001 || packet->mCode != 2) {
         unitTestFailed = true;
         unitTestActive = false;

@@ -1,5 +1,16 @@
 //
-// UnitX Edgeware AB 2020
+//
+//   ______  _              _    _        ______
+//  |  ____|| |            | |  (_)      |  ____|
+//  | |__   | |  __ _  ___ | |_  _   ___ | |__  _ __  __ _  _ __ ___    ___
+//  |  __|  | | / _` |/ __|| __|| | / __||  __|| '__|/ _` || '_ ` _ \  / _ \
+//  | |____ | || (_| |\__ \| |_ | || (__ | |   | |  | (_| || | | | | ||  __/
+//  |______||_| \__,_||___/ \__||_| \___||_|   |_|   \__,_||_| |_| |_| \___|
+//                                                                  Protocol
+// UnitX @ Edgeware AB 2020
+//
+// For more information, example usage and plug-ins please see
+// https://github.com/Unit-X/efp
 //
 
 #ifndef EFP_ELASTICINTERNAL_H
@@ -7,13 +18,14 @@
 
 //Packet header part ----- START ------
 
-//Type 0,1,2 aso. are static from when defined. For new protocol functions/features add new types or flags
-//type15 is the maximum type number 4 bits used
-//* - 0x00 private fragment
-//* - 0x01 frame is larger than MTU
-//* - 0x02 frame is less than MTU
-//* - 0x03 The reminder of the data does not fit a type2 packet
-//* - 0x04 Minimalistic type2-type frame used when static EFP stream and reciever signaled known stream.
+// Type 0,1,2 aso. are static from when defined in this header file.
+// For new protocol functions/features add new types and/or flags
+// type15 is the maximum type number 4 bits used
+// * - 0x00 private fragment
+// * - 0x01 frame is larger than MTU
+// * - 0x02 frame is less than MTU or the tail of a larger superframe
+// * - 0x03 The reminder of the data does not fit a type2 packet but its the tail of the data.
+// * - 0x04 minimalistic type2-type frame used when static EFP stream and reciever signaled known stream.
 
 enum Frametype : uint8_t { //The 4 LSB are used! (The 4 MSB are the flags)
     type0 = 0,

@@ -36,7 +36,6 @@ void UnitTest15::gotData(ElasticFrameProtocolReceiver::pFramePtr &packet) {
         unitTestFailed = true;
         unitTestActive = false;
         return;
-
     }
 
     if (packet->mFlags & INLINE_PAYLOAD) {
@@ -80,7 +79,6 @@ void UnitTest15::gotData(ElasticFrameProtocolReceiver::pFramePtr &packet) {
                 unitTestActive = false;
                 return;
             }
-
         }
         if (unitTestPacketNumberReciever < 1000) {
             if (!(unitTestPacketNumberReciever % 100)) {
@@ -94,7 +92,6 @@ void UnitTest15::gotData(ElasticFrameProtocolReceiver::pFramePtr &packet) {
             std::cout << "UnitTest " << unsigned(activeUnitTest) << " done." << std::endl;
             return;
         }
-
     }
 }
 

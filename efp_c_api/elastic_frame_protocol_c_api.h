@@ -1,5 +1,16 @@
 //
-// Created by UnitX on 2020-02-16.
+//
+//   ______  _              _    _        ______
+//  |  ____|| |            | |  (_)      |  ____|
+//  | |__   | |  __ _  ___ | |_  _   ___ | |__  _ __  __ _  _ __ ___    ___
+//  |  __|  | | / _` |/ __|| __|| | / __||  __|| '__|/ _` || '_ ` _ \  / _ \
+//  | |____ | || (_| |\__ \| |_ | || (__ | |   | |  | (_| || | | | | ||  __/
+//  |______||_| \__,_||___/ \__||_| \___||_|   |_|   \__,_||_| |_| |_| \___|
+//                                                                  Protocol
+// UnitX @ Edgeware AB 2020
+//
+// For more information, example usage and plug-ins please see
+// https://github.com/Unit-X/efp
 //
 
 #ifndef EFP_EFP_C_API_ELASTIC_FRAME_PROTOCOL_C_API_H
@@ -17,7 +28,6 @@
 * @return 0xaabb where aa == major version and bb == minor version
 */
 uint16_t efp_get_version();
-
 
 /**
 * efp_init_send

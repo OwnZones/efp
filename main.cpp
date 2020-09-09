@@ -23,7 +23,6 @@
 #include <iostream>
 
 int main() {
-
     //PerformanceLab sends/receives a endless stream of packets (Used when profiling the code)
     //PerformanceLab myPerformanceLab;
     //myPerformanceLab.startUnitTest();
