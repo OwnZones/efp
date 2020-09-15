@@ -80,5 +80,6 @@ fabric.properties
 # Build directories
 /cmake-build-debug/
 /cmake-build-release/
+/cmake-build-debug-coverage/
 /efp.cbp
 .idea/

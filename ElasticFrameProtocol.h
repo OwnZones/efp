@@ -33,9 +33,7 @@
 #include <map>
 
 #ifndef _WIN64
-
 #include <unistd.h>
-
 #endif
 
 #include <functional>
@@ -182,9 +180,7 @@ enum class ElasticFrameMessages : int16_t {
 /**
  * \class ElasticFrameProtocolSender
  *
- * \brief
- *
- * ElasticFrameProtocolSender can be used to frame elementary streams to EFP fragments for transport over any network technology
+ * \brief ElasticFrameProtocolSender can be used to frame elementary streams to EFP fragments for transport over any network technology
  *
  * \author UnitX
  *
@@ -250,7 +246,7 @@ public:
     /**
     * Send packet callback
     *
-    * @param rSubPacket The data to send
+    * @rSubPacket The data to send
     * @streamID EFP stream ID
     */
     std::function<void(const std::vector<uint8_t> &rSubPacket, uint8_t streamID)> sendCallback = nullptr;
@@ -406,8 +402,9 @@ public:
     /**
     * Method to feed the network fragments received when the data is a pointer
     *
-    * @param rSubPacket The data received
-    * @param fromSource the unique EFP source id. Provided by the user of the EFP protocol
+    * @pSubPacket pointer to data
+    * @packetSize data size
+    * @fromSource the unique EFP source id. Provided by the user of the EFP protocol
     * @return ElasticFrameMessages
     */
     ElasticFrameMessages receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource);
