@@ -24,13 +24,14 @@
 //
 //---------------------------------------------------------------------------------------------------------------------
 
-ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster) {
+ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t bucketTimeoutMaster, uint32_t holTimeoutMaster, std::shared_ptr<ElasticFrameProtocolContext> pCTX) {
     //Throw if you can't reserve the data.
     mBucketList = new Bucket[CIRCULAR_BUFFER_SIZE + 1];
 
+    mCTX = pCTX;
     c_recieveCallback = nullptr;
     c_recieveEmbeddedDataCallback = nullptr;
-    receiveCallback = std::bind(&ElasticFrameProtocolReceiver::gotData, this, std::placeholders::_1);
+    receiveCallback = std::bind(&ElasticFrameProtocolReceiver::gotData, this, std::placeholders::_1, std::placeholders::_2);
 
     mBucketTimeout = bucketTimeoutMaster;
     mHeadOfLineBlockingTimeout = holTimeoutMaster;
@@ -56,7 +57,7 @@ ElasticFrameProtocolReceiver::~ElasticFrameProtocolReceiver() {
 }
 
 // C API callback. Dummy callback if C++
-void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFramePtr &rPacket) {
+void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX) {
     if (c_recieveCallback) {
         size_t payloadDataPosition = 0;
         if (c_recieveEmbeddedDataCallback && (rPacket->mFlags & (uint8_t)INLINE_PAYLOAD) && !rPacket->mBroken) {
@@ -438,7 +439,7 @@ void ElasticFrameProtocolReceiver::deliveryWorker() {
         }
 
         if (lSuperframe) {
-            receiveCallback(lSuperframe);
+            receiveCallback(lSuperframe, mCTX ? mCTX.get() : nullptr);
         }
     }
     mIsDeliveryThreadActive = false;
@@ -803,7 +804,8 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::extractEmbeddedData(ElasticFr
 // Constructor setting the MTU
 // Limit the MTU to uint16_t MAX and UINT8_MAX min.
 // The lower limit is actually type2frameSize+1, keep it at 255 for now
-ElasticFrameProtocolSender::ElasticFrameProtocolSender(uint16_t setMTU) {
+ElasticFrameProtocolSender::ElasticFrameProtocolSender(uint16_t setMTU, std::shared_ptr<ElasticFrameProtocolContext> pCTX) {
+    mCTX = pCTX;
     c_sendCallback = nullptr;
     mSendBufferEnd.reserve(setMTU);
     mSendBufferFixed.resize(setMTU);
@@ -815,7 +817,7 @@ ElasticFrameProtocolSender::ElasticFrameProtocolSender(uint16_t setMTU) {
         mCurrentMTU = setMTU;
     }
 
-    sendCallback = std::bind(&ElasticFrameProtocolSender::sendData, this, std::placeholders::_1, std::placeholders::_2);
+    sendCallback = std::bind(&ElasticFrameProtocolSender::sendData, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
     EFP_LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocolSender constructed")
 }
 
@@ -824,7 +826,7 @@ ElasticFrameProtocolSender::~ElasticFrameProtocolSender() {
 }
 
 // Dummy callback for transmitter
-void ElasticFrameProtocolSender::sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID) {
+void ElasticFrameProtocolSender::sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID, ElasticFrameProtocolContext* pCTX) {
     if (c_sendCallback) {
         c_sendCallback(rSubPacket.data(), rSubPacket.size(), streamID);
     } else {
@@ -906,7 +908,7 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
         if (sendFunction) {
             sendFunction(mSendBufferEnd, streamID);
         } else {
-            sendCallback(mSendBufferEnd, streamID);
+            sendCallback(mSendBufferEnd, streamID, mCTX ? mCTX.get() : nullptr);
         }
         mSuperFrameNoGenerator++;
         return ElasticFrameMessages::noError;
@@ -943,7 +945,7 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
         if (sendFunction) {
             sendFunction(mSendBufferFixed, streamID);
         } else {
-            sendCallback(mSendBufferFixed, streamID);
+            sendCallback(mSendBufferFixed, streamID, mCTX ? mCTX.get() : nullptr);
         }
     }
 
@@ -965,7 +967,7 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
         if (sendFunction) {
             sendFunction(mSendBufferEnd, streamID);
         } else {
-            sendCallback(mSendBufferEnd, streamID);
+            sendCallback(mSendBufferEnd, streamID, mCTX ? mCTX.get() : nullptr);
         }
     }
 
@@ -1002,7 +1004,7 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
     if (sendFunction) {
         sendFunction(mSendBufferEnd, streamID);
     } else {
-        sendCallback(mSendBufferEnd, streamID);
+        sendCallback(mSendBufferEnd, streamID, mCTX ? mCTX.get() : nullptr);
     }
     mSuperFrameNoGenerator++;
     return ElasticFrameMessages::noError;

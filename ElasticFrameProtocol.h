@@ -31,6 +31,7 @@
 #include <cmath>
 #include <thread>
 #include <map>
+#include <any>
 
 #ifndef _WIN64
 #include <unistd.h>
@@ -169,6 +170,14 @@ enum class ElasticFrameMessages : int16_t {
     deleteContentFail           = 11  //Failed finding the content to be deleted
 };
 
+//Optional context passed to the callbacks
+class ElasticFrameProtocolContext {
+public:
+    std::any mObject = nullptr;         // For safe object lifecycles
+    void* mUnsafePointer = nullptr;     // Provided as a lightweight alternative for unsafe pointers
+    uint64_t mValue = 0;                // Provided as a generic counter
+};
+
 //---------------------------------------------------------------------------------------------------------------------
 //
 //
@@ -194,7 +203,7 @@ public:
     *@param setMTU The MTU to be used by the sender. Interval 256 - UINT16_MAX
     *
     */
-    explicit ElasticFrameProtocolSender(uint16_t setMTU);
+    explicit ElasticFrameProtocolSender(uint16_t setMTU, std::shared_ptr<ElasticFrameProtocolContext> pCTX = {});
 
     ///Destructor
     virtual ~ElasticFrameProtocolSender();
@@ -249,7 +258,7 @@ public:
     * @rSubPacket The data to send
     * @streamID EFP stream ID
     */
-    std::function<void(const std::vector<uint8_t> &rSubPacket, uint8_t streamID)> sendCallback = nullptr;
+    std::function<void(const std::vector<uint8_t> &rSubPacket, uint8_t streamID, ElasticFrameProtocolContext* pCTX)> sendCallback = nullptr;
 
     /**
     * Send packet callback (C-API version)
@@ -299,7 +308,7 @@ public:
 private:
     //Private methods ----- START ------
     // Used by the C - API
-    void sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID);
+    void sendData(const std::vector<uint8_t> &rSubPacket, uint8_t streamID, ElasticFrameProtocolContext* pCTX);
     //Private methods ----- END ------
 
     // Internal lists and variables ----- START ------
@@ -308,6 +317,7 @@ private:
     uint16_t mSuperFrameNoGenerator = 0;
     std::vector<uint8_t> mSendBufferFixed;
     std::vector<uint8_t> mSendBufferEnd;
+    std::shared_ptr<ElasticFrameProtocolContext> mCTX = nullptr;
     // Internal lists and variables ----- END -----
 };
 
@@ -382,7 +392,7 @@ public:
     using pFramePtr = std::unique_ptr<SuperFrame>;
 
     ///Constructor (defaults to 100ms timeout of not 100% assembled super frames)
-    explicit ElasticFrameProtocolReceiver(uint32_t bucketTimeoutMaster = 10, uint32_t holTimeoutMaster = 0);
+    explicit ElasticFrameProtocolReceiver(uint32_t bucketTimeoutMaster = 10, uint32_t holTimeoutMaster = 0, std::shared_ptr<ElasticFrameProtocolContext> pCTX = {});
 
     ///Destructor
     virtual ~ElasticFrameProtocolReceiver();
@@ -424,7 +434,7 @@ public:
     * -> mStreamID The EFP-stream ID the data is associated with.
     * -> mFlags signal what flags are used
     */
-    std::function<void(pFramePtr &rPacket)> receiveCallback = nullptr;
+    std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)> receiveCallback = nullptr;
 
     /**
     * Recieve data callback (C-API version)
@@ -532,7 +542,7 @@ private:
     ElasticFrameMessages stopReceiver();
 
     // C-API callback. If C++ is used this is a dummy callback
-    void gotData(pFramePtr &rPacket);
+    void gotData(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX);
 
     // Method unpacking Type1 fragments
     ElasticFrameMessages unpackType1(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource);
@@ -577,6 +587,7 @@ private:
     std::mutex mSuperFrameMtx;
     std::condition_variable mSuperFrameDeliveryConditionVariable;
     bool mSuperFrameReady = false;
+    std::shared_ptr<ElasticFrameProtocolContext> mCTX = nullptr;
     // Internal lists and variables ----- END ------
 };
 

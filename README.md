@@ -52,7 +52,7 @@ Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:
 
 ## Installation
 
-Requires cmake version >= **3.10** and **C++14**
+Requires cmake version >= **3.10** and **C++17**
 
 **Release:**
 
