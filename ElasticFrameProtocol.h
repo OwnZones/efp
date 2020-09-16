@@ -140,8 +140,8 @@ enum class ElasticFrameMessages : int16_t {
     internalCalculationError    = -15, //The sender encountered a condition it can't handle
     notDefinedError             = -14, //Not defined
     bufferOutOfBounds           = -13, //The receiver circular buffer has wrapped around and all data in the buffer is from now untrusted also data prior to this may have been wrong.
-                                       //This error can be triggered if there is a super high data rate data coming in with a large gap/loss of the incoming fragments in the flow
-                                       //Then broken superFrames will be buffered and new incoming data will claim buffers. When there are no more buffers to claim this error will be triggered.
+    //This error can be triggered if there is a super high data rate data coming in with a large gap/loss of the incoming fragments in the flow
+    //Then broken superFrames will be buffered and new incoming data will claim buffers. When there are no more buffers to claim this error will be triggered.
     bufferOutOfResources        = -12, //This error is indicating there are no more buffer resources. In the unlikely event where all frames miss fragment(s) and the timeout is set high
     reservedPTSValue            = -11, //UINT64_MAX is a EFP reserved value
     reservedDTSValue            = -10, //UINT64_MAX is a EFP reserved value
@@ -159,8 +159,8 @@ enum class ElasticFrameMessages : int16_t {
 
     notImplemented              = 1,  //Feature/function/level/method/system aso. not implemented.
     duplicatePacketReceived     = 2,  //If the underlying infrastructure is handing EFP duplicate segments the second packet of the duplicate will generate this error if the
-                                      //The superFrame is still not delivered to the host system. if it has then tooOldFragment will be returned instead.
-                                      //Discarded and the tooOldFragment is triggered.
+    //The superFrame is still not delivered to the host system. if it has then tooOldFragment will be returned instead.
+    //Discarded and the tooOldFragment is triggered.
     tooOldFragment              = 3,  //If the superFrame has been delivered 100% complete or fragments of it due to a timeout and a fragment belonging to the superFrame arrives then it's
     failedStoppingReceiver      = 5,  //The EFP receiver failed stopping it's resources.
     type0Frame                  = 7,  //Type0 frame
@@ -249,7 +249,7 @@ public:
                        uint64_t dts,
                        uint32_t code, uint8_t streamID, uint8_t flags,
                        const std::function<void(const std::vector<uint8_t> &rSubPacket,
-                                          uint8_t streamID)>& sendFunction = nullptr);
+                                                uint8_t streamID)>& sendFunction = nullptr);
 
 
     /**
@@ -283,8 +283,8 @@ public:
     * @return ElasticFrameMessages
     */
     static ElasticFrameMessages addEmbeddedData(std::vector<uint8_t> *pPacket, void *pPrivateData, size_t privateDataSize,
-                                         ElasticEmbeddedFrameContent content = ElasticEmbeddedFrameContent::illegal,
-                                         bool isLast = false);
+                                                ElasticEmbeddedFrameContent content = ElasticEmbeddedFrameContent::illegal,
+                                                bool isLast = false);
     //Help methods ----------- END ----------
 
     ///Delete copy and move constructors and assign operators
@@ -347,7 +347,7 @@ public:
     * \class SuperFrame
     *
     * \brief Contains the data and all parameters associated to that data
-     * The data is 32-byte aligned in memory. 
+     * The data is 32-byte aligned in memory.
     */
     class SuperFrame {
     public:
@@ -412,9 +412,9 @@ public:
     /**
     * Method to feed the network fragments received when the data is a pointer
     *
-    * @pSubPacket pointer to data
-    * @packetSize data size
-    * @fromSource the unique EFP source id. Provided by the user of the EFP protocol
+    * @param pSubPacket pointer to data
+    * @param packetSize data size
+    * @param fromSource the unique EFP source id. Provided by the user of the EFP protocol
     * @return ElasticFrameMessages
     */
     ElasticFrameMessages receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t packetSize, uint8_t fromSource);
@@ -422,7 +422,7 @@ public:
     /**
     * Receive data from the EFP worker thread
     *
-    * @param rPacket superframe received
+    * @rPacket superframe received
     * rPacket contains
     * -> pFrameData Pointer to the data.
     * -> mFrameSize Size of the data.
@@ -474,9 +474,9 @@ public:
     * @pts PTS of the frame (Can be used to associate with a EFP frame).
     */
     void (*c_recieveEmbeddedDataCallback)(uint8_t *data,
-                              size_t size,
-                              uint8_t data_type,
-                              uint64_t pts);
+                                          size_t size,
+                                          uint8_t data_type,
+                                          uint64_t pts);
 
     ///Delete copy and move constructors and assign operators
     ElasticFrameProtocolReceiver(ElasticFrameProtocolReceiver const &) = delete;              // Copy construct
@@ -498,7 +498,7 @@ public:
     * @return ElasticFrameMessages
     */
     static ElasticFrameMessages extractEmbeddedData(pFramePtr &rPacket, std::vector<std::vector<uint8_t>> *pEmbeddedDataList,
-                                             std::vector<uint8_t> *pDataContent, size_t *pPayloadDataPosition);
+                                                    std::vector<uint8_t> *pDataContent, size_t *pPayloadDataPosition);
     //Help methods ----------- END ----------
 
 private:

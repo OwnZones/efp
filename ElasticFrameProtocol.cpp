@@ -66,7 +66,7 @@ void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFrameP
 
             //This method is not optimal since it moves data.. and there is no need to move any data. FIXME.
             ElasticFrameMessages info = extractEmbeddedData(rPacket, &embeddedData, &embeddedContentFlag,
-                                                                      &payloadDataPosition);
+                                                            &payloadDataPosition);
             if (info != ElasticFrameMessages::noError) {
                 EFP_LOGGER(true, LOGG_ERROR, "extractEmbeddedData fail")
                 return;
@@ -456,13 +456,12 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
     uint64_t lHeadOfLineBlockingTail = 0;
     uint64_t lExpectedNextFrameToDeliver = 0;
     uint64_t lOldestFrameDelivered = 0;
-    uint64_t lSavedPTS = 0;
     int64_t lTimeReference = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::steady_clock::now().time_since_epoch()).count();
 
     std::vector<Bucket*> lCandidates;
     lCandidates.reserve(CIRCULAR_BUFFER_SIZE); //Reserve our maximum possible number of candidates
-    
+
 //    uint32_t lTimedebuggerPointer = 0;
 //    int64_t lTimeDebugger[100];
 
@@ -494,7 +493,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
         }
 
         mNetMtx.lock();
-        uint32_t lActiveCount = mBucketMap.size();
+        uint32_t lActiveCount = (uint32_t)mBucketMap.size();
         if (!lActiveCount) {
             mNetMtx.unlock();
             continue; //Nothing to process
@@ -616,7 +615,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                     }
                     lExpectedNextFrameToDeliver = rBucket->mDeliveryOrder + 1;
                     // std::cout << " (y) " << unsigned(expectedNextFrameToDeliver) << std::endl;
-                    lSavedPTS = rBucket->mPts;
                     mBucketMap.erase(rBucket->mDeliveryOrder);
                     rBucket->mActive = false;
                     rBucket->mBucketData = nullptr;
@@ -639,9 +637,9 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                     lHeadOfLineBlockingCounter = mHeadOfLineBlockingTimeout; //Number of times to spin this loop
                     lHeadOfLineBlockingTail = lCandidates[0]->mDeliveryOrder; //This is the tail
                     //EFP_LOGGER(true, LOGG_NOTIFY, "HOL " << unsigned(expectedNextFrameToDeliver) << " "
-                    //<< unsigned(bucketList[candidates[0].bucket].deliveryOrder)
-                    //<< " tail " << unsigned(headOfLineBlockingTail)
-                    //<< " savedPTS " << unsigned(savedPTS))
+                    // << unsigned(bucketList[candidates[0].bucket].deliveryOrder)
+                    // << " tail " << unsigned(headOfLineBlockingTail)
+                    // << " savedPTS " << unsigned(savedPTS))
                 }
 
                 //Deliver only when head of line blocking is cleared and we're back to normal
@@ -677,7 +675,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                             }
                             mSuperFrameDeliveryConditionVariable.notify_one();
                         }
-                        lSavedPTS = rBucket->mPts;
                         mBucketMap.erase(rBucket->mDeliveryOrder);
                         rBucket->mActive = false;
                         rBucket->mBucketData = nullptr;
@@ -841,7 +838,7 @@ ElasticFrameProtocolSender::packAndSend(const std::vector<uint8_t> &rPacket, Ela
                                         uint64_t dts,
                                         uint32_t code, uint8_t streamID, uint8_t flags,
                                         const std::function<void(const std::vector<uint8_t> &rSubPacket,
-                                                           uint8_t streamID)>& sendFunction) {
+                                                                 uint8_t streamID)>& sendFunction) {
     return packAndSendFromPtr(rPacket.data(), rPacket.size(), dataContent, pts, dts, code, streamID, flags,
                               sendFunction);
 }
@@ -853,7 +850,7 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *rPacket, size_t pa
                                                uint64_t pts, uint64_t dts,
                                                uint32_t code, uint8_t streamID, uint8_t flags,
                                                const std::function<void(const std::vector<uint8_t> &rSubPacket,
-                                                                  uint8_t streamID)>& sendFunction) {
+                                                                        uint8_t streamID)>& sendFunction) {
     std::lock_guard<std::mutex> lock(mSendMtx);
 
     if (sizeof(ElasticFrameType1) != sizeof(ElasticFrameType3)) {
@@ -1088,7 +1085,7 @@ uint64_t efp_init_receive(uint32_t bucketTimeout,
                                     size_t,
                                     uint8_t,
                                     uint64_t)
-                                    ) {
+) {
     std::lock_guard<std::mutex> lock(efp_receive_mutex);
     uint64_t local_c_object_handle = c_object_handle;
     auto result = efp_receive_base_map.insert(
@@ -1139,7 +1136,7 @@ size_t efp_add_embedded_data(uint8_t *pDst, uint8_t *pESrc, uint8_t *pDSrc, size
         type |= ElasticEmbeddedFrameContent::lastembeddedcontent;
     }
     lEmbeddedHeader.embeddedFrameType = type;
-    
+
     //Copy the header
     std::copy_n((uint8_t*)&lEmbeddedHeader, sizeof(ElasticFrameContentNamespace::ElasticEmbeddedHeader), pDst);
     //Copy the embedded data

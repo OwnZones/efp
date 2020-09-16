@@ -22,6 +22,14 @@ void UnitTest12::sendData(const std::vector<uint8_t> &subPacket) {
                 for (size_t fragment=unitTestsSavedData2DLocal.size();fragment > 0;fragment--) {
                     if (item != 3) {
                         info =myEFPReciever->receiveFragment(unitTestsSavedData2DLocal[fragment-1],0);
+                        if (info != ElasticFrameMessages::noError) {
+                            std::cout << "Unit test number: " << unsigned(activeUnitTest)
+                                      << " Failed in the receiveFragment method. Error-> " << signed(info)
+                                      << std::endl;
+                            delete myEFPPacker;
+                            delete myEFPReciever;
+                            return;
+                        }
                     }
                 }
             }
