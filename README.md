@@ -50,6 +50,12 @@ Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:
 
 [![unit_tests](https://github.com/Unit-X/efp/workflows/unit_tests/badge.svg?branch=master)](https://github.com/Unit-X/efp/actions?query=workflow%3Aunit_tests) **(Unit tests running on Ubuntu)**
 
+**Issues**
+
+[![Percentage of issues still open](http://isitmaintained.com/badge/open/Unit-X/efp.svg)](http://isitmaintained.com/project/Unit-X/efp "Percentage of issues still open")
+
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/Unit-X/efp.svg)](http://isitmaintained.com/project/Unit-X/efp "Average time to resolve an issue")
+
 ## Installation
 
 Requires cmake version >= **3.10** and **C++17**
@@ -98,25 +104,28 @@ The dynamic EFP library
 
 The EFP class/library can be made a reciever or sender. This is configured during creation as decribed below.
 
+The unit test
+
 **Sender:**
 
 ```cpp
-// The callback function referenced as 'sendCallback'
-void sendData(const std::vector<uint8_t> &subPacket, uint8_t streamID) {
-// Send the subPacket data 
+// The send fragment callback -> 'sendCallback'
+void sendData(const std::vector<uint8_t> &subPacket, uint8_t lStreamID, (optional context.. see below)) {
+// Send the fragment data 
 // UDP.send(subPacket);
 }
 
-// The data to be sent
-std::vector<uint8_t> myData;
+// The data to be sent using EFP
+std::vector<uint8_t> lData;
 
 // Create your sender passing the MTU of the underlying protocol.
-ElasticFrameProtocolSender myEFPSender(MTU);
+// You may also provide additional callback context please see unit test 19.
+ElasticFrameProtocolSender myEFPSender(MTU, (optional context));
 
 // Register your callback sending the packets
 // The callback will be called on the same thread calling 'packAndSend'
 //optionally also a std::placeholders::_2 if you want the EFP streamID
-myEFPSender.sendCallback = std::bind(&sendData, std::placeholders::_1, std::placeholders::_2);
+myEFPSender.sendCallback = std::bind(&sendData, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 (optional if context is used));
 
 // Send the data
 // param1 = The data
@@ -127,9 +136,10 @@ myEFPSender.sendCallback = std::bind(&sendData, std::placeholders::_1, std::plac
 // See the header file detailing what CODE should be set to
 // param6 = Stream number (uint8_t) a unique value for that EFP-Stream
 // param7 = FLAGS (used for various signaling in the protocol) 
-myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 0, EFP_CODE('A', 'N', 'X', 'B'), 2, NO_FLAGS);
+// param8 = Optional lambda (See unit test 18) 
+myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 0, EFP_CODE('A', 'N', 'X', 'B'), 2, NO_FLAGS, (optional lambda));
 
-//If you got your data as a pointer there is also the method 'packAndSendFromPtr' so you don't need to copy your data into a vector first.
+//If you got your data as a pointer there is also the method 'packAndSendFromPtr' so you don't have to copy your data into a vector first.
 
 
 ```
@@ -149,9 +159,10 @@ myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 0, EFP_CODE('A', '
 // mPts contains the pts value used in the superFrame
 // mDts contains the pts value used in the superFrame
 // mCode contains the code sent (if used)
+// mStreamID is the value passed to the receiveFragment method
 // mStream is the stream number to associate to the data
 // mFlags contains the flags used by the superFrame
-void gotData(ElasticFrameProtocol::pFramePtr &rFrame)
+void gotData(ElasticFrameProtocol::pFramePtr &rFrame, (optional context))
 {
 			// Use the data in your application 
 }
@@ -161,10 +172,10 @@ void gotData(ElasticFrameProtocol::pFramePtr &rFrame)
 ElasticFrameProtocolReceiver myEFPReceiver(5, 2);
 
 // Register the callback
-myEFPReceiver.receiveCallback = std::bind(&gotData, std::placeholders::_1);
+myEFPReceiver.receiveCallback = std::bind(&gotData, std::placeholders::_1, std::placeholders::_2 (optional));
 
 // Receive a EFP fragment
-myEFPReceiver.receiveFragment(subPacket,0);
+myEFPReceiver.receiveFragment(subPacket, uint8_t number (is the mStreamID for stream separation) );
 
 //If you got your data as a pointer there is also the method 'receiveFragmentFromPtr' so you don't need to copy your data into a vector first.
 
