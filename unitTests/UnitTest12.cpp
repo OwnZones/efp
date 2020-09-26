@@ -141,7 +141,7 @@ bool UnitTest12::startUnitTest() {
     ElasticFrameMessages result;
     std::vector<uint8_t> mydata;
     uint8_t streamID=1;
-    myEFPReciever = new (std::nothrow) ElasticFrameProtocolReceiver(10, 4);
+    myEFPReciever = new (std::nothrow) ElasticFrameProtocolReceiver(100, 40);
     myEFPPacker = new (std::nothrow) ElasticFrameProtocolSender(MTU);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;

@@ -63,7 +63,7 @@ bool UnitTest17::startUnitTest() {
     ElasticFrameMessages result;
     std::vector<uint8_t> mydata;
     uint8_t streamID = 1;
-    myEFPReciever = new(std::nothrow) ElasticFrameProtocolReceiver(5, 2);
+    myEFPReciever = new(std::nothrow) ElasticFrameProtocolReceiver(50, 20);
     myEFPPacker = new(std::nothrow) ElasticFrameProtocolSender(MTU);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;
@@ -101,7 +101,7 @@ bool UnitTest17::startUnitTest() {
   myEFPPacker->sendCallback = std::bind(&UnitTest17::sendData, this, std::placeholders::_1);
   myEFPPacker->setSuperFrameNo(4567);
   delete myEFPReciever;
-  myEFPReciever = new(std::nothrow) ElasticFrameProtocolReceiver(5, 2);
+  myEFPReciever = new(std::nothrow) ElasticFrameProtocolReceiver(50, 20);
   myEFPReciever->receiveCallback = std::bind(&UnitTest17::gotData, this, std::placeholders::_1);
 
   for (uint64_t packetNumber = 0; packetNumber < PACKETS_2_ROUND; packetNumber++) {

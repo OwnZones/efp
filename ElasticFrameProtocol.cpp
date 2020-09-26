@@ -24,7 +24,7 @@
 //
 //---------------------------------------------------------------------------------------------------------------------
 
-ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t lBucketTimeoutMaster, uint32_t lHolTimeoutMaster, std::shared_ptr<ElasticFrameProtocolContext> pCTX) {
+ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t lBucketTimeoutMasterms, uint32_t lHolTimeoutMasterms, std::shared_ptr<ElasticFrameProtocolContext> pCTX, EFPReceiverMode lReceiverMode) {
     //Throw if you can't reserve the data.
     mBucketList = new Bucket[CIRCULAR_BUFFER_SIZE + 1];
 
@@ -33,13 +33,17 @@ ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t lBucketTimeo
     c_recieveEmbeddedDataCallback = nullptr;
     receiveCallback = std::bind(&ElasticFrameProtocolReceiver::gotData, this, std::placeholders::_1, std::placeholders::_2);
 
-    mBucketTimeout = lBucketTimeoutMaster;
-    mHeadOfLineBlockingTimeout = lHolTimeoutMaster;
-    mThreadActive = true;
-    mIsWorkerThreadActive = true;
-    mIsDeliveryThreadActive = true;
-    std::thread(std::bind(&ElasticFrameProtocolReceiver::receiverWorker, this)).detach();
-    std::thread(std::bind(&ElasticFrameProtocolReceiver::deliveryWorker, this)).detach();
+    mBucketTimeout = (lBucketTimeoutMasterms * 1000) / (WORKER_THREAD_SLEEP_US);
+    mHeadOfLineBlockingTimeout = (lHolTimeoutMasterms * 1000) / (WORKER_THREAD_SLEEP_US);
+
+    mCurrentMode = lReceiverMode;
+    if (mCurrentMode == EFPReceiverMode::THREADED) {
+        mThreadActive = true;
+        mIsWorkerThreadActive = true;
+        mIsDeliveryThreadActive = true;
+        std::thread(std::bind(&ElasticFrameProtocolReceiver::receiverWorker, this)).detach();
+        std::thread(std::bind(&ElasticFrameProtocolReceiver::deliveryWorker, this)).detach();
+    }
     EFP_LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol constructed")
 }
 
@@ -113,7 +117,7 @@ uint64_t ElasticFrameProtocolReceiver::superFrameRecalculator(uint16_t lSuperFra
 
 // Unpack method for type1 packets. Type1 packets are the parts of superFrames larger than the MTU
 ElasticFrameMessages
-ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource) {
+ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction) {
     std::lock_guard<std::mutex> lock(mNetMtx);
 
     ElasticFrameType1 *lType1Frame = (ElasticFrameType1 *) pSubPacket;
@@ -143,7 +147,8 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t lPac
         pThisBucket->mPts = UINT64_MAX;
         pThisBucket->mDts = UINT64_MAX;
         pThisBucket->mHaveReceivedFragment[lType1Frame->hFragmentNo] = true;
-        pThisBucket->mTimeout = mBucketTimeout;
+        pThisBucket->mTimeout = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count() + (mBucketTimeout * 1000);
         pThisBucket->mFragmentCounter = 0;
         pThisBucket->mOfFragmentNo = lType1Frame->hOfFragmentNo;
         pThisBucket->mFragmentSize = (lPacketSize - sizeof(ElasticFrameType1));
@@ -158,6 +163,9 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t lPac
             return ElasticFrameMessages::memoryAllocationError;
         }
         std::copy_n(pSubPacket + sizeof(ElasticFrameType1), lPacketSize - sizeof(ElasticFrameType1), pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
+        if (mCurrentMode == EFPReceiverMode::RUN_TO_COMPLETION) {
+            runToCompletionMethod(rReceiveFunction);
+        }
         return ElasticFrameMessages::noError;
     }
 
@@ -189,7 +197,8 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t lPac
     }
 
     // Let's re-set the timout and let also add +1 to the fragment counter
-    pThisBucket->mTimeout = mBucketTimeout;
+    pThisBucket->mTimeout =  std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count() + (mBucketTimeout * 1000);
     pThisBucket->mFragmentCounter++;
 
     // Move the data to the correct fragment position in the frame.
@@ -200,6 +209,9 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t lPac
 
     size_t lInsertDataPointer = pThisBucket->mFragmentSize * lType1Frame->hFragmentNo;
     std::copy_n(pSubPacket + sizeof(ElasticFrameType1), lPacketSize - sizeof(ElasticFrameType1), pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
+    if (mCurrentMode == EFPReceiverMode::RUN_TO_COMPLETION) {
+        runToCompletionMethod(rReceiveFunction);
+    }
     return ElasticFrameMessages::noError;
 }
 
@@ -208,7 +220,7 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t lPac
 // The data IS the last data of a sequence
 
 ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pSubPacket, size_t lPacketSize,
-                                                               uint8_t lFromSource) {
+                                                               uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction) {
     std::lock_guard<std::mutex> lock(mNetMtx);
     ElasticFrameType2 *lType2Frame = (ElasticFrameType2 *) pSubPacket;
 
@@ -247,7 +259,8 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pS
         }
 
         pThisBucket->mHaveReceivedFragment[lType2Frame->hOfFragmentNo] = true;
-        pThisBucket->mTimeout = mBucketTimeout;
+        pThisBucket->mTimeout =  std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count() + (mBucketTimeout * 1000);
         pThisBucket->mOfFragmentNo = lType2Frame->hOfFragmentNo;
         pThisBucket->mFragmentCounter = 0;
         pThisBucket->mFragmentSize = lType2Frame->hType1PacketSize;
@@ -261,6 +274,9 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pS
         }
         size_t lInsertDataPointer = (size_t) lType2Frame->hType1PacketSize * (size_t) lType2Frame->hOfFragmentNo;
         std::copy_n(pSubPacket + sizeof(ElasticFrameType2), lType2Frame->hSizeOfData, pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
+        if (mCurrentMode == EFPReceiverMode::RUN_TO_COMPLETION) {
+            runToCompletionMethod(rReceiveFunction);
+        }
         return ElasticFrameMessages::noError;
     }
 
@@ -284,7 +300,8 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pS
 
     // Type 2 frames contains the pts and code. If for some reason the type2 packet is missing or the frame is delivered
     // Before the type2 frame arrives PTS,DTS and CODE are set to it's respective 'illegal' value. meaning you cant't use them.
-    pThisBucket->mTimeout = mBucketTimeout;
+    pThisBucket->mTimeout = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count() + (mBucketTimeout * 1000);
     pThisBucket->mPts = lType2Frame->hPts;
 
     if (lType2Frame->hDtsPtsDiff == UINT32_MAX) {
@@ -314,6 +331,9 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pS
         std::copy_n(pSubPacket + sizeof(ElasticFrameType2), lType2Frame->hSizeOfData, pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
     }
 
+    if (mCurrentMode == EFPReceiverMode::RUN_TO_COMPLETION) {
+        runToCompletionMethod(rReceiveFunction);
+    }
     return ElasticFrameMessages::noError;
 }
 
@@ -321,7 +341,7 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pS
 // in front of a type2 packet to catch the data overshoot.
 // Type 3 frames MUST be the same header size as type1 headers (FIXME part of the opportunistic data discussion)
 ElasticFrameMessages
-ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource) {
+ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction) {
     std::lock_guard<std::mutex> lock(mNetMtx);
 
     ElasticFrameType3 *lType3Frame = (ElasticFrameType3 *) pSubPacket;
@@ -353,7 +373,8 @@ ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t lPac
         pThisBucket->mPts = UINT64_MAX;
         pThisBucket->mDts = UINT64_MAX;
         pThisBucket->mHaveReceivedFragment[lThisFragmentNo] = true;
-        pThisBucket->mTimeout = mBucketTimeout;
+        pThisBucket->mTimeout = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count() + (mBucketTimeout * 1000);
         pThisBucket->mFragmentCounter = 0;
         pThisBucket->mOfFragmentNo = lType3Frame->hOfFragmentNo;
         pThisBucket->mFragmentSize = lType3Frame->hType1PacketSize;
@@ -368,6 +389,9 @@ ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t lPac
             return ElasticFrameMessages::memoryAllocationError;
         }
         std::copy_n(pSubPacket + sizeof(ElasticFrameType3),lPacketSize - sizeof(ElasticFrameType3), pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
+        if (mCurrentMode == EFPReceiverMode::RUN_TO_COMPLETION) {
+            runToCompletionMethod(rReceiveFunction);
+        }
         return ElasticFrameMessages::noError;
     }
 
@@ -398,7 +422,8 @@ ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t lPac
     }
 
     // Let's re-set the timout and let also add +1 to the fragment counter
-    pThisBucket->mTimeout = mBucketTimeout;
+    pThisBucket->mTimeout = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count() + (mBucketTimeout * 1000);
     pThisBucket->mFragmentCounter++;
 
     pThisBucket->mBucketData->mFrameSize =
@@ -413,7 +438,53 @@ ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t lPac
 
     size_t lInsertDataPointer = pThisBucket->mFragmentSize * lThisFragmentNo;
     std::copy_n(pSubPacket + sizeof(ElasticFrameType3), lPacketSize - sizeof(ElasticFrameType3), pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
+    if (mCurrentMode == EFPReceiverMode::RUN_TO_COMPLETION) {
+        runToCompletionMethod(rReceiveFunction);
+    }
     return ElasticFrameMessages::noError;
+}
+
+//mNetMtx is already taken no need to lock anything
+void ElasticFrameProtocolReceiver::runToCompletionMethod(const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction) {
+    int64_t lTimeNow = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+
+    std::vector<Bucket*> lCandidates;
+    for (const auto &rBucket : mBucketMap) {
+        //Has the bucket Timed out?
+        if (rBucket.second->mTimeout <= lTimeNow) {
+            rBucket.second->mBucketData->mBroken = true;
+            lCandidates.emplace_back(rBucket.second);
+        } else if (rBucket.second->mFragmentCounter == rBucket.second->mOfFragmentNo) {
+            rBucket.second->mBucketData->mBroken = false;
+            lCandidates.emplace_back(rBucket.second);
+        }
+    }
+    if (lCandidates.empty()) {
+        //I might need more fragments to assemble the super frame or no old data has yet timed out
+        return;
+    }
+
+    uint64_t lDeliveryOrderOldest = lCandidates[0]->mDeliveryOrder;
+    for (auto &rBucket: lCandidates) {
+
+
+        rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+        rBucket->mBucketData->mPts = rBucket->mPts;
+        rBucket->mBucketData->mDts = rBucket->mDts;
+        rBucket->mBucketData->mCode = rBucket->mCode;
+        rBucket->mBucketData->mStreamID = rBucket->mStream;
+        rBucket->mBucketData->mSource = rBucket->mSource;
+        rBucket->mBucketData->mFlags = rBucket->mFlags;
+
+        if (rReceiveFunction) {
+            rReceiveFunction(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+        } else {
+            receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+        }
+    }
+
+
 }
 
 //This thread is delivering the super frames to the host
@@ -488,9 +559,12 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
         if (lTimeCompensation < 0) {
             EFP_LOGGER(true, LOGG_WARN, "Worker thread overloaded by " << signed(lTimeCompensation) << " us")
             lTimeReference = lTimeNow;
+            lTimeCompensation = 0;
         } else {
             std::this_thread::sleep_for(std::chrono::microseconds(lTimeCompensation));
         }
+
+        int64_t lTimeAfterSleep = lTimeNow + lTimeCompensation;
 
         mNetMtx.lock();
         uint32_t lActiveCount = (uint32_t)mBucketMap.size();
@@ -525,14 +599,14 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
             // Are we cleaning out old buckets and did we found a head to timout?
             if ((rBucket.second->mDeliveryOrder < lHeadOfLineBlockingTail) && lClearHeadOfLineBuckets) {
                 //EFP_LOGGER(true, LOGG_NOTIFY, "BOOM clear-> " << unsigned(n.second->mDeliveryOrder))
-                rBucket.second->mTimeout = 1;
+                rBucket.second->mTimeout = lTimeAfterSleep;
             }
-            rBucket.second->mTimeout--;
+
             // If the bucket is ready to be delivered or is the bucket timeout?
-            if (!rBucket.second->mTimeout) {
+            if (rBucket.second->mTimeout <= lTimeAfterSleep) {
                 lTimeOutTrigger = true;
                 lCandidates.emplace_back(rBucket.second);
-                rBucket.second->mTimeout = 1; //We want to timeout this again if head of line blocking is on
+                rBucket.second->mTimeout = lTimeAfterSleep + 1 ; //We want to timeout this again if head of line blocking is on
             } else if (rBucket.second->mFragmentCounter == rBucket.second->mOfFragmentNo) {
                 lCandidates.emplace_back(rBucket.second);
             }
@@ -588,7 +662,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
 
                         if (lAndTheNextIs != rBucket->mDeliveryOrder) {
                             // We did not expect this. is the bucket timed out .. then continue...
-                            if (rBucket->mTimeout > 1) {
+                            if (rBucket->mTimeout < lTimeAfterSleep) { //DEBUGME
                                 break;
                             }
                         }
@@ -719,13 +793,13 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::stopReceiver() {
 }
 
 ElasticFrameMessages
-ElasticFrameProtocolReceiver::receiveFragment(const std::vector<uint8_t> &rSubPacket, uint8_t lFromSource) {
-    return receiveFragmentFromPtr(rSubPacket.data(), rSubPacket.size(), lFromSource);
+ElasticFrameProtocolReceiver::receiveFragment(const std::vector<uint8_t> &rSubPacket, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction) {
+    return receiveFragmentFromPtr(rSubPacket.data(), rSubPacket.size(), lFromSource, rReceiveFunction);
 }
 
 // Unpack method. We received a fragment of data or a full frame. Lets unpack it
 ElasticFrameMessages
-ElasticFrameProtocolReceiver::receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource) {
+ElasticFrameProtocolReceiver::receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction) {
     // Type 0 packet. Discard and continue
     // Type 0 packets can be used to fill with user data outside efp protocol packets just put a uint8_t = Frametype::type0 at position 0 and then any data.
     // Type 1 are frames larger than MTU
@@ -735,7 +809,7 @@ ElasticFrameProtocolReceiver::receiveFragmentFromPtr(const uint8_t *pSubPacket, 
 
     std::lock_guard<std::mutex> lock(mReceiveMtx);
 
-    if (!(mIsWorkerThreadActive & mIsDeliveryThreadActive)) {
+    if (!(mIsWorkerThreadActive & mIsDeliveryThreadActive) && mCurrentMode == EFPReceiverMode::THREADED) {
         EFP_LOGGER(true, LOGG_ERROR, "Receiver not running")
         return ElasticFrameMessages::receiverNotRunning;
     }
@@ -746,17 +820,17 @@ ElasticFrameProtocolReceiver::receiveFragmentFromPtr(const uint8_t *pSubPacket, 
         if (lPacketSize < sizeof(ElasticFrameType1)) {
             return ElasticFrameMessages::frameSizeMismatch;
         }
-        return unpackType1(pSubPacket, lPacketSize, lFromSource);
+        return unpackType1(pSubPacket, lPacketSize, lFromSource, rReceiveFunction);
     } else if ((pSubPacket[0] & (uint8_t)0x0f) == Frametype::type2) {
         if (lPacketSize < sizeof(ElasticFrameType2)) {
             return ElasticFrameMessages::frameSizeMismatch;
         }
-        return unpackType2(pSubPacket, lPacketSize, lFromSource);
+        return unpackType2(pSubPacket, lPacketSize, lFromSource, rReceiveFunction);
     } else if ((pSubPacket[0] & (uint8_t)0x0f) == Frametype::type3) {
         if (lPacketSize < sizeof(ElasticFrameType3)) {
             return ElasticFrameMessages::frameSizeMismatch;
         }
-        return unpackType3(pSubPacket, lPacketSize, lFromSource);
+        return unpackType3(pSubPacket, lPacketSize, lFromSource, rReceiveFunction);
     }
 
     // Did not catch anything I understand

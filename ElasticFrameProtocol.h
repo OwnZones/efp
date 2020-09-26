@@ -393,8 +393,13 @@ public:
 
     using pFramePtr = std::unique_ptr<SuperFrame>;
 
+    enum class EFPReceiverMode : uint32_t {
+        THREADED = 1,
+        RUN_TO_COMPLETION = 2
+    };
+
     ///Constructor (defaults to 100ms timeout of not 100% assembled super frames)
-    explicit ElasticFrameProtocolReceiver(uint32_t lBucketTimeoutMaster = 10, uint32_t lHolTimeoutMaster = 0, std::shared_ptr<ElasticFrameProtocolContext> pCTX = nullptr);
+    explicit ElasticFrameProtocolReceiver(uint32_t lBucketTimeoutMasterms = 100, uint32_t lHolTimeoutMasterms = 0, std::shared_ptr<ElasticFrameProtocolContext> pCTX = nullptr, EFPReceiverMode lReceiverMode = EFPReceiverMode::THREADED);
 
     ///Destructor
     virtual ~ElasticFrameProtocolReceiver();
@@ -407,9 +412,10 @@ public:
     *
     * @param rSubPacket The data received
     * @param lFromSource the unique EFP source id. Provided by the user of the EFP protocol
+    * @param rReceiveFunction optional lambda may only be used in run to completion mode
     * @return ElasticFrameMessages
     */
-    ElasticFrameMessages receiveFragment(const std::vector<uint8_t> &rSubPacket, uint8_t lFromSource);
+    ElasticFrameMessages receiveFragment(const std::vector<uint8_t> &rSubPacket, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction = nullptr);
 
     /**
     * Function assembling received fragments from a data pointer
@@ -417,9 +423,10 @@ public:
     * @param pSubPacket pointer to data
     * @param lPacketSize data size
     * @param lFromSource the unique EFP source id. Provided by the user of the EFP protocol
+    * @param rReceiveFunction optional lambda may only be used in run to completion mode
     * @return ElasticFrameMessages
     */
-    ElasticFrameMessages receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource);
+    ElasticFrameMessages receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction = nullptr);
 
     /**
     * When the EFP receiver is done assembling a super frame or times out data this callback is used.
@@ -518,7 +525,7 @@ private:
         bool mActive = false; // Is this bucket in use?
         ElasticFrameContent mDataContent = ElasticFrameContent::unknown;
         uint16_t mSavedSuperFrameNo = 0; // The SuperFrameNumber using this bucket.
-        uint32_t mTimeout = 0;  // A time out counter. Will most likely be changed to a uint64_t and compared to steady_clock
+        int64_t mTimeout = 0;  // A time out counter. Will most likely be changed to a uint64_t and compared to steady_clock
         uint16_t mFragmentCounter = 0; // Current amount of fragments filled in this bucket
         uint16_t mOfFragmentNo = 0; // Number of fragments expected in this bucket before 100% full
         uint64_t mDeliveryOrder = UINT64_MAX; // The super frame counter
@@ -550,19 +557,22 @@ private:
     void gotData(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX);
 
     // Method unpacking Type1 fragments
-    ElasticFrameMessages unpackType1(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource);
+    ElasticFrameMessages unpackType1(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction);
 
     // Method unpacking Type2 fragments
-    ElasticFrameMessages unpackType2(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource);
+    ElasticFrameMessages unpackType2(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction);
 
     // Method unpacking Type3 fragments
-    ElasticFrameMessages unpackType3(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource);
+    ElasticFrameMessages unpackType3(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction);
 
     // The worker thread assembling unpacked fragments and delivering the superFrames to the deliveryWorker()
     void receiverWorker();
 
     // The worker thread acting as a bridge between EFP and the user
     void deliveryWorker();
+
+    // If EFP is put into 'run to completion' this is the method called to deal with all data in the buffers + new data
+    void runToCompletionMethod(const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction);
 
     // Recalculate the 16-bit vector to a 64-bit vector
     uint64_t superFrameRecalculator(uint16_t lSuperFrame);
@@ -591,6 +601,7 @@ private:
     std::mutex mSuperFrameMtx;
     std::condition_variable mSuperFrameDeliveryConditionVariable;
     bool mSuperFrameReady = false;
+    EFPReceiverMode mCurrentMode;
     std::shared_ptr<ElasticFrameProtocolContext> mCTX = nullptr;
     // Internal lists and variables ----- END ------
 };

@@ -19,6 +19,7 @@
 #include "unitTests/UnitTest17.h"
 #include "unitTests/UnitTest18.h"
 #include "unitTests/UnitTest19.h"
+#include "unitTests/UnitTest20.h"
 #include "unitTests/PerformanceLab.h"
 
 #include <iostream>
@@ -31,6 +32,7 @@ int main() {
 
     int returnCode = EXIT_SUCCESS;
 
+    /*
     //Test sending a packet less than MTU + header - > Expected result is one type2 frame only sent
     UnitTest1 unitTest1;
     if (!unitTest1.startUnitTest()) {
@@ -176,6 +178,15 @@ int main() {
     UnitTest19 unitTest19;
     if (!unitTest19.startUnitTest()) {
         std::cout << "Unit test 19 failed" << std::endl;
+        returnCode = EXIT_FAILURE;
+    }
+*/
+    //Test basic run to completion
+    //Test sending a packet of MTU-headertyp1+1 > result should be one frame type1 and a frame type 2, MTU+1 at the reciever
+
+    UnitTest20 unitTest20;
+    if (!unitTest20.startUnitTest()) {
+        std::cout << "Unit test 20 failed" << std::endl;
         returnCode = EXIT_FAILURE;
     }
 
