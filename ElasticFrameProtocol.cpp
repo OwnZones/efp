@@ -453,10 +453,9 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(const std::function<voi
     for (const auto &rBucket : mBucketMap) {
         //Has the bucket Timed out?
         if (rBucket.second->mTimeout <= lTimeNow) {
-            rBucket.second->mBucketData->mBroken = true;
             lCandidates.emplace_back(rBucket.second);
+            //Has the bucket received all fragments?
         } else if (rBucket.second->mFragmentCounter == rBucket.second->mOfFragmentNo) {
-            rBucket.second->mBucketData->mBroken = false;
             lCandidates.emplace_back(rBucket.second);
         }
     }
@@ -465,25 +464,81 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(const std::function<voi
         return;
     }
 
-    uint64_t lDeliveryOrderOldest = lCandidates[0]->mDeliveryOrder;
-    for (auto &rBucket: lCandidates) {
+    if (mHeadOfLineBlockingTimeout) {
+        //HOL mode
+        uint64_t lDeliveryOrderOldest = lCandidates[0]->mDeliveryOrder;
+        if (mRunToCompletionHOLFirstRun) {
+            mRunToCompletionHOLFirstRun = false;
+            mNextExpectedFrameNumber = lDeliveryOrderOldest;
+        }
 
-
-        rBucket->mBucketData->mDataContent = rBucket->mDataContent;
-        rBucket->mBucketData->mPts = rBucket->mPts;
-        rBucket->mBucketData->mDts = rBucket->mDts;
-        rBucket->mBucketData->mCode = rBucket->mCode;
-        rBucket->mBucketData->mStreamID = rBucket->mStream;
-        rBucket->mBucketData->mSource = rBucket->mSource;
-        rBucket->mBucketData->mFlags = rBucket->mFlags;
-
-        if (rReceiveFunction) {
-            rReceiveFunction(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
-        } else {
-            receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+        for (auto &rBucket: lCandidates) {
+            if (rBucket->mDeliveryOrder ==  mNextExpectedFrameNumber) {
+                //We got what we expected. Now deliver.
+                //Assemble all data for delivery
+                rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+                rBucket->mBucketData->mBroken =
+                        rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                rBucket->mBucketData->mPts = rBucket->mPts;
+                rBucket->mBucketData->mDts = rBucket->mDts;
+                rBucket->mBucketData->mCode = rBucket->mCode;
+                rBucket->mBucketData->mStreamID = rBucket->mStream;
+                rBucket->mBucketData->mSource = rBucket->mSource;
+                rBucket->mBucketData->mFlags = rBucket->mFlags;
+                if (rReceiveFunction) {
+                    rReceiveFunction(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+                } else {
+                    receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+                }
+                mBucketMap.erase(rBucket->mDeliveryOrder); //We delivered let's collect the garbage
+                mNextExpectedFrameNumber++;
+            } else if (rBucket->mTimeout <= (lTimeNow + (mHeadOfLineBlockingTimeout * 1000))) {
+                //We got HOL but the next frame has timed out meaning the time out of the bucket + the HOL timeout
+                //We need now need to jump ahead and reset the mNextExpectedFrameNumber
+                //Assemble all data for delivery and reset the HOL pointer.
+                rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+                rBucket->mBucketData->mBroken =
+                        rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                rBucket->mBucketData->mPts = rBucket->mPts;
+                rBucket->mBucketData->mDts = rBucket->mDts;
+                rBucket->mBucketData->mCode = rBucket->mCode;
+                rBucket->mBucketData->mStreamID = rBucket->mStream;
+                rBucket->mBucketData->mSource = rBucket->mSource;
+                rBucket->mBucketData->mFlags = rBucket->mFlags;
+                if (rReceiveFunction) {
+                    rReceiveFunction(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+                } else {
+                    receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+                }
+                mBucketMap.erase(rBucket->mDeliveryOrder); //We delivered let's collect the garbage
+                mNextExpectedFrameNumber = rBucket->mDeliveryOrder + 1;
+            } else {
+                //Here we got a HOL but the next frame has not yet timed out.. Lets break out of the loop and then
+                //take care of the data at the delivery of the next fragment.
+                break;
+            }
+        }
+    } else {
+        //We are not in HOL mode.. This means just deliver as the frames arrive or times out
+        for (auto &rBucket: lCandidates) {
+            //Assemble all data for delivery
+            rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+            rBucket->mBucketData->mBroken =
+                    rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+            rBucket->mBucketData->mPts = rBucket->mPts;
+            rBucket->mBucketData->mDts = rBucket->mDts;
+            rBucket->mBucketData->mCode = rBucket->mCode;
+            rBucket->mBucketData->mStreamID = rBucket->mStream;
+            rBucket->mBucketData->mSource = rBucket->mSource;
+            rBucket->mBucketData->mFlags = rBucket->mFlags;
+            if (rReceiveFunction) {
+                rReceiveFunction(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+            } else {
+                receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+            }
+            mBucketMap.erase(rBucket->mDeliveryOrder); //We delivered let's collect the garbage
         }
     }
-
 
 }
 

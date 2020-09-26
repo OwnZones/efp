@@ -596,6 +596,10 @@ private:
     std::atomic_bool mIsDeliveryThreadActive = {false};
     std::atomic_bool mThreadActive = {false};
 
+    //Run to completion HOL variables
+    bool mRunToCompletionHOLFirstRun = true;
+    uint64_t mNextExpectedFrameNumber = 0;
+
     std::mutex mReceiveMtx;                     //Mutex protecting the receive part
     std::deque<pFramePtr> mSuperFrameQueue;
     std::mutex mSuperFrameMtx;
