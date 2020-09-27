@@ -3,7 +3,7 @@
 //
 
 //UnitTest10
-//send two type 2 packets out of order and recieve them in order.
+//send two type 2 packets out of order and receive them in order.
 
 #include "UnitTest10.h"
 

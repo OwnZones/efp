@@ -3,7 +3,7 @@
 //
 
 //UnitTest3
-//Test sending 1 byte packet of value 0xaa and recieving it in the other end
+//Test sending 1 byte packet of value 0xaa and receiving it at the EFP receiver.
 
 #include "UnitTest3.h"
 

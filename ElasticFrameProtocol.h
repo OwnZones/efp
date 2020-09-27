@@ -557,13 +557,13 @@ private:
     void gotData(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX);
 
     // Method unpacking Type1 fragments
-    ElasticFrameMessages unpackType1(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction);
+    ElasticFrameMessages unpackType1(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource);
 
     // Method unpacking Type2 fragments
-    ElasticFrameMessages unpackType2(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction);
+    ElasticFrameMessages unpackType2(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource);
 
     // Method unpacking Type3 fragments
-    ElasticFrameMessages unpackType3(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction);
+    ElasticFrameMessages unpackType3(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource);
 
     // The worker thread assembling unpacked fragments and delivering the superFrames to the deliveryWorker()
     void receiverWorker();

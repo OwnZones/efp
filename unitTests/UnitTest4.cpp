@@ -3,7 +3,7 @@
 //
 
 //UnitTest4
-//Test sending a packet of MTU-headertyp1+1 > result should be one frame type1 and a frame type 2, MTU+1 at the reciever
+//Test sending a packet of MTU-HeaderType1+1 > result should be one frame type1 and a frame type 2, MTU+1 at the receiver
 
 #include "UnitTest4.h"
 

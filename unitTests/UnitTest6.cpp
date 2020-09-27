@@ -3,8 +3,8 @@
 //
 
 //UnitTest6
-//Test sending a packet of MTU*5+MTU/2 containing a linear vector drop the first packet -> the result should be a packet with a hole of MTU-headertype1
-//then a linear vector of data starting with the number (MTU-headertyp1) % 256. also check for broken flag is set.
+//Test sending a packet of MTU*5+MTU/2 containing a linear vector drop the first packet -> the result should be a packet with a hole of MTU-EeaderType1
+//then a linear vector of data starting with the number (MTU-HeaderType1) % 256. also check for broken flag is set.
 
 #include "UnitTest6.h"
 
