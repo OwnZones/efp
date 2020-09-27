@@ -555,14 +555,6 @@ void ElasticFrameProtocolReceiver::deliveryWorker() {
 // This is the thread going trough the buckets to see if they should be delivered to
 // the 'user'
 void ElasticFrameProtocolReceiver::receiverWorker() {
-    //Set the defaults. meaning the thread is running and there is no head of line blocking action going on.
-    bool lFoundHeadOfLineBlocking = false;
-    bool lFistDelivery = mHeadOfLineBlockingTimeout ==
-                         0; //if HOL is used then we must receive at least two packets first to know where to start counting.
-    uint32_t lHeadOfLineBlockingCounter = 0;
-    uint64_t lHeadOfLineBlockingTail = 0;
-    uint64_t lExpectedNextFrameToDeliver = 0;
-    uint64_t lOldestFrameDelivered = 0;
     int64_t lTimeReference = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::steady_clock::now().time_since_epoch()).count();
 
@@ -608,190 +600,118 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
             mNetMtx.unlock();
             continue; //Nothing to process
         }
-
-        bool lTimeOutTrigger = false;
-        uint64_t lDeliveryOrderOldest = UINT64_MAX;
-
-        // The default mode is not to clear any buckets
-        bool lClearHeadOfLineBuckets = false;
-        // If I'm in head of blocking garbage collect mode.
-        if (lFoundHeadOfLineBlocking) {
-            // If some one instructed me to timeout then let's timeout first
-            if (lHeadOfLineBlockingCounter) {
-                lHeadOfLineBlockingCounter--;
-                // EFP_LOGGER(true, LOGG_NOTIFY, "Flush head countdown " << unsigned(headOfLineBlockingCounter))
-            } else {
-                // EFP_LOGGER(true, LOGG_NOTIFY, "Flush trigger " << unsigned(headOfLineBlockingCounter))
-                // Timeout triggered.. Let's garbage collect the head.
-                lClearHeadOfLineBuckets = true;
-                lFoundHeadOfLineBlocking = false;
-            }
-        }
-
         lCandidates.clear();
 
-        // Scan trough all active buckets
-        for (const auto &rBucket : mBucketMap) {
-            // Are we cleaning out old buckets and did we found a head to timout?
-            if ((rBucket.second->mDeliveryOrder < lHeadOfLineBlockingTail) && lClearHeadOfLineBuckets) {
-                //EFP_LOGGER(true, LOGG_NOTIFY, "BOOM clear-> " << unsigned(n.second->mDeliveryOrder))
-                rBucket.second->mTimeout = lTimeAfterSleep;
-            }
+        // ------------------------------------------
 
-            // If the bucket is ready to be delivered or is the bucket timeout?
+        for (const auto &rBucket : mBucketMap) {
+            //Has the bucket Timed out?
             if (rBucket.second->mTimeout <= lTimeAfterSleep) {
-                lTimeOutTrigger = true;
                 lCandidates.emplace_back(rBucket.second);
-                rBucket.second->mTimeout = lTimeAfterSleep + 1 ; //We want to timeout this again if head of line blocking is on
+                //Has the bucket received all fragments?
             } else if (rBucket.second->mFragmentCounter == rBucket.second->mOfFragmentNo) {
                 lCandidates.emplace_back(rBucket.second);
             }
         }
-
-        size_t lNumCandidatesToDeliver = lCandidates.size();
-        if (lNumCandidatesToDeliver) {
-            lDeliveryOrderOldest = lCandidates[0]->mDeliveryOrder;
+        if (lCandidates.empty()) {
+            //I might need more fragments to assemble the super frame or no old data has yet timed out
+            mNetMtx.unlock();
+            continue; //Nothing to process
         }
 
-        if ((!lFistDelivery && lNumCandidatesToDeliver >= 2) || lTimeOutTrigger) {
-            lFistDelivery = true;
-            lExpectedNextFrameToDeliver = lDeliveryOrderOldest;
-        }
+        if (mHeadOfLineBlockingTimeout) {
+            //HOL mode
+            if (mRunToCompletionHOLFirstRun) {
+                mRunToCompletionHOLFirstRun = false;
+                mNextExpectedFrameNumber = lCandidates[0]->mDeliveryOrder;
+            }
 
-        // Do we got any timed out buckets or finished buckets?
-        if (lNumCandidatesToDeliver && lFistDelivery) {
-            //FIXME - we could implement fast HOL clearing here lgtm [cpp/fixme-comment]
+            for (auto &rBucket: lCandidates) {
+                if (rBucket->mDeliveryOrder ==  mNextExpectedFrameNumber) {
+                    //We got what we expected. Now deliver.
+                    //Assemble all data for delivery
 
-            //Fast HOL candidate
-            //We're not clearing buckets and we have found HOL
-//            if (foundHeadOfLineBlocking && !clearHeadOfLineBuckets && headOfLineBlockingTimeout) {
-//                uint64_t thisCandidate=candidates[0].deliveryOrder;
-//                if (thisCandidate == )
-//                for (auto &x: candidates) { //DEBUG-Keep for now
-//
-//                }
-//            }
-
-            //if we're waiting for a time out but all candidates are already to be delivered
-
-            //for (auto &x: candidates) { //DEBUG-Keep for now
-            //    std::cout << ">>>" << unsigned(x.deliveryOrder) << std::endl;
-            //}
-
-            // So ok we have cleared the head send it all out
-            if (lClearHeadOfLineBuckets) {
-                //EFP_LOGGER(true, LOGG_NOTIFY, "FLUSH HEAD!")
-
-                uint64_t lAndTheNextIs = lCandidates[0]->mDeliveryOrder;
-
-                for (auto &rBucket: lCandidates) {
-                    if (lOldestFrameDelivered <= rBucket->mDeliveryOrder) {
-                        // Here we introduce a new concept..
-                        // If we are cleaning out the HOL. Only go soo far to either a gap (counter) or packet "non time out".
-                        // If you remove the 'if' below HOL will clean out all super frames from the top of the buffer to the bottom of the buffer no matter the
-                        // Status of the packets in between. So HOL cleaning just wipes out all waiting. This might be a wanted behaviour to avoid time-stall
-                        // However packets in queue are lost since they will 'falsely' be seen as coming late and then discarded.
-
-                        // FIXME lgtm [cpp/fixme-comment]
-                        // If for example candidates.size() is larger than a certain size then maybe just flush to the end to avoid a blocking HOL situation
-                        // If for example every second packet is lost then we will build a large queue
-
-                        if (lAndTheNextIs != rBucket->mDeliveryOrder) {
-                            // We did not expect this. is the bucket timed out .. then continue...
-                            if (rBucket->mTimeout < lTimeAfterSleep) { //DEBUGME
-                                break;
-                            }
-                        }
-                        lAndTheNextIs = rBucket->mDeliveryOrder + 1;
-
-                        lOldestFrameDelivered = mHeadOfLineBlockingTimeout ? rBucket->mDeliveryOrder : 0;
-
-                        //Create a scope for the lock
-                        {
-                            std::lock_guard<std::mutex> lk(mSuperFrameMtx);
-                            rBucket->mBucketData->mDataContent = rBucket->mDataContent;
-                            rBucket->mBucketData->mBroken =
-                                    rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
-                            rBucket->mBucketData->mPts = rBucket->mPts;
-                            rBucket->mBucketData->mDts = rBucket->mDts;
-                            rBucket->mBucketData->mCode = rBucket->mCode;
-                            rBucket->mBucketData->mStreamID = rBucket->mStream;
-                            rBucket->mBucketData->mSource = rBucket->mSource;
-                            rBucket->mBucketData->mFlags = rBucket->mFlags;
-                            mSuperFrameQueue.push_back(std::move(rBucket->mBucketData));
-                            mSuperFrameReady = true;
-                        }
-                        mSuperFrameDeliveryConditionVariable.notify_one();
+                    //Assemble all data for delivery
+                    {
+                        std::lock_guard<std::mutex> lk(mSuperFrameMtx);
+                        rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+                        rBucket->mBucketData->mBroken =
+                                rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                        rBucket->mBucketData->mPts = rBucket->mPts;
+                        rBucket->mBucketData->mDts = rBucket->mDts;
+                        rBucket->mBucketData->mCode = rBucket->mCode;
+                        rBucket->mBucketData->mStreamID = rBucket->mStream;
+                        rBucket->mBucketData->mSource = rBucket->mSource;
+                        rBucket->mBucketData->mFlags = rBucket->mFlags;
+                        mSuperFrameQueue.push_back(std::move(rBucket->mBucketData));
+                        mSuperFrameReady = true;
                     }
-                    lExpectedNextFrameToDeliver = rBucket->mDeliveryOrder + 1;
-                    // std::cout << " (y) " << unsigned(expectedNextFrameToDeliver) << std::endl;
+                    mSuperFrameDeliveryConditionVariable.notify_one();
                     mBucketMap.erase(rBucket->mDeliveryOrder);
                     rBucket->mActive = false;
                     rBucket->mBucketData = nullptr;
-                }
-            } else {
-                // In this run we have not cleared the head.. is there a head to clear?
-                // We can't be in waiting for timout and we can't have a 0 time-out
-                // A 0 timout means out of order delivery else we-re here.
-                // So in out of order delivery we time out the buckets instead of flushing the head.
 
-                // Check for head of line blocking only if HOL-time out is set
-                if (lExpectedNextFrameToDeliver < lCandidates[0]->mDeliveryOrder &&
-                    mHeadOfLineBlockingTimeout &&
-                    !lFoundHeadOfLineBlocking) {
-                    //for (auto &x: candidates) { //DEBUG-Keep for now
-                    //    std::cout << ">>>" << unsigned(x.deliveryOrder) << " is broken " << x.broken << std::endl;
-                    //}
+                    mNextExpectedFrameNumber++;
+                } else if (rBucket->mTimeout <= (lTimeAfterSleep + (mHeadOfLineBlockingTimeout * 1000))) {
+                    //We got HOL but the next frame has timed out meaning the time out of the bucket + the HOL timeout
+                    //We need now need to jump ahead and reset the mNextExpectedFrameNumber
+                    //Assemble all data for delivery and reset the HOL pointer.
 
-                    lFoundHeadOfLineBlocking = true; //Found hole
-                    lHeadOfLineBlockingCounter = mHeadOfLineBlockingTimeout; //Number of times to spin this loop
-                    lHeadOfLineBlockingTail = lCandidates[0]->mDeliveryOrder; //This is the tail
-                    //EFP_LOGGER(true, LOGG_NOTIFY, "HOL " << unsigned(expectedNextFrameToDeliver) << " "
-                    // << unsigned(bucketList[candidates[0].bucket].deliveryOrder)
-                    // << " tail " << unsigned(headOfLineBlockingTail)
-                    // << " savedPTS " << unsigned(savedPTS))
-                }
-
-                //Deliver only when head of line blocking is cleared and we're back to normal
-                if (!lFoundHeadOfLineBlocking) {
-                    for (auto &rBucket: lCandidates) {
-                        if (lExpectedNextFrameToDeliver != rBucket->mDeliveryOrder && mHeadOfLineBlockingTimeout) {
-                            lFoundHeadOfLineBlocking = true; //Found hole
-                            lHeadOfLineBlockingCounter = mHeadOfLineBlockingTimeout; //Number of times to spin this loop
-                            lHeadOfLineBlockingTail =
-                                    rBucket->mDeliveryOrder; //So we basically give the non existing data a chance to arrive..
-                            //EFP_LOGGER(true, LOGG_NOTIFY, "HOL2 " << unsigned(expectedNextFrameToDeliver) << " " << unsigned(x.deliveryOrder) << " tail " << unsigned(headOfLineBlockingTail))
-                            break;
-                        }
-                        lExpectedNextFrameToDeliver = rBucket->mDeliveryOrder + 1;
-
-                        //std::cout << unsigned(oldestFrameDelivered) << " " << unsigned(x.deliveryOrder) << std::endl;
-                        if (lOldestFrameDelivered <= rBucket->mDeliveryOrder) {
-                            lOldestFrameDelivered = mHeadOfLineBlockingTimeout ? rBucket->mDeliveryOrder : 0;
-                            //Create a scope the lock
-                            {
-                                std::lock_guard<std::mutex> lk(mSuperFrameMtx);
-                                rBucket->mBucketData->mDataContent = rBucket->mDataContent;
-                                rBucket->mBucketData->mBroken =
-                                        rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
-                                rBucket->mBucketData->mPts = rBucket->mPts;
-                                rBucket->mBucketData->mDts = rBucket->mDts;
-                                rBucket->mBucketData->mCode = rBucket->mCode;
-                                rBucket->mBucketData->mStreamID = rBucket->mStream;
-                                rBucket->mBucketData->mSource = rBucket->mSource;
-                                rBucket->mBucketData->mFlags = rBucket->mFlags;
-                                mSuperFrameQueue.push_back(std::move(rBucket->mBucketData));
-                                mSuperFrameReady = true;
-                            }
-                            mSuperFrameDeliveryConditionVariable.notify_one();
-                        }
-                        mBucketMap.erase(rBucket->mDeliveryOrder);
-                        rBucket->mActive = false;
-                        rBucket->mBucketData = nullptr;
+                    //Assemble all data for delivery
+                    {
+                        std::lock_guard<std::mutex> lk(mSuperFrameMtx);
+                        rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+                        rBucket->mBucketData->mBroken =
+                                rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                        rBucket->mBucketData->mPts = rBucket->mPts;
+                        rBucket->mBucketData->mDts = rBucket->mDts;
+                        rBucket->mBucketData->mCode = rBucket->mCode;
+                        rBucket->mBucketData->mStreamID = rBucket->mStream;
+                        rBucket->mBucketData->mSource = rBucket->mSource;
+                        rBucket->mBucketData->mFlags = rBucket->mFlags;
+                        mSuperFrameQueue.push_back(std::move(rBucket->mBucketData));
+                        mSuperFrameReady = true;
                     }
+                    mSuperFrameDeliveryConditionVariable.notify_one();
+                    mBucketMap.erase(rBucket->mDeliveryOrder);
+                    rBucket->mActive = false;
+                    rBucket->mBucketData = nullptr;
+
+                    mNextExpectedFrameNumber = rBucket->mDeliveryOrder + 1;
+                } else {
+                    //Here we got a HOL but the next frame has not yet timed out.. Lets break out of the loop and then
+                    //Look again at the delivery of the next fragment to see the status then.
+                    break;
                 }
             }
+        } else {
+            //We are not in HOL mode.. This means just deliver as the frames arrive or times out
+            for (auto &rBucket: lCandidates) {
+                //Assemble all data for delivery
+                {
+                    std::lock_guard<std::mutex> lk(mSuperFrameMtx);
+                    rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+                    rBucket->mBucketData->mBroken =
+                            rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                    rBucket->mBucketData->mPts = rBucket->mPts;
+                    rBucket->mBucketData->mDts = rBucket->mDts;
+                    rBucket->mBucketData->mCode = rBucket->mCode;
+                    rBucket->mBucketData->mStreamID = rBucket->mStream;
+                    rBucket->mBucketData->mSource = rBucket->mSource;
+                    rBucket->mBucketData->mFlags = rBucket->mFlags;
+                    mSuperFrameQueue.push_back(std::move(rBucket->mBucketData));
+                    mSuperFrameReady = true;
+                }
+                mSuperFrameDeliveryConditionVariable.notify_one();
+                mBucketMap.erase(rBucket->mDeliveryOrder);
+                rBucket->mActive = false;
+                rBucket->mBucketData = nullptr;
+            }
         }
+
+
+        // ------------------------------------------
+
         mNetMtx.unlock();
 
         // Is more than 75% of the buffer used. //FIXME notify the user in some way
