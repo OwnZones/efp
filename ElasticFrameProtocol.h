@@ -272,8 +272,9 @@ public:
     * @param pData Pointer to the data
     * @param lSize Size of the data
     * @param lStreamID EFP stream ID
+    * @param lCtx context
     */
-    void (*c_sendCallback)(const uint8_t *pData, size_t lSize, uint8_t lStreamID);
+    void (*c_sendCallback)(const uint8_t *pData, size_t lSize, uint8_t lStreamID, void* lCtx);
 
     //Help methods ----------- START ----------
     /**
@@ -460,6 +461,7 @@ public:
     * @param lStream_id The EFP-stream ID the data is associated with.
     * @param lSource The EFP source ID.
     * @param lFlags signal what flags are used
+    * @param lCtx context
     */
     void (*c_recieveCallback)(uint8_t *pData,
                               size_t lSize,
@@ -470,7 +472,8 @@ public:
                               uint32_t lCode,
                               uint8_t lStream_id,
                               uint8_t lSource,
-                              uint8_t lFlags);
+                              uint8_t lFlags,
+                              void* lCtx);
 
     /**
     * Receive embedded data callback (C-API version)
@@ -485,11 +488,13 @@ public:
     * @param lSize Size of the data.
     * @param lData_type ElasticFrameEmbeddedContentDefines::x where x is the type of data received.
     * @param lPts PTS of the frame (Can be used to associate with a EFP frame).
+    * @param lCtx context
     */
     void (*c_recieveEmbeddedDataCallback)(uint8_t *pData,
                                           size_t lSize,
                                           uint8_t lData_type,
-                                          uint64_t lPts);
+                                          uint64_t lPts,
+                                          void* lCtx);
 
     ///Delete copy and move constructors and assign operators
     ElasticFrameProtocolReceiver(ElasticFrameProtocolReceiver const &) = delete;              // Copy construct

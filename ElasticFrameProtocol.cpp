@@ -75,7 +75,7 @@ void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFrameP
                 return;
             }
             for (int x = 0; x<embeddedData.size(); x++) {
-                c_recieveEmbeddedDataCallback(embeddedData[x].data(), embeddedData[x].size(), embeddedContentFlag[x], rPacket->mPts);
+                c_recieveEmbeddedDataCallback(embeddedData[x].data(), embeddedData[x].size(), embeddedContentFlag[x], rPacket->mPts, mCTX->mUnsafePointer);
             }
             //Adjust the pointers for the payload callback
             if (rPacket->mFrameSize < payloadDataPosition) {
@@ -92,7 +92,8 @@ void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFrameP
                           rPacket->mCode,
                           rPacket->mStreamID,
                           rPacket->mSource,
-                          rPacket->mFlags);
+                          rPacket->mFlags,
+                          mCTX->mUnsafePointer);
     } else {
         EFP_LOGGER(true, LOGG_ERROR, "Implement the recieveCallback method for the protocol to work.")
     }
@@ -887,7 +888,7 @@ ElasticFrameProtocolSender::~ElasticFrameProtocolSender() {
 // Dummy callback for transmitter
 void ElasticFrameProtocolSender::sendData(const std::vector<uint8_t> &rSubPacket, uint8_t lStreamID, ElasticFrameProtocolContext* pCTX) {
     if (c_sendCallback) {
-        c_sendCallback(rSubPacket.data(), rSubPacket.size(), lStreamID);
+        c_sendCallback(rSubPacket.data(), rSubPacket.size(), lStreamID, mCTX->mUnsafePointer);
     } else {
         EFP_LOGGER(true, LOGG_ERROR, "Implement the sendCallback method for the protocol to work.")
     }
@@ -1118,11 +1119,13 @@ uint64_t c_object_handle = {1};
 std::mutex efp_send_mutex;
 std::mutex efp_receive_mutex;
 
-uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t *, size_t, uint8_t)) {
+uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t *, size_t, uint8_t, void*), void* ctx) {
     std::lock_guard<std::mutex> lock(efp_send_mutex);
+    auto sender_ctx = std::make_shared<ElasticFrameProtocolContext>();
+    sender_ctx->mUnsafePointer = ctx;
     uint64_t local_c_object_handle = c_object_handle;
     auto result = efp_send_base_map.insert(std::make_pair(local_c_object_handle,
-                                                          std::make_shared<ElasticFrameProtocolSender>(mtu)));
+                                                          std::make_shared<ElasticFrameProtocolSender>(mtu, sender_ctx)));
     if (!result.first->second) {
         return 0;
     }
@@ -1142,16 +1145,33 @@ uint64_t efp_init_receive(uint32_t bucketTimeout,
                                     uint32_t,
                                     uint8_t,
                                     uint8_t,
-                                    uint8_t),
+                                    uint8_t,
+                                    void*),
                           void (*g)(uint8_t *,
                                     size_t,
                                     uint8_t,
-                                    uint64_t)
+                                    uint64_t,
+                                    void*),
+                          void*     ctx,
+                          uint32_t  mode
 ) {
     std::lock_guard<std::mutex> lock(efp_receive_mutex);
     uint64_t local_c_object_handle = c_object_handle;
+
+    ElasticFrameProtocolReceiver::EFPReceiverMode receive_mode;
+
+    auto receiver_ctx = std::make_shared<ElasticFrameProtocolContext>();
+    receiver_ctx->mUnsafePointer = ctx;
+
+    if (mode == EFP_MODE_RUN_TO_COMPLETE) {
+        receive_mode = ElasticFrameProtocolReceiver::EFPReceiverMode::RUN_TO_COMPLETION;
+    } else {
+        receive_mode = ElasticFrameProtocolReceiver::EFPReceiverMode::THREADED;
+    }
+
     auto result = efp_receive_base_map.insert(
-            std::make_pair(local_c_object_handle, std::make_shared<ElasticFrameProtocolReceiver>(bucketTimeout, holTimeout)));
+            std::make_pair(local_c_object_handle, std::make_shared<ElasticFrameProtocolReceiver>(bucketTimeout, holTimeout,
+                                                                                                 receiver_ctx, receive_mode)));
     if (!result.first->second) {
         return 0;
     }
