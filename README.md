@@ -27,6 +27,14 @@ The internal delivery mechanism has changed to abosolute relative time-outs inst
 
 Version 0.3 also implements a optional context to be used in all callbacks. Please see Unit test 19 for deatils.
 
+**This version changes the API for the receiver!!** 
+
+50 == 50 milliseconds before timing out non complete frames.
+
+20 == 20 milliseconds bfore moving the head forward in HOL mode. (set to 0 for disabling HOL)
+
+ElasticFrameProtocolReceiver myEFPReceiver(50, 20, (optional context), (optional set run to completion mode));
+
 
 ## Current badge status
 
@@ -178,7 +186,9 @@ void gotData(ElasticFrameProtocol::pFramePtr &rFrame, (optional context))
 
 // Create your receiver
 // Passing fragment time out and HOL time out if wanted else set HOL to 0
-ElasticFrameProtocolReceiver myEFPReceiver(5, 2);
+// 50 == 50 ms before timing out not recieving all fragments for a frame
+// 20 == 20 ms before moving the head in HOL mode forward.
+ElasticFrameProtocolReceiver myEFPReceiver(50, 20);
 
 // Register the callback
 myEFPReceiver.receiveCallback = std::bind(&gotData, std::placeholders::_1, std::placeholders::_2 (optional));
