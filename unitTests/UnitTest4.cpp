@@ -3,7 +3,7 @@
 //
 
 //UnitTest4
-//Test sending a packet of MTU-headertyp1+1 > result should be one frame type1 and a frame type 2, MTU+1 at the reciever
+//Test sending a packet of MTU-HeaderType1+1 > result should be one frame type1 and a frame type 2, MTU+1 at the receiver
 
 #include "UnitTest4.h"
 
@@ -99,7 +99,7 @@ bool UnitTest4::startUnitTest() {
     ElasticFrameMessages result;
     std::vector<uint8_t> mydata;
     uint8_t streamID=4;
-    myEFPReciever = new (std::nothrow) ElasticFrameProtocolReceiver(5, 2);
+    myEFPReciever = new (std::nothrow) ElasticFrameProtocolReceiver(50, 20);
     myEFPPacker = new (std::nothrow) ElasticFrameProtocolSender(MTU);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;

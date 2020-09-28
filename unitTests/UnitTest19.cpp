@@ -180,7 +180,7 @@ bool UnitTest19::startUnitTest() {
     //The value part
     myReceiverCTX->mValue = 200;
 
-    myEFPReciever = new(std::nothrow) ElasticFrameProtocolReceiver(10, 4, myReceiverCTX);
+    myEFPReciever = new(std::nothrow) ElasticFrameProtocolReceiver(100, 40, myReceiverCTX);
     myEFPPacker = new(std::nothrow) ElasticFrameProtocolSender(MTU, mySenderCTX);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;

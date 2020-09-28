@@ -3,7 +3,7 @@
 //
 
 //UnitTest10
-//send two type 2 packets out of order and recieve them in order.
+//send two type 2 packets out of order and receive them in order.
 
 #include "UnitTest10.h"
 
@@ -85,7 +85,7 @@ bool UnitTest10::startUnitTest() {
     ElasticFrameMessages result;
     std::vector<uint8_t> mydata;
     uint8_t streamID=1;
-    myEFPReciever = new (std::nothrow) ElasticFrameProtocolReceiver(5, 2);
+    myEFPReciever = new (std::nothrow) ElasticFrameProtocolReceiver(50, 20);
     myEFPPacker = new (std::nothrow) ElasticFrameProtocolSender(MTU);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;

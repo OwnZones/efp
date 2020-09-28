@@ -24,7 +24,7 @@
 //
 //---------------------------------------------------------------------------------------------------------------------
 
-ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t lBucketTimeoutMaster, uint32_t lHolTimeoutMaster, std::shared_ptr<ElasticFrameProtocolContext> pCTX) {
+ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t lBucketTimeoutMasterms, uint32_t lHolTimeoutMasterms, std::shared_ptr<ElasticFrameProtocolContext> pCTX, EFPReceiverMode lReceiverMode) {
     //Throw if you can't reserve the data.
     mBucketList = new Bucket[CIRCULAR_BUFFER_SIZE + 1];
 
@@ -33,13 +33,17 @@ ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t lBucketTimeo
     c_recieveEmbeddedDataCallback = nullptr;
     receiveCallback = std::bind(&ElasticFrameProtocolReceiver::gotData, this, std::placeholders::_1, std::placeholders::_2);
 
-    mBucketTimeout = lBucketTimeoutMaster;
-    mHeadOfLineBlockingTimeout = lHolTimeoutMaster;
-    mThreadActive = true;
-    mIsWorkerThreadActive = true;
-    mIsDeliveryThreadActive = true;
-    std::thread(std::bind(&ElasticFrameProtocolReceiver::receiverWorker, this)).detach();
-    std::thread(std::bind(&ElasticFrameProtocolReceiver::deliveryWorker, this)).detach();
+    mBucketTimeout = (lBucketTimeoutMasterms * 1000) / (WORKER_THREAD_SLEEP_US);
+    mHeadOfLineBlockingTimeout = (lHolTimeoutMasterms * 1000) / (WORKER_THREAD_SLEEP_US);
+
+    mCurrentMode = lReceiverMode;
+    if (mCurrentMode == EFPReceiverMode::THREADED) {
+        mThreadActive = true;
+        mIsWorkerThreadActive = true;
+        mIsDeliveryThreadActive = true;
+        std::thread(std::bind(&ElasticFrameProtocolReceiver::receiverWorker, this)).detach();
+        std::thread(std::bind(&ElasticFrameProtocolReceiver::deliveryWorker, this)).detach();
+    }
     EFP_LOGGER(true, LOGG_NOTIFY, "ElasticFrameProtocol constructed")
 }
 
@@ -143,7 +147,8 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t lPac
         pThisBucket->mPts = UINT64_MAX;
         pThisBucket->mDts = UINT64_MAX;
         pThisBucket->mHaveReceivedFragment[lType1Frame->hFragmentNo] = true;
-        pThisBucket->mTimeout = mBucketTimeout;
+        pThisBucket->mTimeout = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count() + (mBucketTimeout * 1000);
         pThisBucket->mFragmentCounter = 0;
         pThisBucket->mOfFragmentNo = lType1Frame->hOfFragmentNo;
         pThisBucket->mFragmentSize = (lPacketSize - sizeof(ElasticFrameType1));
@@ -189,7 +194,8 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t lPac
     }
 
     // Let's re-set the timout and let also add +1 to the fragment counter
-    pThisBucket->mTimeout = mBucketTimeout;
+    pThisBucket->mTimeout =  std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count() + (mBucketTimeout * 1000);
     pThisBucket->mFragmentCounter++;
 
     // Move the data to the correct fragment position in the frame.
@@ -207,8 +213,7 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t lPac
 // Type2 packets are also parts of frames smaller than the MTU
 // The data IS the last data of a sequence
 
-ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pSubPacket, size_t lPacketSize,
-                                                               uint8_t lFromSource) {
+ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource) {
     std::lock_guard<std::mutex> lock(mNetMtx);
     ElasticFrameType2 *lType2Frame = (ElasticFrameType2 *) pSubPacket;
 
@@ -247,7 +252,8 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pS
         }
 
         pThisBucket->mHaveReceivedFragment[lType2Frame->hOfFragmentNo] = true;
-        pThisBucket->mTimeout = mBucketTimeout;
+        pThisBucket->mTimeout =  std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count() + (mBucketTimeout * 1000);
         pThisBucket->mOfFragmentNo = lType2Frame->hOfFragmentNo;
         pThisBucket->mFragmentCounter = 0;
         pThisBucket->mFragmentSize = lType2Frame->hType1PacketSize;
@@ -284,7 +290,8 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pS
 
     // Type 2 frames contains the pts and code. If for some reason the type2 packet is missing or the frame is delivered
     // Before the type2 frame arrives PTS,DTS and CODE are set to it's respective 'illegal' value. meaning you cant't use them.
-    pThisBucket->mTimeout = mBucketTimeout;
+    pThisBucket->mTimeout = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count() + (mBucketTimeout * 1000);
     pThisBucket->mPts = lType2Frame->hPts;
 
     if (lType2Frame->hDtsPtsDiff == UINT32_MAX) {
@@ -313,7 +320,6 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pS
         size_t lInsertDataPointer = (size_t) lType2Frame->hType1PacketSize * (size_t) lType2Frame->hOfFragmentNo;
         std::copy_n(pSubPacket + sizeof(ElasticFrameType2), lType2Frame->hSizeOfData, pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
     }
-
     return ElasticFrameMessages::noError;
 }
 
@@ -353,7 +359,8 @@ ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t lPac
         pThisBucket->mPts = UINT64_MAX;
         pThisBucket->mDts = UINT64_MAX;
         pThisBucket->mHaveReceivedFragment[lThisFragmentNo] = true;
-        pThisBucket->mTimeout = mBucketTimeout;
+        pThisBucket->mTimeout = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count() + (mBucketTimeout * 1000);
         pThisBucket->mFragmentCounter = 0;
         pThisBucket->mOfFragmentNo = lType3Frame->hOfFragmentNo;
         pThisBucket->mFragmentSize = lType3Frame->hType1PacketSize;
@@ -398,7 +405,8 @@ ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t lPac
     }
 
     // Let's re-set the timout and let also add +1 to the fragment counter
-    pThisBucket->mTimeout = mBucketTimeout;
+    pThisBucket->mTimeout = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count() + (mBucketTimeout * 1000);
     pThisBucket->mFragmentCounter++;
 
     pThisBucket->mBucketData->mFrameSize =
@@ -416,6 +424,107 @@ ElasticFrameProtocolReceiver::unpackType3(const uint8_t *pSubPacket, size_t lPac
     return ElasticFrameMessages::noError;
 }
 
+//mNetMtx is already taken no need to lock anything
+void ElasticFrameProtocolReceiver::runToCompletionMethod(const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction) {
+    int64_t lTimeNow = std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+
+    std::vector<Bucket*> lCandidates;
+    lCandidates.reserve(CIRCULAR_BUFFER_SIZE);
+    for (const auto &rBucket : mBucketMap) {
+        //Has the bucket Timed out?
+        if (rBucket.second->mTimeout <= lTimeNow) {
+            lCandidates.emplace_back(rBucket.second);
+            //Has the bucket received all fragments?
+        } else if (rBucket.second->mFragmentCounter == rBucket.second->mOfFragmentNo) {
+            lCandidates.emplace_back(rBucket.second);
+        }
+    }
+    if (lCandidates.empty()) {
+        //I might need more fragments to assemble the super frame or no old data has yet timed out
+        return;
+    }
+
+    if (mHeadOfLineBlockingTimeout) {
+        //HOL mode
+        if (mDeliveryHOLFirstRun) {
+            mDeliveryHOLFirstRun = false;
+            mNextExpectedFrameNumber = lCandidates[0]->mDeliveryOrder;
+        }
+
+        for (auto &rBucket: lCandidates) {
+            if (rBucket->mDeliveryOrder ==  mNextExpectedFrameNumber) {
+                //We got what we expected. Now deliver.
+                //Assemble all data for delivery
+                rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+                rBucket->mBucketData->mBroken = rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                rBucket->mBucketData->mPts = rBucket->mPts;
+                rBucket->mBucketData->mDts = rBucket->mDts;
+                rBucket->mBucketData->mCode = rBucket->mCode;
+                rBucket->mBucketData->mStreamID = rBucket->mStream;
+                rBucket->mBucketData->mSource = rBucket->mSource;
+                rBucket->mBucketData->mFlags = rBucket->mFlags;
+                if (rReceiveFunction) {
+                    rReceiveFunction(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+                } else {
+                    receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+                }
+                mBucketMap.erase(rBucket->mDeliveryOrder); //We delivered let's collect the garbage
+                rBucket->mActive = false; //Inactivate the bucket
+                rBucket->mBucketData = nullptr; //Release the data
+                mNextExpectedFrameNumber++; //The next expected frame is this frame number + 1
+            } else if (rBucket->mTimeout <= (lTimeNow + (mHeadOfLineBlockingTimeout * 1000))) {
+                //We got HOL but the next frame has timed out meaning the time out of the bucket + the HOL timeout
+                //We need now need to jump ahead and reset the mNextExpectedFrameNumber
+                //Assemble all data for delivery and reset the HOL pointer.
+                rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+                rBucket->mBucketData->mBroken = rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                rBucket->mBucketData->mPts = rBucket->mPts;
+                rBucket->mBucketData->mDts = rBucket->mDts;
+                rBucket->mBucketData->mCode = rBucket->mCode;
+                rBucket->mBucketData->mStreamID = rBucket->mStream;
+                rBucket->mBucketData->mSource = rBucket->mSource;
+                rBucket->mBucketData->mFlags = rBucket->mFlags;
+                if (rReceiveFunction) {
+                    rReceiveFunction(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+                } else {
+                    receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+                }
+                mBucketMap.erase(rBucket->mDeliveryOrder); //We delivered let's collect the garbage
+                rBucket->mActive = false; //Inactivate the bucket
+                rBucket->mBucketData = nullptr; //Release the data
+                mNextExpectedFrameNumber = rBucket->mDeliveryOrder + 1;
+            } else {
+                //Here we got a HOL but the next frame has not yet timed out.. Lets break out of the loop and then
+                //Look again at the delivery of the next fragment to see the status then.
+                break;
+            }
+        }
+    } else {
+        //We are not in HOL mode.. This means just deliver as the frames arrive or times out
+        for (auto &rBucket: lCandidates) {
+            //Assemble all data for delivery
+            rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+            rBucket->mBucketData->mBroken =
+                    rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+            rBucket->mBucketData->mPts = rBucket->mPts;
+            rBucket->mBucketData->mDts = rBucket->mDts;
+            rBucket->mBucketData->mCode = rBucket->mCode;
+            rBucket->mBucketData->mStreamID = rBucket->mStream;
+            rBucket->mBucketData->mSource = rBucket->mSource;
+            rBucket->mBucketData->mFlags = rBucket->mFlags;
+            if (rReceiveFunction) {
+                rReceiveFunction(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+            } else {
+                receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+            }
+            mBucketMap.erase(rBucket->mDeliveryOrder); //We delivered let's collect the garbage
+            rBucket->mActive = false; //Inactivate the bucket
+            rBucket->mBucketData = nullptr; //Release the data
+        }
+    }
+}
+
 //This thread is delivering the super frames to the host
 void ElasticFrameProtocolReceiver::deliveryWorker() {
     while (mThreadActive) {
@@ -427,7 +536,7 @@ void ElasticFrameProtocolReceiver::deliveryWorker() {
                                                           [this] { return mSuperFrameReady; }); //if mSuperFrameReady == true we already got data no need to wait for signal
             // We got a signal a frame is ready
 
-            // pop one frame
+            // pop until queue is empty
             if (!mSuperFrameQueue.empty()) {
                 lSuperframe = std::move(mSuperFrameQueue.front());
                 mSuperFrameQueue.pop_front();
@@ -437,9 +546,11 @@ void ElasticFrameProtocolReceiver::deliveryWorker() {
                 mSuperFrameReady = false;
             }
         }
-
+        //I want to be outside the scope of the lock when calling the callback. Else the
+        //callback may lock the internal workers.
         if (lSuperframe) {
             receiveCallback(lSuperframe, mCTX ? mCTX.get() : nullptr);
+            lSuperframe = nullptr; //Drop the ownership.
         }
     }
     mIsDeliveryThreadActive = false;
@@ -448,19 +559,11 @@ void ElasticFrameProtocolReceiver::deliveryWorker() {
 // This is the thread going trough the buckets to see if they should be delivered to
 // the 'user'
 void ElasticFrameProtocolReceiver::receiverWorker() {
-    //Set the defaults. meaning the thread is running and there is no head of line blocking action going on.
-    bool lFoundHeadOfLineBlocking = false;
-    bool lFistDelivery = mHeadOfLineBlockingTimeout ==
-                         0; //if HOL is used then we must receive at least two packets first to know where to start counting.
-    uint32_t lHeadOfLineBlockingCounter = 0;
-    uint64_t lHeadOfLineBlockingTail = 0;
-    uint64_t lExpectedNextFrameToDeliver = 0;
-    uint64_t lOldestFrameDelivered = 0;
     int64_t lTimeReference = std::chrono::duration_cast<std::chrono::microseconds>(
             std::chrono::steady_clock::now().time_since_epoch()).count();
 
     std::vector<Bucket*> lCandidates;
-    lCandidates.reserve(CIRCULAR_BUFFER_SIZE); //Reserve our maximum possible number of candidates
+    lCandidates.reserve(CIRCULAR_BUFFER_SIZE);
 
 //    uint32_t lTimedebuggerPointer = 0;
 //    int64_t lTimeDebugger[100];
@@ -488,9 +591,12 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
         if (lTimeCompensation < 0) {
             EFP_LOGGER(true, LOGG_WARN, "Worker thread overloaded by " << signed(lTimeCompensation) << " us")
             lTimeReference = lTimeNow;
+            lTimeCompensation = 0;
         } else {
             std::this_thread::sleep_for(std::chrono::microseconds(lTimeCompensation));
         }
+
+        int64_t lTimeAfterSleep = lTimeNow + lTimeCompensation;
 
         mNetMtx.lock();
         uint32_t lActiveCount = (uint32_t)mBucketMap.size();
@@ -499,189 +605,115 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
             continue; //Nothing to process
         }
 
-        bool lTimeOutTrigger = false;
-        uint64_t lDeliveryOrderOldest = UINT64_MAX;
-
-        // The default mode is not to clear any buckets
-        bool lClearHeadOfLineBuckets = false;
-        // If I'm in head of blocking garbage collect mode.
-        if (lFoundHeadOfLineBlocking) {
-            // If some one instructed me to timeout then let's timeout first
-            if (lHeadOfLineBlockingCounter) {
-                lHeadOfLineBlockingCounter--;
-                // EFP_LOGGER(true, LOGG_NOTIFY, "Flush head countdown " << unsigned(headOfLineBlockingCounter))
-            } else {
-                // EFP_LOGGER(true, LOGG_NOTIFY, "Flush trigger " << unsigned(headOfLineBlockingCounter))
-                // Timeout triggered.. Let's garbage collect the head.
-                lClearHeadOfLineBuckets = true;
-                lFoundHeadOfLineBlocking = false;
-            }
-        }
-
         lCandidates.clear();
 
-        // Scan trough all active buckets
+        // ------------------------------------------
+
         for (const auto &rBucket : mBucketMap) {
-            // Are we cleaning out old buckets and did we found a head to timout?
-            if ((rBucket.second->mDeliveryOrder < lHeadOfLineBlockingTail) && lClearHeadOfLineBuckets) {
-                //EFP_LOGGER(true, LOGG_NOTIFY, "BOOM clear-> " << unsigned(n.second->mDeliveryOrder))
-                rBucket.second->mTimeout = 1;
-            }
-            rBucket.second->mTimeout--;
-            // If the bucket is ready to be delivered or is the bucket timeout?
-            if (!rBucket.second->mTimeout) {
-                lTimeOutTrigger = true;
+            //Has the bucket Timed out?
+            if (rBucket.second->mTimeout <= lTimeAfterSleep) {
                 lCandidates.emplace_back(rBucket.second);
-                rBucket.second->mTimeout = 1; //We want to timeout this again if head of line blocking is on
+                //Has the bucket received all fragments?
             } else if (rBucket.second->mFragmentCounter == rBucket.second->mOfFragmentNo) {
                 lCandidates.emplace_back(rBucket.second);
             }
         }
-
-        size_t lNumCandidatesToDeliver = lCandidates.size();
-        if (lNumCandidatesToDeliver) {
-            lDeliveryOrderOldest = lCandidates[0]->mDeliveryOrder;
+        if (lCandidates.empty()) {
+            //I might need more fragments to assemble the super frame or no old data has yet timed out
+            mNetMtx.unlock();
+            continue; //Nothing to process
         }
 
-        if ((!lFistDelivery && lNumCandidatesToDeliver >= 2) || lTimeOutTrigger) {
-            lFistDelivery = true;
-            lExpectedNextFrameToDeliver = lDeliveryOrderOldest;
-        }
+        if (mHeadOfLineBlockingTimeout) {
+            //HOL mode
+            if (mDeliveryHOLFirstRun) {
+                mDeliveryHOLFirstRun = false;
+                mNextExpectedFrameNumber = lCandidates[0]->mDeliveryOrder;
+            }
 
-        // Do we got any timed out buckets or finished buckets?
-        if (lNumCandidatesToDeliver && lFistDelivery) {
-            //FIXME - we could implement fast HOL clearing here lgtm [cpp/fixme-comment]
+            for (auto &rBucket: lCandidates) {
+                if (rBucket->mDeliveryOrder ==  mNextExpectedFrameNumber) {
+                    //We got what we expected. Now deliver.
+                    //Assemble all data for delivery
 
-            //Fast HOL candidate
-            //We're not clearing buckets and we have found HOL
-//            if (foundHeadOfLineBlocking && !clearHeadOfLineBuckets && headOfLineBlockingTimeout) {
-//                uint64_t thisCandidate=candidates[0].deliveryOrder;
-//                if (thisCandidate == )
-//                for (auto &x: candidates) { //DEBUG-Keep for now
-//
-//                }
-//            }
-
-            //if we're waiting for a time out but all candidates are already to be delivered
-
-            //for (auto &x: candidates) { //DEBUG-Keep for now
-            //    std::cout << ">>>" << unsigned(x.deliveryOrder) << std::endl;
-            //}
-
-            // So ok we have cleared the head send it all out
-            if (lClearHeadOfLineBuckets) {
-                //EFP_LOGGER(true, LOGG_NOTIFY, "FLUSH HEAD!")
-
-                uint64_t lAndTheNextIs = lCandidates[0]->mDeliveryOrder;
-
-                for (auto &rBucket: lCandidates) {
-                    if (lOldestFrameDelivered <= rBucket->mDeliveryOrder) {
-                        // Here we introduce a new concept..
-                        // If we are cleaning out the HOL. Only go soo far to either a gap (counter) or packet "non time out".
-                        // If you remove the 'if' below HOL will clean out all super frames from the top of the buffer to the bottom of the buffer no matter the
-                        // Status of the packets in between. So HOL cleaning just wipes out all waiting. This might be a wanted behaviour to avoid time-stall
-                        // However packets in queue are lost since they will 'falsely' be seen as coming late and then discarded.
-
-                        // FIXME lgtm [cpp/fixme-comment]
-                        // If for example candidates.size() is larger than a certain size then maybe just flush to the end to avoid a blocking HOL situation
-                        // If for example every second packet is lost then we will build a large queue
-
-                        if (lAndTheNextIs != rBucket->mDeliveryOrder) {
-                            // We did not expect this. is the bucket timed out .. then continue...
-                            if (rBucket->mTimeout > 1) {
-                                break;
-                            }
-                        }
-                        lAndTheNextIs = rBucket->mDeliveryOrder + 1;
-
-                        lOldestFrameDelivered = mHeadOfLineBlockingTimeout ? rBucket->mDeliveryOrder : 0;
-
-                        //Create a scope for the lock
-                        {
-                            std::lock_guard<std::mutex> lk(mSuperFrameMtx);
-                            rBucket->mBucketData->mDataContent = rBucket->mDataContent;
-                            rBucket->mBucketData->mBroken =
-                                    rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
-                            rBucket->mBucketData->mPts = rBucket->mPts;
-                            rBucket->mBucketData->mDts = rBucket->mDts;
-                            rBucket->mBucketData->mCode = rBucket->mCode;
-                            rBucket->mBucketData->mStreamID = rBucket->mStream;
-                            rBucket->mBucketData->mSource = rBucket->mSource;
-                            rBucket->mBucketData->mFlags = rBucket->mFlags;
-                            mSuperFrameQueue.push_back(std::move(rBucket->mBucketData));
-                            mSuperFrameReady = true;
-                        }
-                        mSuperFrameDeliveryConditionVariable.notify_one();
+                    //Assemble all data for delivery
+                    {
+                        std::lock_guard<std::mutex> lk(mSuperFrameMtx);
+                        rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+                        rBucket->mBucketData->mBroken =
+                                rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                        rBucket->mBucketData->mPts = rBucket->mPts;
+                        rBucket->mBucketData->mDts = rBucket->mDts;
+                        rBucket->mBucketData->mCode = rBucket->mCode;
+                        rBucket->mBucketData->mStreamID = rBucket->mStream;
+                        rBucket->mBucketData->mSource = rBucket->mSource;
+                        rBucket->mBucketData->mFlags = rBucket->mFlags;
+                        mSuperFrameQueue.push_back(std::move(rBucket->mBucketData));
+                        mSuperFrameReady = true;
                     }
-                    lExpectedNextFrameToDeliver = rBucket->mDeliveryOrder + 1;
-                    // std::cout << " (y) " << unsigned(expectedNextFrameToDeliver) << std::endl;
+                    mSuperFrameDeliveryConditionVariable.notify_one();
                     mBucketMap.erase(rBucket->mDeliveryOrder);
                     rBucket->mActive = false;
-                    rBucket->mBucketData = nullptr;
-                }
-            } else {
-                // In this run we have not cleared the head.. is there a head to clear?
-                // We can't be in waiting for timout and we can't have a 0 time-out
-                // A 0 timout means out of order delivery else we-re here.
-                // So in out of order delivery we time out the buckets instead of flushing the head.
 
-                // Check for head of line blocking only if HOL-time out is set
-                if (lExpectedNextFrameToDeliver < lCandidates[0]->mDeliveryOrder &&
-                    mHeadOfLineBlockingTimeout &&
-                    !lFoundHeadOfLineBlocking) {
-                    //for (auto &x: candidates) { //DEBUG-Keep for now
-                    //    std::cout << ">>>" << unsigned(x.deliveryOrder) << " is broken " << x.broken << std::endl;
-                    //}
+                    mNextExpectedFrameNumber++;
+                } else if (rBucket->mTimeout <= (lTimeAfterSleep + (mHeadOfLineBlockingTimeout * 1000))) {
+                    //We got HOL but the next frame has timed out meaning the time out of the bucket + the HOL timeout
+                    //We need now need to jump ahead and reset the mNextExpectedFrameNumber
+                    //Assemble all data for delivery and reset the HOL pointer.
 
-                    lFoundHeadOfLineBlocking = true; //Found hole
-                    lHeadOfLineBlockingCounter = mHeadOfLineBlockingTimeout; //Number of times to spin this loop
-                    lHeadOfLineBlockingTail = lCandidates[0]->mDeliveryOrder; //This is the tail
-                    //EFP_LOGGER(true, LOGG_NOTIFY, "HOL " << unsigned(expectedNextFrameToDeliver) << " "
-                    // << unsigned(bucketList[candidates[0].bucket].deliveryOrder)
-                    // << " tail " << unsigned(headOfLineBlockingTail)
-                    // << " savedPTS " << unsigned(savedPTS))
-                }
-
-                //Deliver only when head of line blocking is cleared and we're back to normal
-                if (!lFoundHeadOfLineBlocking) {
-                    for (auto &rBucket: lCandidates) {
-                        if (lExpectedNextFrameToDeliver != rBucket->mDeliveryOrder && mHeadOfLineBlockingTimeout) {
-                            lFoundHeadOfLineBlocking = true; //Found hole
-                            lHeadOfLineBlockingCounter = mHeadOfLineBlockingTimeout; //Number of times to spin this loop
-                            lHeadOfLineBlockingTail =
-                                    rBucket->mDeliveryOrder; //So we basically give the non existing data a chance to arrive..
-                            //EFP_LOGGER(true, LOGG_NOTIFY, "HOL2 " << unsigned(expectedNextFrameToDeliver) << " " << unsigned(x.deliveryOrder) << " tail " << unsigned(headOfLineBlockingTail))
-                            break;
-                        }
-                        lExpectedNextFrameToDeliver = rBucket->mDeliveryOrder + 1;
-
-                        //std::cout << unsigned(oldestFrameDelivered) << " " << unsigned(x.deliveryOrder) << std::endl;
-                        if (lOldestFrameDelivered <= rBucket->mDeliveryOrder) {
-                            lOldestFrameDelivered = mHeadOfLineBlockingTimeout ? rBucket->mDeliveryOrder : 0;
-                            //Create a scope the lock
-                            {
-                                std::lock_guard<std::mutex> lk(mSuperFrameMtx);
-                                rBucket->mBucketData->mDataContent = rBucket->mDataContent;
-                                rBucket->mBucketData->mBroken =
-                                        rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
-                                rBucket->mBucketData->mPts = rBucket->mPts;
-                                rBucket->mBucketData->mDts = rBucket->mDts;
-                                rBucket->mBucketData->mCode = rBucket->mCode;
-                                rBucket->mBucketData->mStreamID = rBucket->mStream;
-                                rBucket->mBucketData->mSource = rBucket->mSource;
-                                rBucket->mBucketData->mFlags = rBucket->mFlags;
-                                mSuperFrameQueue.push_back(std::move(rBucket->mBucketData));
-                                mSuperFrameReady = true;
-                            }
-                            mSuperFrameDeliveryConditionVariable.notify_one();
-                        }
-                        mBucketMap.erase(rBucket->mDeliveryOrder);
-                        rBucket->mActive = false;
-                        rBucket->mBucketData = nullptr;
+                    //Assemble all data for delivery
+                    {
+                        std::lock_guard<std::mutex> lk(mSuperFrameMtx);
+                        rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+                        rBucket->mBucketData->mBroken =
+                                rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                        rBucket->mBucketData->mPts = rBucket->mPts;
+                        rBucket->mBucketData->mDts = rBucket->mDts;
+                        rBucket->mBucketData->mCode = rBucket->mCode;
+                        rBucket->mBucketData->mStreamID = rBucket->mStream;
+                        rBucket->mBucketData->mSource = rBucket->mSource;
+                        rBucket->mBucketData->mFlags = rBucket->mFlags;
+                        mSuperFrameQueue.push_back(std::move(rBucket->mBucketData));
+                        mSuperFrameReady = true;
                     }
+                    mSuperFrameDeliveryConditionVariable.notify_one();
+                    mBucketMap.erase(rBucket->mDeliveryOrder);
+                    rBucket->mActive = false;
+
+                    mNextExpectedFrameNumber = rBucket->mDeliveryOrder + 1;
+                } else {
+                    //Here we got a HOL but the next frame has not yet timed out.. Lets break out of the loop and then
+                    //Look again at the delivery of the next fragment to see the status then.
+                    break;
                 }
             }
+        } else {
+            //We are not in HOL mode.. This means just deliver as the frames arrive or times out
+            for (auto &rBucket: lCandidates) {
+                //Assemble all data for delivery
+                {
+                    std::lock_guard<std::mutex> lk(mSuperFrameMtx);
+                    rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+                    rBucket->mBucketData->mBroken =
+                            rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                    rBucket->mBucketData->mPts = rBucket->mPts;
+                    rBucket->mBucketData->mDts = rBucket->mDts;
+                    rBucket->mBucketData->mCode = rBucket->mCode;
+                    rBucket->mBucketData->mStreamID = rBucket->mStream;
+                    rBucket->mBucketData->mSource = rBucket->mSource;
+                    rBucket->mBucketData->mFlags = rBucket->mFlags;
+                    mSuperFrameQueue.push_back(std::move(rBucket->mBucketData));
+                    mSuperFrameReady = true;
+                }
+                mSuperFrameDeliveryConditionVariable.notify_one();
+                mBucketMap.erase(rBucket->mDeliveryOrder);
+                rBucket->mActive = false;
+            }
         }
+
+
+        // ------------------------------------------
+
         mNetMtx.unlock();
 
         // Is more than 75% of the buffer used. //FIXME notify the user in some way
@@ -719,13 +751,13 @@ ElasticFrameMessages ElasticFrameProtocolReceiver::stopReceiver() {
 }
 
 ElasticFrameMessages
-ElasticFrameProtocolReceiver::receiveFragment(const std::vector<uint8_t> &rSubPacket, uint8_t lFromSource) {
-    return receiveFragmentFromPtr(rSubPacket.data(), rSubPacket.size(), lFromSource);
+ElasticFrameProtocolReceiver::receiveFragment(const std::vector<uint8_t> &rSubPacket, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction) {
+    return receiveFragmentFromPtr(rSubPacket.data(), rSubPacket.size(), lFromSource, rReceiveFunction);
 }
 
 // Unpack method. We received a fragment of data or a full frame. Lets unpack it
 ElasticFrameMessages
-ElasticFrameProtocolReceiver::receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource) {
+ElasticFrameProtocolReceiver::receiveFragmentFromPtr(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource, const std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)>& rReceiveFunction) {
     // Type 0 packet. Discard and continue
     // Type 0 packets can be used to fill with user data outside efp protocol packets just put a uint8_t = Frametype::type0 at position 0 and then any data.
     // Type 1 are frames larger than MTU
@@ -733,9 +765,11 @@ ElasticFrameProtocolReceiver::receiveFragmentFromPtr(const uint8_t *pSubPacket, 
     // Type 2 packets are also used at the end of Type 1 packet superFrames
     // Type 3 frames carry the reminder of data when it's too large for type2 to carry.
 
+    ElasticFrameMessages lMessage;
+
     std::lock_guard<std::mutex> lock(mReceiveMtx);
 
-    if (!(mIsWorkerThreadActive & mIsDeliveryThreadActive)) {
+    if (!(mIsWorkerThreadActive & mIsDeliveryThreadActive) && mCurrentMode == EFPReceiverMode::THREADED) {
         EFP_LOGGER(true, LOGG_ERROR, "Receiver not running")
         return ElasticFrameMessages::receiverNotRunning;
     }
@@ -746,17 +780,29 @@ ElasticFrameProtocolReceiver::receiveFragmentFromPtr(const uint8_t *pSubPacket, 
         if (lPacketSize < sizeof(ElasticFrameType1)) {
             return ElasticFrameMessages::frameSizeMismatch;
         }
-        return unpackType1(pSubPacket, lPacketSize, lFromSource);
+        lMessage = unpackType1(pSubPacket, lPacketSize, lFromSource);
+        if (mCurrentMode == EFPReceiverMode::RUN_TO_COMPLETION) {
+            runToCompletionMethod(rReceiveFunction);
+        }
+        return lMessage;
     } else if ((pSubPacket[0] & (uint8_t)0x0f) == Frametype::type2) {
         if (lPacketSize < sizeof(ElasticFrameType2)) {
             return ElasticFrameMessages::frameSizeMismatch;
         }
-        return unpackType2(pSubPacket, lPacketSize, lFromSource);
+        lMessage = unpackType2(pSubPacket, lPacketSize, lFromSource);
+        if (mCurrentMode == EFPReceiverMode::RUN_TO_COMPLETION) {
+            runToCompletionMethod(rReceiveFunction);
+        }
+        return lMessage;
     } else if ((pSubPacket[0] & (uint8_t)0x0f) == Frametype::type3) {
         if (lPacketSize < sizeof(ElasticFrameType3)) {
             return ElasticFrameMessages::frameSizeMismatch;
         }
-        return unpackType3(pSubPacket, lPacketSize, lFromSource);
+        lMessage = unpackType3(pSubPacket, lPacketSize, lFromSource);
+        if (mCurrentMode == EFPReceiverMode::RUN_TO_COMPLETION) {
+            runToCompletionMethod(rReceiveFunction);
+        }
+        return lMessage;
     }
 
     // Did not catch anything I understand

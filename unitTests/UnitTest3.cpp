@@ -3,7 +3,7 @@
 //
 
 //UnitTest3
-//Test sending 1 byte packet of value 0xaa and recieving it in the other end
+//Test sending 1 byte packet of value 0xaa and receiving it at the EFP receiver.
 
 #include "UnitTest3.h"
 
@@ -62,7 +62,7 @@ bool UnitTest3::startUnitTest() {
     ElasticFrameMessages result;
     std::vector<uint8_t> mydata;
     uint8_t streamID=1;
-    myEFPReciever = new (std::nothrow) ElasticFrameProtocolReceiver(5, 2);
+    myEFPReciever = new (std::nothrow) ElasticFrameProtocolReceiver(50, 20);
     myEFPPacker = new (std::nothrow) ElasticFrameProtocolSender(MTU);
     if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
         if (myEFPReciever) delete myEFPReciever;
