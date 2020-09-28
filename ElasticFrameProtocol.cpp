@@ -821,7 +821,6 @@ ElasticFrameProtocolReceiver::receiveFragmentFromPtr(const uint8_t *pSubPacket, 
         }
         return lMessage;
     }
-
     // Did not catch anything I understand
     return ElasticFrameMessages::unknownFrameType;
 }

@@ -306,7 +306,8 @@ public:
     void setSuperFrameNo(uint16_t lSuperFrameNo);
 #endif
     //Used by unitTests ----END-----------------
-
+protected:
+    std::shared_ptr<ElasticFrameProtocolContext> mCTX = nullptr; //Place to save the context if provided
 private:
     //Private methods ----- START ------
     // Used by the C - API
@@ -319,7 +320,7 @@ private:
     uint16_t mSuperFrameNoGenerator = 0;
     std::vector<uint8_t> mSendBufferFixed; //Fragment buffer the size of MTU given
     std::vector<uint8_t> mSendBufferEnd; //Resized fragment buffer the size of the end fragment
-    std::shared_ptr<ElasticFrameProtocolContext> mCTX = nullptr; //Place to save the context if provided
+
     // Internal lists and variables ----- END -----
 };
 
@@ -512,7 +513,8 @@ public:
     static ElasticFrameMessages extractEmbeddedData(pFramePtr &rPacket, std::vector<std::vector<uint8_t>> *pEmbeddedDataList,
                                                     std::vector<uint8_t> *pDataContent, size_t *pPayloadDataPosition);
     //Help methods ----------- END ----------
-
+protected:
+    std::shared_ptr<ElasticFrameProtocolContext> mCTX = nullptr;
 private:
     // A bucket is filled with fragments and is part of the receiver buffer
     // The bucket when finished contains all the data in order for EFP to deliver
@@ -606,7 +608,6 @@ private:
     std::condition_variable mSuperFrameDeliveryConditionVariable;
     bool mSuperFrameReady = false;
     EFPReceiverMode mCurrentMode;
-    std::shared_ptr<ElasticFrameProtocolContext> mCTX = nullptr;
     // Internal lists and variables ----- END ------
 };
 
