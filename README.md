@@ -23,9 +23,9 @@ Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:
 
 Version 0.3 adds a run-to-completion mode, see unit test 20 for implementation details.
 
-The internal delivery mechanism has changed to abosolute relative time-outs instead of counters, this changes the behaviour (to the better) compared to older version of EFP when using EFP over lossy infrastructure.
+The internal delivery mechanism has changed to absolute relative time-outs instead of counters, this changes the behaviour (to the better) compared to older version of EFP when using EFP over lossy infrastructure.
 
-Version 0.3 also implements a optional context to be used in all callbacks. Please see Unit test 19 for deatils.
+Version 0.3 also implements a optional context to be used in all callbacks. Please see Unit test 19 for details.
 
 **This version changes the API for the receiver!!** 
 
@@ -119,7 +119,7 @@ The dynamic EFP library
 
 ## Usage
 
-The EFP class/library can be made a reciever or sender. This is configured during creation as decribed below.
+The EFP class/library can be made a receiver or sender. This is configured during creation as described below.
 
 The unit test
 
@@ -152,7 +152,7 @@ myEFPSender.sendCallback = std::bind(&sendData, std::placeholders::_1, std::plac
 // param5 = CODE (if the data type param2 (uint8_t) msb is set then CODE must be used
 // See the header file detailing what CODE should be set to
 // param6 = Stream number (uint8_t) a unique value for that EFP-Stream
-// param7 = FLAGS (used for various signaling in the protocol) 
+// param7 = FLAGS (used for various signalling in the protocol) 
 // param8 = Optional lambda (See unit test 18) 
 myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 0, EFP_CODE('A', 'N', 'X', 'B'), 2, NO_FLAGS, (optional lambda));
 
@@ -186,7 +186,7 @@ void gotData(ElasticFrameProtocol::pFramePtr &rFrame, (optional context))
 
 // Create your receiver
 // Passing fragment time out and HOL time out if wanted else set HOL to 0
-// 50 == 50 ms before timing out not recieving all fragments for a frame
+// 50 == 50 ms before timing out not receiving all fragments for a frame
 // 20 == 20 ms before moving the head in HOL mode forward.
 ElasticFrameProtocolReceiver myEFPReceiver(50, 20);
 
@@ -254,7 +254,7 @@ EFPBond makes it possible for all streams to use multiple underlying transport i
 
 [**EFPSignal**](https://github.com/Unit-X/efpsignal)
 
-EFPSignal adds signaling, content declaration and dynamic/static subscription to EFP-Streams.  
+EFPSignal adds signalling, content declaration and dynamic/static subscription to EFP-Streams.  
 
 ## Contributing
 
@@ -269,7 +269,7 @@ EFPSignal adds signaling, content declaration and dynamic/static subscription to
 
 When working with media workflows, both live and non-live, we use framing protocols such as MP4 and MPEG-TS, often transported over HTTP (TCP). Some of the protocols used for media transport are also tied to a certain underlying transport mechanism (RTMP, HLS, WebRTC…), and some are agnostic to the underlying transport (MP4, MPEG-TS…). The protocols tied to an underlying transport type forces the user to the behavior of that protocol’s properties, for example, TCP when using RTMP. If you use MP4 as framing agnostic to the underlying transport and then transport the data using a protocol where you might lose data and the delivery might be out of order, there is no mechanism to correct for that in the MP4-box domain.  
 
-For those situations, MPEG-TS has traditionally been used and is a common multiplexing standard for media. However, MPEG-TS, was designed in the mid ’90s for the transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems in the 1990’s where simplex transport was common and data integrity looked different. However, MPEG-TS has not changed since then, it does not match modern IP protocols well and it has a high protocol overhead. Some of today’s underlying transport protocols also lose data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behavior. 
+For those situations, MPEG-TS has traditionally been used and is a common multiplexing standard for media. However, MPEG-TS, was designed in the mid ’90s for the transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems in the 1990’s where simplex transport was common and data integrity looked different. However, MPEG-TS has not changed since then, it does not match modern IP protocols well and it has a high protocol overhead. Some of today’s underlying transport protocols also lose data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behaviour. 
 
 There has been work done in the MPEG group to modernize media/data framing using MMT (MPEG Media Transport) for better adaption against underlying transport. MMT is currently used in the ATSC 3.0 standard but has not gained popularity in the data center/cloud/internet domain. 
 
