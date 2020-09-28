@@ -19,6 +19,15 @@ The elasticity comes from the protocols ability to adapt to incoming frame size,
 
 Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:/g/personal/anders_cedronius_edgeware_tv/ERnSit7j6udBsZOqkQcMLrQBpKmnfdApG3lehRk4zE-qgQ?e=Ha2VrP) for more information.
 
+## Notification about version 0.3
+
+Version 0.3 adds a run-to-completion mode, see unit test 20 for implementation details.
+
+The internal delivery mechanism has changed to abosolute relative time-outs instead of counters, this changes the behaviour (to the better) compared to older version of EFP when using EFP over lossy infrastructure.
+
+Version 0.3 also implements a optional context to be used in all callbacks. Please see Unit test 19 for deatils.
+
+
 ## Current badge status
 
 (Click the badge to get to the underlying information)
@@ -297,4 +306,4 @@ Maintainer: anders.cedronius(at)edgeware.tv
 
 *MIT*
 
-Read *LICENCE.md* for details
+Read *LICENCE* for details

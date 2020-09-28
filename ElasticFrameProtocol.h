@@ -76,7 +76,7 @@ extern "C" {
 #define UNDEFINED_FLAG  0b10000000 // TBD
 
 #define EFP_MAJOR_VERSION 0
-#define EFP_MINOR_VERSION 2
+#define EFP_MINOR_VERSION 3
 
 // Bitwise operations are used on members therefore the namespace is wrapping enum instead of 'enum class'
 /// Definition of the data types supported by EFP
@@ -596,8 +596,8 @@ private:
     std::atomic_bool mIsDeliveryThreadActive = {false};
     std::atomic_bool mThreadActive = {false};
 
-    //Run to completion HOL variables
-    bool mRunToCompletionHOLFirstRun = true;
+    //Delivery variables
+    bool mDeliveryHOLFirstRun = true;
     uint64_t mNextExpectedFrameNumber = 0;
 
     std::mutex mReceiveMtx;                     //Mutex protecting the receive part

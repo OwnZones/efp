@@ -32,7 +32,7 @@ int main() {
 
     int returnCode = EXIT_SUCCESS;
 
-
+/*
     //Test sending a packet less than MTU + header - > Expected result is one type2 frame only sent
     UnitTest1 unitTest1;
     if (!unitTest1.startUnitTest()) {
@@ -180,7 +180,7 @@ int main() {
         std::cout << "Unit test 19 failed" << std::endl;
         returnCode = EXIT_FAILURE;
     }
-
+*/
     //Test basic run to completion
     //Test sending a packet of MTU-headertyp1+1 > result should be one frame type1 and a frame type 2, MTU+1 at the reciever
 

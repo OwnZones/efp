@@ -430,6 +430,7 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(const std::function<voi
             std::chrono::steady_clock::now().time_since_epoch()).count();
 
     std::vector<Bucket*> lCandidates;
+    lCandidates.reserve(CIRCULAR_BUFFER_SIZE);
     for (const auto &rBucket : mBucketMap) {
         //Has the bucket Timed out?
         if (rBucket.second->mTimeout <= lTimeNow) {
@@ -446,10 +447,9 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(const std::function<voi
 
     if (mHeadOfLineBlockingTimeout) {
         //HOL mode
-        uint64_t lDeliveryOrderOldest = lCandidates[0]->mDeliveryOrder;
-        if (mRunToCompletionHOLFirstRun) {
-            mRunToCompletionHOLFirstRun = false;
-            mNextExpectedFrameNumber = lDeliveryOrderOldest;
+        if (mDeliveryHOLFirstRun) {
+            mDeliveryHOLFirstRun = false;
+            mNextExpectedFrameNumber = lCandidates[0]->mDeliveryOrder;
         }
 
         for (auto &rBucket: lCandidates) {
@@ -457,8 +457,7 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(const std::function<voi
                 //We got what we expected. Now deliver.
                 //Assemble all data for delivery
                 rBucket->mBucketData->mDataContent = rBucket->mDataContent;
-                rBucket->mBucketData->mBroken =
-                        rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                rBucket->mBucketData->mBroken = rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
                 rBucket->mBucketData->mPts = rBucket->mPts;
                 rBucket->mBucketData->mDts = rBucket->mDts;
                 rBucket->mBucketData->mCode = rBucket->mCode;
@@ -471,14 +470,15 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(const std::function<voi
                     receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
                 }
                 mBucketMap.erase(rBucket->mDeliveryOrder); //We delivered let's collect the garbage
-                mNextExpectedFrameNumber++;
+                rBucket->mActive = false; //Inactivate the bucket
+                rBucket->mBucketData = nullptr; //Release the data
+                mNextExpectedFrameNumber++; //The next expected frame is this frame number + 1
             } else if (rBucket->mTimeout <= (lTimeNow + (mHeadOfLineBlockingTimeout * 1000))) {
                 //We got HOL but the next frame has timed out meaning the time out of the bucket + the HOL timeout
                 //We need now need to jump ahead and reset the mNextExpectedFrameNumber
                 //Assemble all data for delivery and reset the HOL pointer.
                 rBucket->mBucketData->mDataContent = rBucket->mDataContent;
-                rBucket->mBucketData->mBroken =
-                        rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                rBucket->mBucketData->mBroken = rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
                 rBucket->mBucketData->mPts = rBucket->mPts;
                 rBucket->mBucketData->mDts = rBucket->mDts;
                 rBucket->mBucketData->mCode = rBucket->mCode;
@@ -491,6 +491,8 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(const std::function<voi
                     receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
                 }
                 mBucketMap.erase(rBucket->mDeliveryOrder); //We delivered let's collect the garbage
+                rBucket->mActive = false; //Inactivate the bucket
+                rBucket->mBucketData = nullptr; //Release the data
                 mNextExpectedFrameNumber = rBucket->mDeliveryOrder + 1;
             } else {
                 //Here we got a HOL but the next frame has not yet timed out.. Lets break out of the loop and then
@@ -517,6 +519,8 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(const std::function<voi
                 receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
             }
             mBucketMap.erase(rBucket->mDeliveryOrder); //We delivered let's collect the garbage
+            rBucket->mActive = false; //Inactivate the bucket
+            rBucket->mBucketData = nullptr; //Release the data
         }
     }
 }
@@ -559,7 +563,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
             std::chrono::steady_clock::now().time_since_epoch()).count();
 
     std::vector<Bucket*> lCandidates;
-    lCandidates.reserve(CIRCULAR_BUFFER_SIZE); //Reserve our maximum possible number of candidates
+    lCandidates.reserve(CIRCULAR_BUFFER_SIZE);
 
 //    uint32_t lTimedebuggerPointer = 0;
 //    int64_t lTimeDebugger[100];
@@ -600,6 +604,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
             mNetMtx.unlock();
             continue; //Nothing to process
         }
+
         lCandidates.clear();
 
         // ------------------------------------------
@@ -621,8 +626,8 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
 
         if (mHeadOfLineBlockingTimeout) {
             //HOL mode
-            if (mRunToCompletionHOLFirstRun) {
-                mRunToCompletionHOLFirstRun = false;
+            if (mDeliveryHOLFirstRun) {
+                mDeliveryHOLFirstRun = false;
                 mNextExpectedFrameNumber = lCandidates[0]->mDeliveryOrder;
             }
 
@@ -649,7 +654,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                     mSuperFrameDeliveryConditionVariable.notify_one();
                     mBucketMap.erase(rBucket->mDeliveryOrder);
                     rBucket->mActive = false;
-                    rBucket->mBucketData = nullptr;
 
                     mNextExpectedFrameNumber++;
                 } else if (rBucket->mTimeout <= (lTimeAfterSleep + (mHeadOfLineBlockingTimeout * 1000))) {
@@ -675,7 +679,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                     mSuperFrameDeliveryConditionVariable.notify_one();
                     mBucketMap.erase(rBucket->mDeliveryOrder);
                     rBucket->mActive = false;
-                    rBucket->mBucketData = nullptr;
 
                     mNextExpectedFrameNumber = rBucket->mDeliveryOrder + 1;
                 } else {
@@ -705,7 +708,6 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                 mSuperFrameDeliveryConditionVariable.notify_one();
                 mBucketMap.erase(rBucket->mDeliveryOrder);
                 rBucket->mActive = false;
-                rBucket->mBucketData = nullptr;
             }
         }
 
