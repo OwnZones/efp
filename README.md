@@ -25,13 +25,13 @@ Version 0.3 adds a run-to-completion mode, see unit test 20 for implementation d
 
 The internal delivery mechanism has changed to absolute relative time-outs instead of counters, this changes the behaviour (to the better) compared to older version of EFP when using EFP over lossy infrastructure.
 
-Version 0.3 also implements a optional context to be used in all callbacks. Please see Unit test 19 for details.
+Version 0.3 also implements an optional context to be used in all callbacks. Please see Unit test 19 for details.
 
 **This version changes the API for the receiver!!** 
 
 50 == 50 milliseconds before timing out non complete frames.
 
-20 == 20 milliseconds bfore moving the head forward in HOL mode. (set to 0 for disabling HOL)
+20 == 20 milliseconds before moving the head forward in HOL mode. (set to 0 for disabling HOL)
 
 ElasticFrameProtocolReceiver myEFPReceiver(50, 20, (optional context), (optional set run to completion mode));
 
