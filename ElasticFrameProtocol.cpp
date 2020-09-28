@@ -477,23 +477,31 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(const std::function<voi
                 //We got HOL but the next frame has timed out meaning the time out of the bucket + the HOL timeout
                 //We need now need to jump ahead and reset the mNextExpectedFrameNumber
                 //Assemble all data for delivery and reset the HOL pointer.
-                rBucket->mBucketData->mDataContent = rBucket->mDataContent;
-                rBucket->mBucketData->mBroken = rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
-                rBucket->mBucketData->mPts = rBucket->mPts;
-                rBucket->mBucketData->mDts = rBucket->mDts;
-                rBucket->mBucketData->mCode = rBucket->mCode;
-                rBucket->mBucketData->mStreamID = rBucket->mStream;
-                rBucket->mBucketData->mSource = rBucket->mSource;
-                rBucket->mBucketData->mFlags = rBucket->mFlags;
-                if (rReceiveFunction) {
-                    rReceiveFunction(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+
+                if (rBucket->mDeliveryOrder < mNextExpectedFrameNumber) {
+                    //Remove the data since we dont want to deliver OOO
+                    mBucketMap.erase(rBucket->mDeliveryOrder);
+                    rBucket->mBucketData = nullptr;
+                    rBucket->mActive = false;
                 } else {
-                    receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+                    rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+                    rBucket->mBucketData->mBroken = rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                    rBucket->mBucketData->mPts = rBucket->mPts;
+                    rBucket->mBucketData->mDts = rBucket->mDts;
+                    rBucket->mBucketData->mCode = rBucket->mCode;
+                    rBucket->mBucketData->mStreamID = rBucket->mStream;
+                    rBucket->mBucketData->mSource = rBucket->mSource;
+                    rBucket->mBucketData->mFlags = rBucket->mFlags;
+                    if (rReceiveFunction) {
+                        rReceiveFunction(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+                    } else {
+                        receiveCallback(rBucket->mBucketData, mCTX ? mCTX.get() : nullptr);
+                    }
+                    mBucketMap.erase(rBucket->mDeliveryOrder); //We delivered let's collect the garbage
+                    rBucket->mActive = false; //Inactivate the bucket
+                    rBucket->mBucketData = nullptr; //Release the data
+                    mNextExpectedFrameNumber = rBucket->mDeliveryOrder + 1;
                 }
-                mBucketMap.erase(rBucket->mDeliveryOrder); //We delivered let's collect the garbage
-                rBucket->mActive = false; //Inactivate the bucket
-                rBucket->mBucketData = nullptr; //Release the data
-                mNextExpectedFrameNumber = rBucket->mDeliveryOrder + 1;
             } else {
                 //Here we got a HOL but the next frame has not yet timed out.. Lets break out of the loop and then
                 //Look again at the delivery of the next fragment to see the status then.
@@ -656,31 +664,41 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                     rBucket->mActive = false;
 
                     mNextExpectedFrameNumber++;
+
                 } else if (rBucket->mTimeout <= (lTimeAfterSleep + (mHeadOfLineBlockingTimeout * 1000))) {
                     //We got HOL but the next frame has timed out meaning the time out of the bucket + the HOL timeout
                     //We need now need to jump ahead and reset the mNextExpectedFrameNumber
                     //Assemble all data for delivery and reset the HOL pointer.
 
-                    //Assemble all data for delivery
-                    {
-                        std::lock_guard<std::mutex> lk(mSuperFrameMtx);
-                        rBucket->mBucketData->mDataContent = rBucket->mDataContent;
-                        rBucket->mBucketData->mBroken =
-                                rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
-                        rBucket->mBucketData->mPts = rBucket->mPts;
-                        rBucket->mBucketData->mDts = rBucket->mDts;
-                        rBucket->mBucketData->mCode = rBucket->mCode;
-                        rBucket->mBucketData->mStreamID = rBucket->mStream;
-                        rBucket->mBucketData->mSource = rBucket->mSource;
-                        rBucket->mBucketData->mFlags = rBucket->mFlags;
-                        mSuperFrameQueue.push_back(std::move(rBucket->mBucketData));
-                        mSuperFrameReady = true;
+                    //Is the frame older than the head?
+                    //If you want Out Of Order (OOO) delivery in HOL mode remove this 'if'
+                    if (rBucket->mDeliveryOrder < mNextExpectedFrameNumber) {
+                        //Remove the data since we dont want to deliver OOO
+                        mBucketMap.erase(rBucket->mDeliveryOrder);
+                        rBucket->mBucketData = nullptr;
+                        rBucket->mActive = false;
+                    } else {
+                        //The frame is newer than the head
+                        //Assemble all data for delivery
+                        {
+                            std::lock_guard<std::mutex> lk(mSuperFrameMtx);
+                            rBucket->mBucketData->mDataContent = rBucket->mDataContent;
+                            rBucket->mBucketData->mBroken =
+                                    rBucket->mFragmentCounter != rBucket->mOfFragmentNo;
+                            rBucket->mBucketData->mPts = rBucket->mPts;
+                            rBucket->mBucketData->mDts = rBucket->mDts;
+                            rBucket->mBucketData->mCode = rBucket->mCode;
+                            rBucket->mBucketData->mStreamID = rBucket->mStream;
+                            rBucket->mBucketData->mSource = rBucket->mSource;
+                            rBucket->mBucketData->mFlags = rBucket->mFlags;
+                            mSuperFrameQueue.push_back(std::move(rBucket->mBucketData));
+                            mSuperFrameReady = true;
+                        }
+                        mSuperFrameDeliveryConditionVariable.notify_one();
+                        mBucketMap.erase(rBucket->mDeliveryOrder);
+                        rBucket->mActive = false;
+                        mNextExpectedFrameNumber = rBucket->mDeliveryOrder + 1;
                     }
-                    mSuperFrameDeliveryConditionVariable.notify_one();
-                    mBucketMap.erase(rBucket->mDeliveryOrder);
-                    rBucket->mActive = false;
-
-                    mNextExpectedFrameNumber = rBucket->mDeliveryOrder + 1;
                 } else {
                     //Here we got a HOL but the next frame has not yet timed out.. Lets break out of the loop and then
                     //Look again at the delivery of the next fragment to see the status then.

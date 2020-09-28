@@ -29,11 +29,12 @@ Version 0.3 also implements an optional context to be used in all callbacks. Ple
 
 **This version changes the API for the receiver!!** 
 
-50 == 50 milliseconds before timing out non complete frames.
+X == milliseconds before timing out non complete frames.
 
-20 == 20 milliseconds before moving the head forward in HOL mode. (set to 0 for disabling HOL)
+Y == milliseconds before moving the head forward in HOL mode. (set to 0 for disabling HOL)
 
-ElasticFrameProtocolReceiver myEFPReceiver(50, 20, (optional context), (optional set run to completion mode));
+ElasticFrameProtocolReceiver myEFPReceiver(X, Y, (optional context), (optional set run to completion mode));
+
 
 
 ## Current badge status
