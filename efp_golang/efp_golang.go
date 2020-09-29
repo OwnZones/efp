@@ -6,8 +6,8 @@ package main
 #cgo linux LDFLAGS: -L${SRCDIR}/efp_libs/linux -lefp -lstdc++
 #include <stdint.h>
 #include "elastic_frame_protocol_c_api.h"
-uint64_t initEFPSender(uint64_t mtu);
-uint64_t initEFPReciever(uint32_t bucketTimeout, uint32_t holTimeout);
+uint64_t initEFPSender(uint64_t mtu, void* ctx);
+uint64_t initEFPReciever(uint32_t bucketTimeout, uint32_t holTimeout, void* ctx, uint32_t mode);
 */
 import "C"
 import (
@@ -30,11 +30,13 @@ func main() {
 
 	makeVector()
 
-	//Init a EFP sender MTU 300 bytes
-	efpSendID := C.initEFPSender(300)
+	//If you want to pass context change nil to unsafe.Pointer(your stuff)
 
-	//Start a EFP reciever (bucket time-out 100ms, HOL timeout 50ms)
-	efpReceiveID = C.initEFPReciever(10,5)
+	//Init a EFP sender MTU 300 bytes
+	efpSendID := C.initEFPSender(300, nil)
+
+	//Start a EFP reciever (bucket time-out 100ms, HOL timeout 50ms, context == nil and the mode is threaded)
+	efpReceiveID = C.initEFPReciever(100,50, nil, C.EFP_MODE_THREAD)
 
 	//Create a data block containing a null terminated string"
 	stringtoEmbed := append([]byte("Embed this string"), byte(0))
@@ -64,7 +66,7 @@ func main() {
 }
 
 //export sendDataEFP
-func sendDataEFP(data *C.uchar, size C.size_t, streamID uint8) {
+func sendDataEFP(data *C.uchar, size C.size_t, streamID uint8, ctx *C.void) {
 	fmt.Printf("Send Fragment. \n")
 	result := C.efp_receive_fragment(efpReceiveID, data, size, 0);
 	 if (result < 0) {
@@ -73,7 +75,7 @@ func sendDataEFP(data *C.uchar, size C.size_t, streamID uint8) {
 }
 
 //export gotEmbeddedDataEFP
-func gotEmbeddedDataEFP(data *C.uchar, size C.size_t, dataType uint8, pts uint64) {
+func gotEmbeddedDataEFP(data *C.uchar, size C.size_t, dataType uint8, pts uint64, ctx *C.void) {
 	fmt.Printf("Got embedded data size: %d and data type: %d\n", size, dataType)
 	fmt.Printf("PTS: %d\n", pts)
 	//In this example we know it's a C-String so we just cast it..
