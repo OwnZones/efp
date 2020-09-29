@@ -589,8 +589,8 @@ private:
     Stream mStreams[UINT8_MAX];                 // EFP-Stream information store
     std::map<uint64_t , Bucket*> mBucketMap;    // Sorted (super frame number) pointers to mBucketList items
     Bucket *mBucketList;                        // Internal queue where all fragments are stored and super frames delivered from
-    uint32_t mBucketTimeout = 0;                // Time out passed to receiver
-    uint32_t mHeadOfLineBlockingTimeout = 0;    // HOL time out passed to receiver
+    uint32_t mBucketTimeoutms = 0;              // Time out passed to receiver (in milliseconds)
+    uint32_t mHeadOfLineBlockingTimeoutms = 0;  // HOL time out passed to receiver (in milliseconds)
     std::mutex mNetMtx;                         // Mutex protecting the bucket queue
 
     // Various counters to keep track of the different frames

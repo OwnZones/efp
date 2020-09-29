@@ -8,10 +8,10 @@
 #include <iostream>
 #include <sstream>
 
-#define LOGG_NOTIFY 1
-#define LOGG_WARN 2
-#define LOGG_ERROR 4
-#define LOGG_FATAL 8
+#define LOGG_NOTIFY (unsigned)1
+#define LOGG_WARN (unsigned)2
+#define LOGG_ERROR (unsigned)4
+#define LOGG_FATAL (unsigned)8
 #define LOGG_MASK  LOGG_NOTIFY | LOGG_WARN | LOGG_ERROR | LOGG_FATAL //What to logg?
 
 //#define DEBUG

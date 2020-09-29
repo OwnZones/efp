@@ -149,7 +149,7 @@ int main() {
     }
 
     //This time we don't drop anything.. We should receive the embedded data and the EFP frame with broken == 0
-    result = efp_send_data(efp_object_handle_send, sendThisData, alloc_size, 10, 100, 100, EFP_CODE('A', 'V', 'C', 'C'),
+    result = efp_send_data(efp_object_handle_send, sendThisData, alloc_size, 10, 200, 200, EFP_CODE('A', 'V', 'C', 'C'),
                            2, 16);
     if (result < 0) {
         printf("Error %d sending\n", result);
