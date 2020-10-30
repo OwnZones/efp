@@ -164,7 +164,8 @@ bool UnitTest16::startUnitTest() {
         if (myEFPPacker) delete myEFPPacker;
         return false;
     }
-    myEFPPacker->sendCallback = std::bind(&UnitTest16::sendData, this, std::placeholders::_1);
+
+    myEFPPacker->sendCallback = [=](const std::vector<uint8_t> &rSubPacket, uint8_t lStreamID, ElasticFrameProtocolContext* pCTX){sendData(rSubPacket);};
     myEFPReciever->receiveCallback = std::bind(&UnitTest16::gotData, this, std::placeholders::_1);
 
     unitTestPacketNumberReciever = 0;

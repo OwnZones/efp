@@ -104,7 +104,8 @@ namespace ElasticFrameContentNamespace {
         h264    = 0x83, //ITU-T H.264       //ANXB = Annex B framing / AVCC = AVCC framing
         h265    = 0x84, //ITU-T H.265       //ANXB = Annex B framing / AVCC = AVCC framing
         h266    = 0x85, //ITU-T H.266       //ANXB = Annex B framing / AVCC = AVCC framing
-        av1     = 0x86  //ITU-T H.266       //XOBU = Open Bitstream Units framing
+        av1     = 0x86, //AOM AV1           //XOBU = Open Bitstream Units framing
+        mp4     = 0x87  //ISO/IEC 14496-12  //(MP4 box name)
     };
 
     /// Embedded data types
