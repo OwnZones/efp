@@ -20,6 +20,7 @@
 #include "unitTests/UnitTest18.h"
 #include "unitTests/UnitTest19.h"
 #include "unitTests/UnitTest20.h"
+#include "unitTests/UnitTest21.h"
 #include "unitTests/PerformanceLab.h"
 
 #include <iostream>
@@ -31,6 +32,7 @@ int main() {
     //code will never get to here
 
     int returnCode = EXIT_SUCCESS;
+
 
     //Test sending a packet less than MTU + header - > Expected result is one type2 frame only sent
     UnitTest1 unitTest1;
@@ -189,5 +191,11 @@ int main() {
         returnCode = EXIT_FAILURE;
     }
 
+    //Zero copy (destroys original data)
+    UnitTest21 unitTest21;
+    if (!unitTest21.startUnitTest()) {
+        std::cout << "Unit test 21 failed" << std::endl;
+        returnCode = EXIT_FAILURE;
+    }
     return returnCode;
 }

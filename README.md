@@ -2,7 +2,7 @@
 
 # ElasticFrameProtocol
 
-The ElasticFrameProtocol is acting as a bridge between data producers/consumers and the underlying transport protocol.
+The ElasticFrameProtocol is a bridge between data producers/consumers and the underlying transport protocol.
 
 ```
 ---------------------------------------------------------   /\
@@ -16,6 +16,36 @@ The ElasticFrameProtocol is acting as a bridge between data producers/consumers 
 ```
 
 The elasticity comes from the protocols ability to adapt to incoming frame size, type, number of concurrent streams and underlying infrastructure. This layer is kept thin without driving overhead, complexity and delay. 
+
+
+#Reasons for using EFP
+
+For us there are a couple of reasons that sparked the initial design. And why we (and others) use EFP today.
+
+1.    We wanted to create a framing layer decoupled from the underlying transport and agnostic to the payload. The benefit we see is, without re-writing the application and all its features we’re able to change / select the underlying transport anywhere in the solution.
+
+2.    We wanted to create a thin-framing structure providing better mapping to IP protocols compared to MPEG-TS (initially designed for mapping to ATM) and MP4 designed targeting files. EFP lowers the overhead from several % to just about 0.5% overhead.
+
+3.    We wanted features like dynamic load balancing when bonding interfaces, 1+N protection and splitting of elementary data streams without being bound to a specific transport protocols features. We see this as an important feature when building a robust infrastructure. Some transport protocols miss that (part of EFPBond).
+
+4.   We want to correctly detect the data integrity of the transported data. MPEG-TS has 4 bits CC. That is not good enough when transporting data over IP networks. It was designed to detect bit-errors in transport protocols from the 90's, then 4 bits CC works great.
+
+5.    We needed something that enables us to transport elementary data payload dynamically. Something that is using the duplex nature of IP networks for pub/sub applications where we can declare content and subscribe to content in the elementary stream level (Part of EFPSignal).
+
+6.    We needed a framing structure that is capable of inserting timing critical messaging (type0 frames) we need that for transporting exact time. We use it for media-timing (NTP is not possible to use in all locations since UDP port 123 is sometimes blocked). 
+
+7.    We wanted a what we think is a simple super-clean C++ interface since we’re a C++ team. We also expose a C interface for other languages to use.
+
+8.    We wanted a solution that is of a license type that can be used in commercial products without us having to expose our code. For example Apple do not allow dynamic linking in iOS applications making GPL lisence types unwanted.
+
+9.    We wanted something open source and free of charge.
+
+10.    We wanted something written in a portable language so we can target any system and any arhitecture.
+
+
+Your needs might be different than ours. Or you might use already existing protocols that meet the above requirements/features. If that is the case, please let us know as we do not want to re-invent the wheel.
+Anyhow, the above requirements are why we designed and implemented EFP.
+
 
 Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:/g/personal/anders_cedronius_edgeware_tv/ERnSit7j6udBsZOqkQcMLrQBpKmnfdApG3lehRk4zE-qgQ?e=Ha2VrP) for more information.
 

@@ -7,7 +7,7 @@
 //  | |____ | || (_| |\__ \| |_ | || (__ | |   | |  | (_| || | | | | ||  __/
 //  |______||_| \__,_||___/ \__||_| \___||_|   |_|   \__,_||_| |_| |_| \___|
 //                                                                  Protocol
-// UnitX @ Edgeware AB 2020
+// UnitX @ Edgeware AB 2021
 //
 // For more information, example usage and plug-ins please see
 // https://github.com/Unit-X/efp
@@ -76,7 +76,7 @@ extern "C" {
 #define UNDEFINED_FLAG  0b10000000 // TBD
 
 #define EFP_MAJOR_VERSION 0
-#define EFP_MINOR_VERSION 3
+#define EFP_MINOR_VERSION 4
 
 // Bitwise operations are used on members therefore the namespace is wrapping enum instead of 'enum class'
 /// Definition of the data types supported by EFP
@@ -257,6 +257,32 @@ public:
                        uint32_t lCode, uint8_t lStreamID, uint8_t lFlags,
                        const std::function<void(const std::vector<uint8_t> &rSubPacket,
                                                 uint8_t streamID)>& rSendFunction = nullptr);
+
+
+    ///WARNING. Zero copy destructivePackAndSendFromPtr is WIP.
+
+    /**
+     * Converts the original data from a pointer to EFP packets/fragments destructive
+     * That means that the original data is destroyed/polluted and may not be used.
+     * This method also requires that 100 bytes prior to the buffer start is free to be used
+     * | 100 bytes | data to be fragmented |
+     * This is a exclusive C++ method and the lambda (rSendFunction) is the only data output option
+     *
+     * @param pPacket pointer to the data to be sent
+     * @param lPacketSize size of the data to be sent
+     * @param lDataContent ElasticFrameContent::x where x is the type of data to be sent.
+     * @param lPts the PTS value of the content
+     * @param lDts the DTS value of the content
+     * @param lCode if MSB (uint8_t) of ElasticFrameContent is set. Then code is used to further declare the content
+     * @param lStreamID The EFP-stream ID the data is associated with.
+     * @param lFlags signal what flags are used
+     * @param rSendFunction send function/lambda. Overrides the callback sendCallback
+     * @return ElasticFrameMessages
+     */
+    ElasticFrameMessages
+    destructivePackAndSendFromPtr(const uint8_t *pPacket, size_t lPacketSize, ElasticFrameContent lDataContent, uint64_t lPts,
+                       uint64_t lDts, uint32_t lCode, uint8_t lStreamID, uint8_t lFlags,
+                                  const std::function<void(const uint8_t*, size_t)>& rSendFunction);
 
     /**
     * Send fragment callback
