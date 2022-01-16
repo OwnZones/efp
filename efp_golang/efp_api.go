@@ -30,7 +30,5 @@ uint64_t initEFPSender(uint64_t mtu, void* ctx) {
 uint64_t initEFPReciever(uint32_t bucketTimeout, uint32_t holTimeout, void* ctx, uint32_t mode) {
 	return efp_init_receive(bucketTimeout, holTimeout, &gotDataEFP, &gotEmbeddedDataEFP, ctx, mode);
 }
- */
+*/
 import "C"
-
-
