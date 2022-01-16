@@ -73,36 +73,36 @@ ElasticFrameProtocolReceiver myEFPReceiver(X, Y, (optional context), (optional s
 
 **Build**
 
-[![efp_base_macos](https://github.com/Unit-X/efp/workflows/efp_base_macos/badge.svg)](https://github.com/Unit-X/efp/actions?query=workflow%3Aefp_base_macos) **(MacOS build)**
+[![efp_base_macos](https://github.com/agilecontent/efp/workflows/efp_base_macos/badge.svg)](https://github.com/agilecontent/efp/actions?query=workflow%3Aefp_base_macos) **(MacOS build)**
 
-[![efp_base_win](https://github.com/Unit-X/efp/workflows/efp_base_win/badge.svg)](https://github.com/Unit-X/efp/actions?query=workflow%3Aefp_base_win) **(Windows 10 build)**
+[![efp_base_win](https://github.com/agilecontent/efp/workflows/efp_base_win/badge.svg)](https://github.com/agilecontent/efp/actions?query=workflow%3Aefp_base_win) **(Windows 10 build)**
 
-[![efp_base_ubuntu](https://github.com/Unit-X/efp/workflows/efp_base_ubuntu/badge.svg)](https://github.com/Unit-X/efp/actions?query=workflow%3Aefp_base_ubuntu) **(Ubuntu build)**
+[![efp_base_ubuntu](https://github.com/agilecontent/efp/workflows/efp_base_ubuntu/badge.svg)](https://github.com/agilecontent/efp/actions?query=workflow%3Aefp_base_ubuntu) **(Ubuntu build)**
 
 **Code quality**
 
-[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/Unit-X/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Unit-X/efp/context:cpp)
+[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/agilecontent/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/agilecontent/efp/context:cpp)
 
 
-[![CodeFactor](https://www.codefactor.io/repository/github/unit-x/efp/badge)](https://www.codefactor.io/repository/github/unit-x/efp)
+[![CodeFactor](https://www.codefactor.io/repository/github/agilecontent/efp/badge)](https://www.codefactor.io/repository/github/agilecontent/efp)
 
 **Code scanning alerts**
 
-[![CodeQL](https://github.com/Unit-X/efp/workflows/CodeQL/badge.svg?branch=master)](https://github.com/Unit-X/efp/security/code-scanning)
+[![CodeQL](https://github.com/agilecontent/efp/workflows/CodeQL/badge.svg?branch=master)](https://github.com/agilecontent/efp/security/code-scanning)
 
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/Unit-X/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Unit-X/efp/alerts/)
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/agilecontent/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/agilecontent/efp/alerts/)
 
-[![deepcode](https://www.deepcode.ai/api/gh/badge?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGF0Zm9ybTEiOiJnaCIsIm93bmVyMSI6IlVuaXQtWCIsInJlcG8xIjoiZWZwIiwiaW5jbHVkZUxpbnQiOmZhbHNlLCJhdXRob3JJZCI6MjE5MTYsImlhdCI6MTU5NzkzMzY5MX0.VMWvZfxEBy8Ib23oONlN65tNZUrubUqQt6eUnMIiWrA)](https://www.deepcode.ai/app/gh/Unit-X/efp/_/dashboard?utm_content=gh%2FUnit-X%2Fefp) 
+[![deepcode](https://www.deepcode.ai/api/gh/badge?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGF0Zm9ybTEiOiJnaCIsIm93bmVyMSI6IlVuaXQtWCIsInJlcG8xIjoiZWZwIiwiaW5jbHVkZUxpbnQiOmZhbHNlLCJhdXRob3JJZCI6MjE5MTYsImlhdCI6MTU5NzkzMzY5MX0.VMWvZfxEBy8Ib23oONlN65tNZUrubUqQt6eUnMIiWrA)](https://www.deepcode.ai/app/gh/agilecontent/efp/_/dashboard?utm_content=gh%2Fagilecontent%2Fefp) 
 
 **Tests**
 
-[![unit_tests](https://github.com/Unit-X/efp/workflows/unit_tests/badge.svg?branch=master)](https://github.com/Unit-X/efp/actions?query=workflow%3Aunit_tests) **(Unit tests running on Ubuntu)**
+[![unit_tests](https://github.com/agilecontent/efp/workflows/unit_tests/badge.svg?branch=master)](https://github.com/agilecontent/efp/actions?query=workflow%3Aunit_tests) **(Unit tests running on Ubuntu)**
 
 **Issues**
 
-[![Percentage of issues still open](http://isitmaintained.com/badge/open/Unit-X/efp.svg)](http://isitmaintained.com/project/Unit-X/efp "Percentage of issues still open")
+[![Percentage of issues still open](http://isitmaintained.com/badge/open/agilecontent/efp.svg)](http://isitmaintained.com/project/agilecontent/efp "Percentage of issues still open")
 
-[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/Unit-X/efp.svg)](http://isitmaintained.com/project/Unit-X/efp "Average time to resolve an issue")
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/agilecontent/efp.svg)](http://isitmaintained.com/project/agilecontent/efp "Average time to resolve an issue")
 
 ## Installation
 
@@ -241,7 +241,7 @@ Add this in your CMake file.
 #Include EFP
 include(ExternalProject)
 ExternalProject_Add(project_efp
-        GIT_REPOSITORY https://github.com/Unit-X/efp.git
+        GIT_REPOSITORY https://github.com/agilecontent/efp.git
         GIT_SUBMODULES ""
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
         BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
@@ -279,11 +279,11 @@ You should now be able to use EFP in your project and use any CMake supported ID
 
 EFP is all about framing data and checking the integrity of the content. For other functionality EFP uses plug-ins. Available plug-ins are listed below.
 
-[**EFPBonding**](https://github.com/Unit-X/efpbond)
+[**EFPBonding**](https://github.com/agilecontent/efpbond)
 
 EFPBond makes it possible for all streams to use multiple underlying transport interfaces for protection or to increase the capacity. 
 
-[**EFPSignal**](https://github.com/Unit-X/efpsignal)
+[**EFPSignal**](https://github.com/agilecontent/efpsignal)
 
 EFPSignal adds signalling, content declaration and dynamic/static subscription to EFP-Streams.  
 
@@ -318,15 +318,15 @@ Please feel free to use, clone / fork and contribute to this new way of intercon
 
 1. A client/server using EFP over SRT
 
-[EFP + SRT Client/Server](https://github.com/Unit-X/efp_srt_example)
+[EFP + SRT Client/Server](https://github.com/agilecontent/efp_srt_example)
 
 2. A example showing how to use the EBPBond plug-in 
 
-[EFP + EFPBond + SRT](https://github.com/Unit-X/efp_srt_bonding_example)
+[EFP + EFPBond + SRT](https://github.com/agilecontent/efp_srt_bonding_example)
 
 3. A simple example showing how to map UDP -> MPEG-TS -> EFP
 
-[UDP -> MPEG-TS -> EFP](https://github.com/Unit-X/ts2efp)
+[UDP -> MPEG-TS -> EFP](https://github.com/agilecontent/ts2efp)
 
 
 ## Next steps
@@ -337,11 +337,7 @@ Please feel free to use, clone / fork and contribute to this new way of intercon
 
 ## Credits
 
-The UnitX team at Edgeware AB
-
-Maintainer: anders.cedronius(at)edgeware.tv
-
-
+The UnitX team at Edgeware AB, now part of AgileContent
 
 ## License
 

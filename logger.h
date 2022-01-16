@@ -1,5 +1,5 @@
 //
-// UnitX Edgeware AB 2020
+// UnitX Edgeware AB 2020 => AgileContent 2022
 //
 
 #ifndef LOGGER_H

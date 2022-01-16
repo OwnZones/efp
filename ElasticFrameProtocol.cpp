@@ -7,7 +7,7 @@
 //  | |____ | || (_| |\__ \| |_ | || (__ | |   | |  | (_| || | | | | ||  __/
 //  |______||_| \__,_||___/ \__||_| \___||_|   |_|   \__,_||_| |_| |_| \___|
 //                                                                  Protocol
-// UnitX Edgeware AB 2020
+// UnitX @ Edgeware AB 2020 => AgileContent 2022
 //
 
 #include "ElasticFrameProtocol.h"

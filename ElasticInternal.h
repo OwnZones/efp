@@ -10,7 +10,7 @@
 // UnitX @ Edgeware AB 2021
 //
 // For more information, example usage and plug-ins please see
-// https://github.com/Unit-X/efp
+// https://github.com/agilecontent/efp
 //
 
 #ifndef EFP_ELASTICINTERNAL_H
