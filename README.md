@@ -81,16 +81,11 @@ ElasticFrameProtocolReceiver myEFPReceiver(X, Y, (optional context), (optional s
 
 **Code quality**
 
-[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/agilecontent/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/agilecontent/efp/context:cpp)
-
-
 [![CodeFactor](https://www.codefactor.io/repository/github/agilecontent/efp/badge)](https://www.codefactor.io/repository/github/agilecontent/efp)
 
 **Code scanning alerts**
 
 [![CodeQL](https://github.com/agilecontent/efp/workflows/CodeQL/badge.svg?branch=master)](https://github.com/agilecontent/efp/security/code-scanning)
-
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/agilecontent/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/agilecontent/efp/alerts/)
 
 [![deepcode](https://www.deepcode.ai/api/gh/badge?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGF0Zm9ybTEiOiJnaCIsIm93bmVyMSI6IlVuaXQtWCIsInJlcG8xIjoiZWZwIiwiaW5jbHVkZUxpbnQiOmZhbHNlLCJhdXRob3JJZCI6MjE5MTYsImlhdCI6MTU5NzkzMzY5MX0.VMWvZfxEBy8Ib23oONlN65tNZUrubUqQt6eUnMIiWrA)](https://www.deepcode.ai/app/gh/agilecontent/efp/_/dashboard?utm_content=gh%2Fagilecontent%2Fefp) 
 
