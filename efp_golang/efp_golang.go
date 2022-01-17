@@ -1,3 +1,4 @@
+// Copyright Edgeware AB 2020, Agile Content 2021-2022
 package main
 
 /*

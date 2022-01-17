@@ -1,9 +1,0 @@
-#Start worker
-
-image: atlassian/default-image:2
-
-pipelines:
-  default:
-    - step:
-        script: # Modify the commands below to build your repository.
-          - curl -v -X POST -u "andersc:${BUILDMASTER}" -H "Accept:\ application/vnd.github.everest-preview+json" -H "Content-Type:\ application/json" --data '{"event_type":"efpbase"}' https://api.github.com/repos/edgeware/stardom-radiator/dispatches
