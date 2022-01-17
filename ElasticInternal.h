@@ -7,10 +7,10 @@
 //  | |____ | || (_| |\__ \| |_ | || (__ | |   | |  | (_| || | | | | ||  __/
 //  |______||_| \__,_||___/ \__||_| \___||_|   |_|   \__,_||_| |_| |_| \___|
 //                                                                  Protocol
-// UnitX @ Edgeware AB 2021
+// Copyright Edgeware AB 2020, Agile Content 2021-2022
 //
 // For more information, example usage and plug-ins please see
-// https://github.com/Unit-X/efp
+// https://github.com/agilecontent/efp
 //
 
 #ifndef EFP_ELASTICINTERNAL_H

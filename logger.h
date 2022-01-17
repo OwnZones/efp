@@ -1,7 +1,4 @@
-//
-// UnitX Edgeware AB 2020
-//
-
+// Copyright Edgeware AB 2020, Agile Content 2021-2022
 #ifndef LOGGER_H
 #define LOGGER_H
 

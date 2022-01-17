@@ -32,15 +32,15 @@ For us there are a couple of reasons that sparked the initial design. And why we
 
 5.    We needed something that enables us to transport elementary data payload dynamically. Something that is using the duplex nature of IP networks for pub/sub applications where we can declare content and subscribe to content in the elementary stream level (Part of EFPSignal).
 
-6.    We needed a framing structure that is capable of inserting timing critical messaging (type0 frames) we need that for transporting exact time. We use it for media-timing (NTP is not possible to use in all locations since UDP port 123 is sometimes blocked). 
+6.    We needed a framing structure that is capable of inserting timing critical messaging (type0 frames) we need that for transporting exact time. We use it for media-timing (NTP is not possible to use in all locations since UDP port 123 is sometimes blocked).
 
 7.    We wanted a what we think is a simple super-clean C++ interface since we’re a C++ team. We also expose a C interface for other languages to use.
 
-8.    We wanted a solution that is of a license type that can be used in commercial products without us having to expose our code. For example Apple do not allow dynamic linking in iOS applications making GPL lisence types unwanted.
+8.    We wanted a solution that is of a license type that can be used in commercial products without us having to expose our code. For example Apple do not allow dynamic linking in iOS applications making GPL licence types unwanted.
 
 9.    We wanted something open source and free of charge.
 
-10.    We wanted something written in a portable language so we can target any system and any arhitecture.
+10.    We wanted something written in a portable language so we can target any system and any architecture.
 
 
 Your needs might be different than ours. Or you might use already existing protocols that meet the above requirements/features. If that is the case, please let us know as we do not want to re-invent the wheel.
@@ -59,7 +59,7 @@ Version 0.3 also implements an optional context to be used in all callbacks. Ple
 
 **This version changes the API for the receiver!!** 
 
-X == milliseconds before timing out non complete frames.
+X == milliseconds before timing out non-complete frames.
 
 Y == milliseconds before moving the head forward in HOL mode. (set to 0 for disabling HOL)
 
@@ -73,36 +73,36 @@ ElasticFrameProtocolReceiver myEFPReceiver(X, Y, (optional context), (optional s
 
 **Build**
 
-[![efp_base_macos](https://github.com/Unit-X/efp/workflows/efp_base_macos/badge.svg)](https://github.com/Unit-X/efp/actions?query=workflow%3Aefp_base_macos) **(MacOS build)**
+[![efp_base_macos](https://github.com/agilecontent/efp/workflows/efp_base_macos/badge.svg)](https://github.com/agilecontent/efp/actions?query=workflow%3Aefp_base_macos) **(MacOS build)**
 
-[![efp_base_win](https://github.com/Unit-X/efp/workflows/efp_base_win/badge.svg)](https://github.com/Unit-X/efp/actions?query=workflow%3Aefp_base_win) **(Windows 10 build)**
+[![efp_base_win](https://github.com/agilecontent/efp/workflows/efp_base_win/badge.svg)](https://github.com/agilecontent/efp/actions?query=workflow%3Aefp_base_win) **(Windows 10 build)**
 
-[![efp_base_ubuntu](https://github.com/Unit-X/efp/workflows/efp_base_ubuntu/badge.svg)](https://github.com/Unit-X/efp/actions?query=workflow%3Aefp_base_ubuntu) **(Ubuntu build)**
+[![efp_base_ubuntu](https://github.com/agilecontent/efp/workflows/efp_base_ubuntu/badge.svg)](https://github.com/agilecontent/efp/actions?query=workflow%3Aefp_base_ubuntu) **(Ubuntu build)**
 
 **Code quality**
 
-[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/Unit-X/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Unit-X/efp/context:cpp)
+[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/agilecontent/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/agilecontent/efp/context:cpp)
 
 
-[![CodeFactor](https://www.codefactor.io/repository/github/unit-x/efp/badge)](https://www.codefactor.io/repository/github/unit-x/efp)
+[![CodeFactor](https://www.codefactor.io/repository/github/agilecontent/efp/badge)](https://www.codefactor.io/repository/github/agilecontent/efp)
 
 **Code scanning alerts**
 
-[![CodeQL](https://github.com/Unit-X/efp/workflows/CodeQL/badge.svg?branch=master)](https://github.com/Unit-X/efp/security/code-scanning)
+[![CodeQL](https://github.com/agilecontent/efp/workflows/CodeQL/badge.svg?branch=master)](https://github.com/agilecontent/efp/security/code-scanning)
 
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/Unit-X/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Unit-X/efp/alerts/)
+[![Total alerts](https://img.shields.io/lgtm/alerts/g/agilecontent/efp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/agilecontent/efp/alerts/)
 
-[![deepcode](https://www.deepcode.ai/api/gh/badge?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGF0Zm9ybTEiOiJnaCIsIm93bmVyMSI6IlVuaXQtWCIsInJlcG8xIjoiZWZwIiwiaW5jbHVkZUxpbnQiOmZhbHNlLCJhdXRob3JJZCI6MjE5MTYsImlhdCI6MTU5NzkzMzY5MX0.VMWvZfxEBy8Ib23oONlN65tNZUrubUqQt6eUnMIiWrA)](https://www.deepcode.ai/app/gh/Unit-X/efp/_/dashboard?utm_content=gh%2FUnit-X%2Fefp) 
+[![deepcode](https://www.deepcode.ai/api/gh/badge?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGF0Zm9ybTEiOiJnaCIsIm93bmVyMSI6IlVuaXQtWCIsInJlcG8xIjoiZWZwIiwiaW5jbHVkZUxpbnQiOmZhbHNlLCJhdXRob3JJZCI6MjE5MTYsImlhdCI6MTU5NzkzMzY5MX0.VMWvZfxEBy8Ib23oONlN65tNZUrubUqQt6eUnMIiWrA)](https://www.deepcode.ai/app/gh/agilecontent/efp/_/dashboard?utm_content=gh%2Fagilecontent%2Fefp) 
 
 **Tests**
 
-[![unit_tests](https://github.com/Unit-X/efp/workflows/unit_tests/badge.svg?branch=master)](https://github.com/Unit-X/efp/actions?query=workflow%3Aunit_tests) **(Unit tests running on Ubuntu)**
+[![unit_tests](https://github.com/agilecontent/efp/workflows/unit_tests/badge.svg?branch=master)](https://github.com/agilecontent/efp/actions?query=workflow%3Aunit_tests) **(Unit tests running on Ubuntu)**
 
 **Issues**
 
-[![Percentage of issues still open](http://isitmaintained.com/badge/open/Unit-X/efp.svg)](http://isitmaintained.com/project/Unit-X/efp "Percentage of issues still open")
+[![Percentage of issues still open](http://isitmaintained.com/badge/open/agilecontent/efp.svg)](http://isitmaintained.com/project/agilecontent/efp "Percentage of issues still open")
 
-[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/Unit-X/efp.svg)](http://isitmaintained.com/project/Unit-X/efp "Average time to resolve an issue")
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/agilecontent/efp.svg)](http://isitmaintained.com/project/agilecontent/efp "Average time to resolve an issue")
 
 ## Installation
 
@@ -126,19 +126,19 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 cmake --build . --config Debug
 ```
 
-Output: 
+Output:
 
 **(platform specific)efp.(platform specific)** (Linux/MacOS -> libefp.a)
 
-The static EFP library 
+The static EFP library
 
-**(platform specific)efp_shared.(platform specific)** 
+**(platform specific)efp_shared.(platform specific)**
 
-The dynamic EFP library 
+The dynamic EFP library
 
 **efptests**
 
-*efptests* (executable) runs trough the unit tests and returns EXIT_SUCESS if all unit tests pass.
+*efptests* (executable) runs through the unit tests and returns EXIT_SUCESS if all unit tests pass.
 
 ---
 
@@ -183,8 +183,8 @@ myEFPSender.sendCallback = std::bind(&sendData, std::placeholders::_1, std::plac
 // param5 = CODE (if the data type param2 (uint8_t) msb is set then CODE must be used
 // See the header file detailing what CODE should be set to
 // param6 = Stream number (uint8_t) a unique value for that EFP-Stream
-// param7 = FLAGS (used for various signalling in the protocol) 
-// param8 = Optional lambda (See unit test 18) 
+// param7 = FLAGS (used for various signalling in the protocol)
+// param8 = Optional lambda (See unit test 18)
 myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 0, EFP_CODE('A', 'N', 'X', 'B'), 2, NO_FLAGS, (optional lambda));
 
 //If you got your data as a pointer there is also the method 'packAndSendFromPtr' so you don't have to copy your data into a vector first.
@@ -201,7 +201,7 @@ myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 0, EFP_CODE('A', '
 // rFrame is a pointer to the data object
 // Containing:
 // pFrameData pointer to the data
-// mFrameSize Size of the data 
+// mFrameSize Size of the data
 // mDataContent is containing the content descriptor
 // mBroken is true if data in the superFrame is missing
 // mPts contains the pts value used in the superFrame
@@ -212,7 +212,7 @@ myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 0, EFP_CODE('A', '
 // mFlags contains the flags used by the superFrame
 void gotData(ElasticFrameProtocol::pFramePtr &rFrame, (optional context))
 {
-			// Use the data in your application 
+			// Use the data in your application
 }
 
 // Create your receiver
@@ -233,7 +233,7 @@ myEFPReceiver.receiveFragment(subPacket, uint8_t number (is the mStreamID for st
 
 ## Using EFP in your CMake project
 
-* **Step1** 
+* **Step1**
 
 Add this in your CMake file.
 
@@ -241,7 +241,7 @@ Add this in your CMake file.
 #Include EFP
 include(ExternalProject)
 ExternalProject_Add(project_efp
-        GIT_REPOSITORY https://github.com/Unit-X/efp.git
+        GIT_REPOSITORY https://github.com/agilecontent/efp.git
         GIT_SUBMODULES ""
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
         BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
@@ -262,10 +262,10 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/efp/)
 Link your library or executable.
 
 ```
-target_link_libraries((your target) efp (the rest you want to link)) 
+target_link_libraries((your target) efp (the rest you want to link))
 ```
 
-* **Step3** 
+* **Step3**
 
 Add header file to your project.
 
@@ -279,13 +279,13 @@ You should now be able to use EFP in your project and use any CMake supported ID
 
 EFP is all about framing data and checking the integrity of the content. For other functionality EFP uses plug-ins. Available plug-ins are listed below.
 
-[**EFPBonding**](https://github.com/Unit-X/efpbond)
+[**EFPBonding**](https://github.com/agilecontent/efpbond)
 
-EFPBond makes it possible for all streams to use multiple underlying transport interfaces for protection or to increase the capacity. 
+EFPBond makes it possible for all streams to use multiple underlying transport interfaces for protection or to increase the capacity.
 
-[**EFPSignal**](https://github.com/Unit-X/efpsignal)
+[**EFPSignal**](https://github.com/agilecontent/efpsignal)
 
-EFPSignal adds signalling, content declaration and dynamic/static subscription to EFP-Streams.  
+EFPSignal adds signalling, content declaration and dynamic/static subscription to EFP-Streams.
 
 ## Contributing
 
@@ -298,9 +298,9 @@ EFPSignal adds signalling, content declaration and dynamic/static subscription t
 
 ## History
 
-When working with media workflows, both live and non-live, we use framing protocols such as MP4 and MPEG-TS, often transported over HTTP (TCP). Some of the protocols used for media transport are also tied to a certain underlying transport mechanism (RTMP, HLS, WebRTC…), and some are agnostic to the underlying transport (MP4, MPEG-TS…). The protocols tied to an underlying transport type forces the user to the behavior of that protocol’s properties, for example, TCP when using RTMP. If you use MP4 as framing agnostic to the underlying transport and then transport the data using a protocol where you might lose data and the delivery might be out of order, there is no mechanism to correct for that in the MP4-box domain.  
+When working with media workflows, both live and non-live, we use framing protocols such as MP4 and MPEG-TS, often transported over HTTP (TCP). Some of the protocols used for media transport are also tied to a certain underlying transport mechanism (RTMP, HLS, WebRTC…), and some are agnostic to the underlying transport (MP4, MPEG-TS…). The protocols tied to an underlying transport type forces the user to the behavior of that protocol’s properties, for example, TCP when using RTMP. If you use MP4 as framing agnostic to the underlying transport and then transport the data using a protocol where you might lose data and the delivery might be out of order, there is no mechanism to correct for that in the MP4-box domain.
 
-For those situations, MPEG-TS has traditionally been used and is a common multiplexing standard for media. However, MPEG-TS, was designed in the mid ’90s for the transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems in the 1990’s where simplex transport was common and data integrity looked different. However, MPEG-TS has not changed since then, it does not match modern IP protocols well and it has a high protocol overhead. Some of today’s underlying transport protocols also lose data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behaviour. 
+For those situations, MPEG-TS has traditionally been used and is a common multiplexing standard for media. However, MPEG-TS, was designed in the mid ’90s for the transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems in the 1990’s where simplex transport was common and data integrity looked different. However, MPEG-TS has not changed since then, it does not match modern IP protocols well and it has a high protocol overhead. Some of today’s underlying transport protocols also lose data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behaviour.
 
 There has been work done in the MPEG group to modernize media/data framing using MMT (MPEG Media Transport) for better adaption against underlying transport. MMT is currently used in the ATSC 3.0 standard but has not gained popularity in the data center/cloud/internet domain. 
 
@@ -318,15 +318,15 @@ Please feel free to use, clone / fork and contribute to this new way of intercon
 
 1. A client/server using EFP over SRT
 
-[EFP + SRT Client/Server](https://github.com/Unit-X/efp_srt_example)
+[EFP + SRT Client/Server](https://github.com/agilecontent/efp_srt_example)
 
 2. A example showing how to use the EBPBond plug-in 
 
-[EFP + EFPBond + SRT](https://github.com/Unit-X/efp_srt_bonding_example)
+[EFP + EFPBond + SRT](https://github.com/agilecontent/efp_srt_bonding_example)
 
 3. A simple example showing how to map UDP -> MPEG-TS -> EFP
 
-[UDP -> MPEG-TS -> EFP](https://github.com/Unit-X/ts2efp)
+[UDP -> MPEG-TS -> EFP](https://github.com/agilecontent/ts2efp)
 
 
 ## Next steps
@@ -337,14 +337,10 @@ Please feel free to use, clone / fork and contribute to this new way of intercon
 
 ## Credits
 
-The UnitX team at Edgeware AB
-
-Maintainer: anders.cedronius(at)edgeware.tv
-
-
+The UnitX team at Edgeware AB. From 2021 Edgeware is a part of Agile Content.
 
 ## License
 
 *MIT*
 
-Read *LICENCE* for details
+Read *LICENSE* for details
