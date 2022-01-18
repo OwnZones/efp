@@ -47,7 +47,7 @@ Your needs might be different than ours. Or you might use already existing proto
 Anyhow, the above requirements are why we designed and implemented EFP.
 
 
-Please read -> [**ElasticFrameProtocol**](https://edgeware-my.sharepoint.com/:p:/g/personal/anders_cedronius_edgeware_tv/ERnSit7j6udBsZOqkQcMLrQBpKmnfdApG3lehRk4zE-qgQ?e=Ha2VrP) for more information.
+Please read -> [**ElasticFrameProtocol**](https://github.com/agilecontent/efp/blob/master/docs/ElasticFrameProtocol.pdf) for more information.
 
 ## Notification about version 0.3
 
