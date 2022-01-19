@@ -15,7 +15,7 @@ The ElasticFrameProtocol is a bridge between data producers/consumers and the un
 
 ```
 
-The elasticity comes from the protocols ability to adapt to incoming frame size, type, number of concurrent streams and underlying infrastructure. This layer is kept thin without driving overhead, complexity and delay. 
+The elasticity comes from the protocols ability to adapt to incoming frame size, type, number of concurrent streams and underlying infrastructure. This layer is kept thin without driving overhead, complexity and delay.
 
 
 #Reasons for using EFP
@@ -26,21 +26,23 @@ For us there are a couple of reasons that sparked the initial design. And why we
 
 2.    We wanted to create a thin-framing structure providing better mapping to IP protocols compared to MPEG-TS (initially designed for mapping to ATM) and MP4 designed targeting files. EFP lowers the overhead from several % to just about 0.5% overhead.
 
-3.    We wanted features like dynamic load balancing when bonding interfaces, 1+N protection and splitting of elementary data streams without being bound to a specific transport protocols features. We see this as an important feature when building a robust infrastructure. Some transport protocols miss that (part of EFPBond).
+3.    We wanted to be able to use precise monotonically increasing timestamps. EFP has 64-bit time stamps so one can use absolute TAI time stamps, instead of relative time that wraps every 26 hours as in MPEG-TS.
 
-4.   We want to correctly detect the data integrity of the transported data. MPEG-TS has 4 bits CC. That is not good enough when transporting data over IP networks. It was designed to detect bit-errors in transport protocols from the 90's, then 4 bits CC works great.
+4.    We wanted features like dynamic load balancing when bonding interfaces, 1+N protection and splitting of elementary data streams without being bound to a specific transport protocols features. We see this as an important feature when building a robust infrastructure. Some transport protocols miss that (part of EFPBond).
 
-5.    We needed something that enables us to transport elementary data payload dynamically. Something that is using the duplex nature of IP networks for pub/sub applications where we can declare content and subscribe to content in the elementary stream level (Part of EFPSignal).
+5.   We want to correctly detect the data integrity of the transported data. MPEG-TS has 4 bits CC. That is not good enough when transporting data over IP networks. It was designed to detect bit-errors in transport protocols from the 90's, then 4 bits CC works great.
 
-6.    We needed a framing structure that is capable of inserting timing critical messaging (type0 frames) we need that for transporting exact time. We use it for media-timing (NTP is not possible to use in all locations since UDP port 123 is sometimes blocked).
+6.    We needed something that enables us to transport elementary data payload dynamically. Something that is using the duplex nature of IP networks for pub/sub applications where we can declare content and subscribe to content in the elementary stream level (Part of EFPSignal).
 
-7.    We wanted a what we think is a simple super-clean C++ interface since we’re a C++ team. We also expose a C interface for other languages to use.
+7.    We needed a framing structure that is capable of inserting timing critical messaging (type0 frames) we need that for transporting exact time. We use it for media-timing (NTP is not possible to use in all locations since UDP port 123 is sometimes blocked).
 
-8.    We wanted a solution that is of a license type that can be used in commercial products without us having to expose our code. For example Apple do not allow dynamic linking in iOS applications making GPL licence types unwanted.
+8.    We wanted a what we think is a simple super-clean C++ interface since we’re a C++ team. We also expose a C interface for other languages to use.
 
-9.    We wanted something open source and free of charge.
+9.    We wanted a solution that is of a license type that can be used in commercial products without us having to expose our code. For example Apple do not allow dynamic linking in iOS applications making GPL licence types unwanted.
 
-10.    We wanted something written in a portable language so we can target any system and any architecture.
+10.   We wanted something open source and free of charge.
+
+11.    We wanted something written in a portable language so we can target any system and any architecture.
 
 
 Your needs might be different than ours. Or you might use already existing protocols that meet the above requirements/features. If that is the case, please let us know as we do not want to re-invent the wheel.
@@ -295,15 +297,17 @@ EFPSignal adds signalling, content declaration and dynamic/static subscription t
 
 When working with media workflows, both live and non-live, we use framing protocols such as MP4 and MPEG-TS, often transported over HTTP (TCP). Some of the protocols used for media transport are also tied to a certain underlying transport mechanism (RTMP, HLS, WebRTC…), and some are agnostic to the underlying transport (MP4, MPEG-TS…). The protocols tied to an underlying transport type forces the user to the behavior of that protocol’s properties, for example, TCP when using RTMP. If you use MP4 as framing agnostic to the underlying transport and then transport the data using a protocol where you might lose data and the delivery might be out of order, there is no mechanism to correct for that in the MP4-box domain.
 
-For those situations, MPEG-TS has traditionally been used and is a common multiplexing standard for media. However, MPEG-TS, was designed in the mid ’90s for the transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems in the 1990’s where simplex transport was common and data integrity looked different. However, MPEG-TS has not changed since then, it does not match modern IP protocols well and it has a high protocol overhead. Some of today’s underlying transport protocols also lose data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behaviour.
+For those situations, MPEG-TS has traditionally been used and is a common multiplexing standard for media. However, MPEG-TS, was designed in the mid ’90s for the transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems in the 1990’s where simplex transport was common and data integrity looked different. However, MPEG-TS has not changed since then, it does not match modern IP protocols well and it has a high protocol overhead. Some of today’s underlying transport protocols also lose data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behaviour. Another deficiency of
+MPEG-TS is its 33-bits time stamps which wrap every 26 hours and are used to carry a system reference time. Similarly, RTP has 32 bits time stamps. EFP uses 64 bits and can therefore carry monotonically increasing time stamps like TAI with high precision.
 
 There has been work done in the MPEG group to modernize media/data framing using MMT (MPEG Media Transport) for better adaption against underlying transport. MMT is currently used in the ATSC 3.0 standard but has not gained popularity in the data center/cloud/internet domain. 
 
-Another common solution to cover for a protocol’s shortcomings is to stack protocols and framing structures on top of each other. However, this drives complexity to the solution, ads overhead and sometimes delay. Many implementations are closed source and, if they aren’t, they are often of license types that are unwanted in commercial products.  
+Another common solution to cover for a protocol’s shortcomings is to stack protocols and framing structures on top of each other. However, this drives complexity to the solution, ads overhead and sometimes delay. Many implementations are closed source and, if they aren’t, they are often of license types that are unwanted in commercial products.
 
-Now with the rise of protocols such as RIST, Zixi, and SRT we wanted to fully utilize the transport containers with as little overhead as possible, so we implemented a thin network adaptation layer that allows us to easily use different transport protocols where they make most sense maintaining a well-defined data delivery pipeline to and from the data producers/consumers. 
+Now with the rise of protocols such as RIST, Zixi, and SRT we wanted to fully utilize the transport containers with as little overhead as possible, so we implemented a thin network adaptation layer that allows us to easily use different transport protocols where they make most sense maintaining a well-defined data delivery pipeline to and from the data producers/consumers.
 
-That’s why we developed ElasticFrameProtocol, we are so enthusiastic about where RIST, Zixi, and SRT is taking the future of broadcast. There are new open source projects putting these building blocks together, creating new ways of working and transporting media all the time.  We would like to simplify the way of building media solutions even more by open sourcing the layer on top of the transport protocols so that you can focus on developing great services instead.  
+That’s why we developed ElasticFrameProtocol, we are so enthusiastic about where RIST, Zixi, and SRT is taking the future of broadcast.
+There are new open source projects putting these building blocks together, creating new ways of working and transporting media all the time.  We would like to simplify the way of building media solutions even more by open sourcing the layer on top of the transport protocols so that you can focus on developing great services instead.
 
 Please feel free to use, clone / fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks in your next project or lab. 
 
