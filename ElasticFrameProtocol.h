@@ -168,10 +168,10 @@ enum class ElasticFrameMessages : int16_t {
     noError                     = 0,  //No error or information
 
     notImplemented              = 1,  //Feature/function/level/method/system aso. not implemented.
-    duplicatePacketReceived     = 2,  //If the underlying infrastructure is handing EFP duplicate segments the second packet of the duplicate will generate this error if the
+    duplicatePacketReceived     = 2,  //If the underlying infrastructure is handing EFP duplicate segments the second packet of the duplicate will generate this warning if the
     //The superFrame is still not delivered to the host system. if it has then tooOldFragment will be returned instead.
-    //Discarded and the tooOldFragment is triggered.
-    tooOldFragment              = 3,  //If the superFrame has been delivered 100% complete or fragments of it due to a timeout and a fragment belonging to the superFrame arrives then it's
+    //in 1+n duplicatePacketReceived is triggered often. This is normal operation and just an indication the fragment is already received, can be used for statistics.
+    tooOldFragment              = 3,  //If the superFrame has been delivered 100% complete or fragments of it due to a timeout and a fragment belonging to the superFrame arrives.
     failedStoppingReceiver      = 5,  //The EFP receiver failed stopping it's resources.
     type0Frame                  = 7,  //Type0 frame
     efpSignalDropped            = 8,  //EFPSignal did drop the content since it's not declared
