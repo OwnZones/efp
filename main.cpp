@@ -20,6 +20,7 @@
 #include "unitTests/UnitTest19.h"
 #include "unitTests/UnitTest20.h"
 #include "unitTests/UnitTest21.h"
+#include "unitTests/UnitTest22.h"
 #include "unitTests/PerformanceLab.h"
 
 #include <iostream>
@@ -196,5 +197,13 @@ int main() {
         std::cout << "Unit test 21 failed" << std::endl;
         returnCode = EXIT_FAILURE;
     }
+
+    //Send fragments unordered and lost testing HOL and broken flags
+    UnitTest22 unitTest22;
+    if (!unitTest22.startUnitTest()) {
+        std::cout << "Unit test 22 failed" << std::endl;
+        returnCode = EXIT_FAILURE;
+    }
+
     return returnCode;
 }
