@@ -6,11 +6,10 @@
 #include "ElasticFrameProtocol.h"
 #include "UnitTestHelpers.h"
 
-#define MTU 1456 //SRT-max
-#define LOSSRATE 2 // 2% lost frames
-#define BROKEN 2 // 2% superframes broken
-#define OUTOFORDER 10 // 10% out of order deliveries
-#define NUMBER_TOTAL_PACKETS 200 //Number of total packets sent in this unit test
+const uint32_t LOSSRATE = 2; // 2% lost frames
+const uint32_t BROKEN = 2; // 2% superframes broken
+const uint32_t OUTOFORDER = 10; // 10% out of order deliveries
+const uint32_t NUMBER_TOTAL_PACKETS = 200; //Number of total packets sent in this unit test
 
 namespace {
     struct TestProps {

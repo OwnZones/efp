@@ -4,6 +4,8 @@
 #include <chrono>
 #include <thread>
 
+const uint32_t MTU = 1456; //SRT-max
+
 namespace UnitTestHelpers {
 
     ///

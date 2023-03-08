@@ -3,8 +3,8 @@
 #include <memory>
 
 #include "ElasticFrameProtocol.h"
+#include "UnitTestHelpers.h"
 
-#define MTU 1456 //SRT-max
 
 //UnitTest1
 //Test sending a packet less than MTU + header - > Expected result is one type2 frame only sent

@@ -5,7 +5,6 @@
 #include "ElasticFrameProtocol.h"
 #include "UnitTestHelpers.h"
 
-#define MTU 1456 //SRT-max
 
 //UnitTest7
 //Test sending packets, 5 type 1 + 1 type 2.. Reorder type1 packet 3 and 2 so the delivery order is 1 3 2 4 5 6

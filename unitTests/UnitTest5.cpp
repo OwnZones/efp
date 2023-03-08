@@ -5,7 +5,6 @@
 #include "ElasticFrameProtocol.h"
 #include "UnitTestHelpers.h"
 
-#define MTU 1456 //SRT-max
 
 //UnitTest5
 //Test sending a packet of MTU*5+MTU/2 containing a linear vector -> the result should be a packet with that size containing a linear vector.

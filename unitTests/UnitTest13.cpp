@@ -5,8 +5,6 @@
 #include "ElasticFrameProtocol.h"
 #include "UnitTestHelpers.h"
 
-#define MTU 1456 //SRT-max
-
 
 //FIXME-- Test is currently only sending the packets. lgtm [cpp/fixme-comment]
 //UnitTest13

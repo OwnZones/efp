@@ -5,8 +5,6 @@
 #include "ElasticFrameProtocol.h"
 #include "UnitTestHelpers.h"
 
-#define MTU 1456 //SRT-max
-
 //UnitTest22
 //
 //Send 4 frames

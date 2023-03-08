@@ -5,7 +5,6 @@
 #include "ElasticFrameProtocol.h"
 #include "UnitTestHelpers.h"
 
-#define MTU 1456 //SRT-max
 
 //UnitTest12
 //Test sending 5 packets, with 5 frame type 1 + 1 frame type 2

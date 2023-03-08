@@ -5,7 +5,6 @@
 #include "ElasticFrameProtocol.h"
 #include "UnitTestHelpers.h"
 
-#define MTU 1456 //SRT-max
 
 //UnitTest4
 //Test sending a packet of MTU-HeaderType1+1 > result should be one frame type1 and a frame type 2, MTU+1 at the receiver

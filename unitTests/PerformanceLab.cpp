@@ -4,7 +4,6 @@
 
 #include "ElasticFrameProtocol.h"
 
-#define MTU 1456 //SRT-max
 
 int main() {
     uint8_t streamID = 1;

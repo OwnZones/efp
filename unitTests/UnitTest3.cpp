@@ -5,7 +5,6 @@
 #include "ElasticFrameProtocol.h"
 #include "UnitTestHelpers.h"
 
-#define MTU 1456 //SRT-max
 
 //UnitTest3
 //Test sending 1 byte packet of value 0xaa and receiving it at the EFP receiver.
