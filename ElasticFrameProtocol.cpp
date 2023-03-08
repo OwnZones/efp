@@ -32,8 +32,8 @@ ElasticFrameProtocolReceiver::ElasticFrameProtocolReceiver(uint32_t lBucketTimeo
     mBucketList = new Bucket[CIRCULAR_BUFFER_SIZE + 1];
 
     mCTX = std::move(pCTX);
-    c_recieveCallback = nullptr;
-    c_recieveEmbeddedDataCallback = nullptr;
+    c_receiveCallback = nullptr;
+    c_receiveEmbeddedDataCallback = nullptr;
     receiveCallback = std::bind(&ElasticFrameProtocolReceiver::gotData, this, std::placeholders::_1,
                                 std::placeholders::_2);
 
@@ -66,9 +66,9 @@ ElasticFrameProtocolReceiver::~ElasticFrameProtocolReceiver() {
 // C API callback. Dummy callback if C++
 void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFramePtr &rPacket,
                                            ElasticFrameProtocolContext *pCTX) {
-    if (c_recieveCallback) {
+    if (c_receiveCallback) {
         size_t payloadDataPosition = 0;
-        if (c_recieveEmbeddedDataCallback && (rPacket->mFlags & (uint8_t) INLINE_PAYLOAD) && !rPacket->mBroken) {
+        if (c_receiveEmbeddedDataCallback && (rPacket->mFlags & (uint8_t) INLINE_PAYLOAD) && !rPacket->mBroken) {
             std::vector<std::vector<uint8_t>> embeddedData;
             std::vector<uint8_t> embeddedContentFlag;
 
@@ -79,8 +79,8 @@ void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFrameP
                 EFP_LOGGER(true, LOGG_ERROR, "extractEmbeddedData fail")
                 return;
             }
-            for (int x = 0; x < embeddedData.size(); x++) {
-                c_recieveEmbeddedDataCallback(embeddedData[x].data(), embeddedData[x].size(), embeddedContentFlag[x],
+            for (size_t x = 0; x < embeddedData.size(); x++) {
+                c_receiveEmbeddedDataCallback(embeddedData[x].data(), embeddedData[x].size(), embeddedContentFlag[x],
                                               rPacket->mPts, mCTX->mUnsafePointer);
             }
             //Adjust the pointers for the payload callback
@@ -89,7 +89,7 @@ void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFrameP
                 return;
             }
         }
-        c_recieveCallback(rPacket->pFrameData + payloadDataPosition, //compensate for the embedded data
+        c_receiveCallback(rPacket->pFrameData + payloadDataPosition, //compensate for the embedded data
                           rPacket->mFrameSize - payloadDataPosition, //compensate for the embedded data
                           rPacket->mDataContent,
                           (uint8_t) rPacket->mBroken,
@@ -1220,11 +1220,11 @@ ElasticFrameMessages ElasticFrameProtocolSender::addEmbeddedData(std::vector<uin
 }
 
 // Used by the unit tests
-size_t ElasticFrameProtocolSender::geType1Size() {
+size_t ElasticFrameProtocolSender::getType1Size() {
     return sizeof(ElasticFrameType1);
 }
 
-size_t ElasticFrameProtocolSender::geType2Size() {
+size_t ElasticFrameProtocolSender::getType2Size() {
     return sizeof(ElasticFrameType2);
 }
 
@@ -1306,8 +1306,8 @@ uint64_t efp_init_receive(uint32_t bucketTimeout,
     if (!result.first->second) {
         return 0;
     }
-    result.first->second->c_recieveCallback = f;
-    result.first->second->c_recieveEmbeddedDataCallback = g;
+    result.first->second->c_receiveCallback = f;
+    result.first->second->c_receiveEmbeddedDataCallback = g;
     c_object_handle++;
     return local_c_object_handle;
 }

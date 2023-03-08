@@ -25,7 +25,7 @@
 // * - 0x01 frame is larger than MTU
 // * - 0x02 frame is less than MTU or the tail of a larger superframe
 // * - 0x03 The reminder of the data does not fit a type2 packet but its the tail of the data.
-// * - 0x04 minimalistic type2-type frame used when static EFP stream and reciever signaled known stream.
+// * - 0x04 minimalistic type2-type frame used when static EFP stream and receiver signaled known stream.
 
 enum Frametype : uint8_t { //The 4 LSB are used! (The 4 MSB are the flags)
     type0 = 0,

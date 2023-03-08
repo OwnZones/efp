@@ -8,7 +8,7 @@ package main
 #include <stdint.h>
 #include "elastic_frame_protocol_c_api.h"
 uint64_t initEFPSender(uint64_t mtu, void* ctx);
-uint64_t initEFPReciever(uint32_t bucketTimeout, uint32_t holTimeout, void* ctx, uint32_t mode);
+uint64_t initEFPReceiver(uint32_t bucketTimeout, uint32_t holTimeout, void* ctx, uint32_t mode);
 */
 import "C"
 import (
@@ -37,8 +37,8 @@ func main() {
 	//Init a EFP sender MTU 300 bytes
 	efpSendID := C.initEFPSender(300, nil)
 
-	//Start a EFP reciever (bucket time-out 100ms, HOL timeout 50ms, context == nil and the mode is threaded)
-	efpReceiveID = C.initEFPReciever(100, 50, nil, C.EFP_MODE_THREAD)
+	//Start a EFP receiver (bucket time-out 100ms, HOL timeout 50ms, context == nil and the mode is threaded)
+	efpReceiveID = C.initEFPReceiver(100, 50, nil, C.EFP_MODE_THREAD)
 
 	//Create a data block containing a null terminated string"
 	stringtoEmbed := append([]byte("Embed this string"), byte(0))
@@ -112,18 +112,18 @@ func gotDataEFP(data *C.uchar,
 	testsComplete := true
 
 	if broken != 0 {
-		fmt.Printf("Recieved frame is broken. \n")
+		fmt.Printf("received frame is broken. \n")
 		testsComplete = false
 	}
 
 	if size != testSetSize {
-		fmt.Printf("Recieved frame size missmatch. \n")
+		fmt.Printf("received frame size missmatch. \n")
 		testsComplete = false
 	}
 
 	for i := 0; i < testSetSize; i++ {
 		if thisData[i] != uint8(i) {
-			fmt.Printf("Recieved frame data not correct. \n")
+			fmt.Printf("received frame data not correct. \n")
 			testsComplete = false
 		}
 	}

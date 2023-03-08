@@ -11,17 +11,68 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
 #set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-arcs -ftest-coverage")
 
-find_package (Threads REQUIRED)
+find_package(Threads REQUIRED)
+find_package(GTest REQUIRED)
+
 add_library(efp STATIC ElasticFrameProtocol.cpp)
 add_library(efp_shared SHARED ElasticFrameProtocol.cpp)
 
-file(GLOB unit_tests "${CMAKE_CURRENT_SOURCE_DIR}/unitTests/*.cpp")
-file(GLOB unit_test_template "${CMAKE_CURRENT_SOURCE_DIR}/unitTestTemplate/*.cpp")
-add_executable(efptests main.cpp ${unit_test_template} ${unit_tests} ElasticFrameProtocol.cpp)
-target_link_libraries(efptests Threads::Threads)
+add_executable(runUnitTestsEFP
+        ${CMAKE_CURRENT_SOURCE_DIR}/ElasticFrameProtocol.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest1.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest2.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest3.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest4.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest5.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest6.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest7.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest8.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest9.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest10.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest11.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest12.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest13.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest14.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest15.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest16.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest17.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest18.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest19.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest20.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest21.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest22.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTestHelpers.cpp
+        )
+
+target_include_directories(runUnitTestsEFP
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/unitTests_gtest
+        SYSTEM
+        ${GTEST_INCLUDE_DIRS})
+
+target_link_libraries(runUnitTestsEFP
+        Threads::Threads
+        GTest::gtest_main)
+
+target_compile_options(runUnitTestsEFP PRIVATE -Werror -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-comment)
+
+add_executable(performanceLab
+        ${CMAKE_CURRENT_SOURCE_DIR}/ElasticFrameProtocol.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/PerformanceLab.cpp
+        )
+
+target_include_directories(performanceLab
+        PRIVATE
+        ${CMAKE_SOURCE_DIR}
+        SYSTEM
+        ${GTEST_INCLUDE_DIRS})
+
+target_link_libraries(performanceLab
+        Threads::Threads)
+
 
 set(CMAKE_C_STANDARD 99)
 add_executable(test_efp_c_api ${CMAKE_CURRENT_SOURCE_DIR}/efp_c_api/main.c)
 target_link_libraries(test_efp_c_api efp Threads::Threads)
-
 
