@@ -284,7 +284,7 @@ public:
      * @return ElasticFrameMessages
      */
     ElasticFrameMessages
-    destructivePackAndSendFromPtr(const uint8_t *pPacket, size_t lPacketSize, ElasticFrameContent lDataContent, uint64_t lPts,
+    destructivePackAndSendFromPtr(uint8_t *pPacket, size_t lPacketSize, ElasticFrameContent lDataContent, uint64_t lPts,
                        uint64_t lDts, uint32_t lCode, uint8_t lStreamID, uint8_t lFlags,
                                   const std::function<void(const uint8_t*, size_t)>& rSendFunction);
 

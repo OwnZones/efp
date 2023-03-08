@@ -73,7 +73,7 @@ bool UnitTest21::startUnitTest() {
         //destructivePackAndSendFromPtr(const uint8_t *pPacket, size_t lPacketSize, ElasticFrameContent lDataContent, uint64_t lPts,
         //        uint64_t lDts, uint32_t lCode, uint8_t lStreamID, uint8_t lFlags, lambda);
 
-        result = myEFPPacker->destructivePackAndSendFromPtr((const uint8_t*)mydata.data()+100, mydata.size()-100, ElasticFrameContent::h264, packetNumber + 1001, packetNumber + 1, 0,
+        result = myEFPPacker->destructivePackAndSendFromPtr(mydata.data()+100, mydata.size()-100, ElasticFrameContent::h264, packetNumber + 1001, packetNumber + 1, 0,
                                                             streamID, NO_FLAGS, [&](const uint8_t* lData, size_t lSize) {
                     ElasticFrameMessages info = myEFPReciever->receiveFragmentFromPtr(lData, lSize, 0);
                     if (info != ElasticFrameMessages::noError) {
