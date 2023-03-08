@@ -120,7 +120,7 @@ int main() {
         printf("Fatal. Failed creating EFP receiver");
         return 1;
     }
-    printf("receiver created.\n");
+    printf("Receiver created.\n");
 
     //Prepare data
     for (int x = 0; x < TEST_DATA_SIZE; x++) {

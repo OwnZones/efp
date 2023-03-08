@@ -55,7 +55,7 @@ int main() {
         returnCode = EXIT_FAILURE;
     }
 
-    //Test sending a packet of MTU-headertyp1+1 > result should be one frame type1 and a frame type 2, MTU+1 at the reciever
+    //Test sending a packet of MTU-headertyp1+1 > result should be one frame type1 and a frame type 2, MTU+1 at the receiver
     UnitTest4 unitTest4;
     if (!unitTest4.startUnitTest()) {
         std::cout << "Unit test 4 failed" << std::endl;
@@ -160,8 +160,8 @@ int main() {
         //}
     }
 
-    //Send 100 frames... Stop the sender. Delete the sender. delete the reciever
-    //start a new sender and force the superframe counter to != 0 start the reciever
+    //Send 100 frames... Stop the sender. Delete the sender. delete the receiver
+    //start a new sender and force the superframe counter to != 0 start the receiver
     UnitTest17 unitTest17;
     if (!unitTest17.startUnitTest()) {
         std::cout << "Unit test 17 failed" << std::endl;
@@ -183,7 +183,7 @@ int main() {
     }
 
     //Test basic run to completion
-    //Test sending a packet of MTU-headertyp1+1 > result should be one frame type1 and a frame type 2, MTU+1 at the reciever
+    //Test sending a packet of MTU-headertyp1+1 > result should be one frame type1 and a frame type 2, MTU+1 at the receiver
 
     UnitTest20 unitTest20;
     if (!unitTest20.startUnitTest()) {
