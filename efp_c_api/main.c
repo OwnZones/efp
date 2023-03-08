@@ -113,14 +113,14 @@ int main() {
     }
     printf("Sender created.\n");
 
-    //EFP Recieve
-    printf("Create reciever.\n");
+    //EFP receive
+    printf("Create receiver.\n");
     efp_object_handle_receive = efp_init_receive(30, 10, &receive_data_callback, &receive_embedded_data_callback, context, EFP_MODE_THREAD);
     if (!efp_object_handle_receive) {
-        printf("Fatal. Failed creating EFP reciever");
+        printf("Fatal. Failed creating EFP receiver");
         return 1;
     }
-    printf("Reciever created.\n");
+    printf("receiver created.\n");
 
     //Prepare data
     for (int x = 0; x < TEST_DATA_SIZE; x++) {
