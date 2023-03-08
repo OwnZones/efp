@@ -1,138 +1,70 @@
-//
-// Created by Anders Cedronius on 2019-12-05.
-//
+#include <gtest/gtest.h>
+
+#include <memory>
+
+#include "ElasticFrameProtocol.h"
+#include "UnitTestHelpers.h"
+
 
 //UnitTest7
 //Test sending packets, 5 type 1 + 1 type 2.. Reorder type1 packet 3 and 2 so the delivery order is 1 3 2 4 5 6
 //then check for correct length and correct vector in the payload
-// Also checks the streamID parameter in sendData callback
+TEST(UnitTest7, SendLinearVectorAndSwapFragmentOrder) {
+    std::unique_ptr<ElasticFrameProtocolReceiver> myEFPReceiver = std::make_unique<ElasticFrameProtocolReceiver>(50,
+                                                                                                                 20);
+    std::unique_ptr<ElasticFrameProtocolSender> myEFPPacker = std::make_unique<ElasticFrameProtocolSender>(MTU);
+    std::atomic<bool> dataReceived = false;
 
-#include "UnitTest7.h"
+    size_t packetNumber = 0;
+    std::vector<uint8_t> savedSubPacketNumber2;
+    myEFPPacker->sendCallback = [&](const std::vector<uint8_t> &subPacket, uint8_t lStreamID,
+                                    ElasticFrameProtocolContext *pCTX) {
+        EXPECT_EQ(lStreamID, 8);
+        packetNumber++;
+        if (packetNumber == 2) {
+            // Hold packet number 2
+            savedSubPacketNumber2 = subPacket;
+            return;
+        } else if (packetNumber == 3) {
+            //First send packet number 3, then packet number 2
+            ElasticFrameMessages info = myEFPReceiver->receiveFragment(subPacket, 0);
+            EXPECT_EQ(info, ElasticFrameMessages::noError);
 
-void UnitTest7::sendData(const std::vector<uint8_t> &subPacket, uint8_t streamID) {
-
-    if (streamID != 8) {
-        std::cout << "Error-> streamID missmatch";
-        unitTestFailed = true;
-        unitTestActive = false;
-        return;
-    }
-
-    ElasticFrameMessages info;
-    if (unitTestPacketNumberSender == 1) {
-        unitTestPacketNumberSender++;
-        unitTestsSavedData = subPacket;
-        return;
-    }
-    if (unitTestPacketNumberSender == 2) {
-        unitTestPacketNumberSender++;
-        info = myEFPReciever->receiveFragment(subPacket,0);
-        if (info != ElasticFrameMessages::noError) {
-            std::cout << "Error-> " << signed(info) << std::endl;
-            unitTestFailed = true;
-            unitTestActive = false;
+            info = myEFPReceiver->receiveFragment(savedSubPacketNumber2, 0);
+            EXPECT_EQ(info, ElasticFrameMessages::noError);
+            return;
         }
-        info = myEFPReciever->receiveFragment(unitTestsSavedData,0);
-        if (info != ElasticFrameMessages::noError) {
-            std::cout << "Error-> " << signed(info) << std::endl;
-            unitTestFailed = true;
-            unitTestActive = false;
+
+        ElasticFrameMessages info = myEFPReceiver->receiveFragment(subPacket, 0);
+        EXPECT_EQ(info, ElasticFrameMessages::noError);
+    };
+
+    myEFPReceiver->receiveCallback = [&](ElasticFrameProtocolReceiver::pFramePtr &packet,
+                                         ElasticFrameProtocolContext *) {
+        EXPECT_EQ(packet->mStreamID, 8);
+        EXPECT_EQ(packet->mPts, 1001);
+        EXPECT_EQ(packet->mCode, 2);
+        EXPECT_FALSE(packet->mBroken);
+
+        EXPECT_EQ(packet->mFrameSize, (((MTU - myEFPPacker->getType1Size()) * 5) + 12));
+
+        uint8_t vectorChecker = 0;
+        for (size_t x = 0; x < packet->mFrameSize; x++) {
+            EXPECT_EQ(packet->pFrameData[x], vectorChecker++);
         }
-        return;
-    }
-    unitTestPacketNumberSender++;
-    info = myEFPReciever->receiveFragment(subPacket,0);
-    if (info != ElasticFrameMessages::noError) {
-        std::cout << "Error-> " << signed(info) << std::endl;
-        unitTestFailed = true;
-        unitTestActive = false;
-    }
-}
+        dataReceived = true;
+    };
 
-void UnitTest7::gotData(ElasticFrameProtocolReceiver::pFramePtr &packet) {
-    if (!unitTestActive) return;
-
-    if (packet->mPts != 1001 || packet->mCode != 2) {
-        unitTestFailed = true;
-        unitTestActive = false;
-        return;
-    }
-    if (packet->mBroken) {
-        unitTestFailed = true;
-        unitTestActive = false;
-        return;
-    }
-    if (packet->mFrameSize != (((MTU - myEFPPacker->geType1Size()) * 5) + 12)) {
-        unitTestFailed = true;
-        unitTestActive = false;
-        return;
-    }
-    uint8_t vectorChecker = 0;
-    for (int x = 0; x < packet->mFrameSize; x++) {
-        if (packet->pFrameData[x] != vectorChecker++) {
-            unitTestFailed = true;
-            unitTestActive = false;
-            break;
-        }
-    }
-    unitTestActive = false;
-    std::cout << "UnitTest " << unsigned(activeUnitTest) << " done." << std::endl;
-}
-
-bool UnitTest7::waitForCompletion() {
-    int breakOut = 0;
-    while (unitTestActive) {
-        //quarter of a second
-        std::this_thread::sleep_for(std::chrono::microseconds(1000 * 250));
-        if (breakOut++ == 10) {
-            std::cout << "waitForCompletion did wait for 5 seconds. fail the test." << std::endl;
-            unitTestFailed = true;
-            unitTestActive = false;
-        }
-    }
-    if (unitTestFailed) {
-        std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed." << std::endl;
-        return true;
-    }
-    return false;
-}
-
-bool UnitTest7::startUnitTest() {
-    unitTestFailed = false;
-    unitTestActive = false;
-    ElasticFrameMessages result;
     std::vector<uint8_t> mydata;
-    uint8_t streamID=8;
-    myEFPReciever = new (std::nothrow) ElasticFrameProtocolReceiver(50, 20);
-    myEFPPacker = new (std::nothrow) ElasticFrameProtocolSender(MTU);
-    if (myEFPReciever == nullptr || myEFPPacker == nullptr) {
-        if (myEFPReciever) delete myEFPReciever;
-        if (myEFPPacker) delete myEFPPacker;
-        return false;
-    }
-    myEFPPacker->sendCallback = std::bind(&UnitTest7::sendData, this, std::placeholders::_1, std::placeholders::_2);
-    myEFPReciever->receiveCallback = std::bind(&UnitTest7::gotData, this, std::placeholders::_1);
-    unitTestPacketNumberSender = 0;
-    unitTestsSavedData.clear();
-    mydata.resize(((MTU - myEFPPacker->geType1Size()) * 5) + 12);
+    mydata.resize(((MTU - myEFPPacker->getType1Size()) * 5) + 12);
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
-    unitTestActive = true;
-    result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::adts,1001,1,2,streamID,NO_FLAGS);
-    if (result != ElasticFrameMessages::noError) {
-        std::cout << "Unit test number: " << unsigned(activeUnitTest) << " Failed in the packAndSend method. Error-> " << signed(result)
-                  << std::endl;
-        delete myEFPPacker;
-        delete myEFPReciever;
-        return false;
-    }
 
-    if (waitForCompletion()){
-        delete myEFPPacker;
-        delete myEFPReciever;
-        return false;
-    } else {
-        delete myEFPPacker;
-        delete myEFPReciever;
-        return true;
-    }
+    uint8_t streamID = 8;
+    ElasticFrameMessages result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::adts, 1001, 1, 2, streamID,
+                                                           NO_FLAGS);
+    EXPECT_EQ(result, ElasticFrameMessages::noError);
+
+    EXPECT_TRUE(UnitTestHelpers::waitUntil([&]() {
+        return dataReceived.load();
+    }, std::chrono::milliseconds(500)));
 }

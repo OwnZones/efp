@@ -333,8 +333,8 @@ public:
 
     //Used by unitTests ----START-----------------
 #ifdef UNIT_TESTS
-    static size_t geType1Size();
-    static size_t geType2Size();
+    static size_t getType1Size();
+    static size_t getType2Size();
     void setSuperFrameNo(uint16_t lSuperFrameNo);
 #endif
     //Used by unitTests ----END-----------------

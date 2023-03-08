@@ -133,10 +133,13 @@ The static EFP library
 
 The dynamic EFP library
 
-**efptests**
+**runUnitTestsEFP**
 
-*efptests* (executable) runs through the unit tests and returns EXIT_SUCESS if all unit tests pass.
+*runUnitTestsEFP* (executable) runs through the unit tests and returns EXIT_SUCCESS if all unit tests pass.
 
+The unit test framework is built using Google Test.
+On Linux, install the following package to be able to run it:
+`sudo apt install libgtest-dev`
 ---
 
 **EFP** Is built on Ubuntu, Windows10 and MacOS every commit by us.
@@ -189,7 +192,7 @@ myEFPSender.packAndSend(myData, ElasticFrameContent::h264, 0, 0, EFP_CODE('A', '
 
 ```
 
-**Reciever:**
+**Receiver:**
 
 ```cpp
 

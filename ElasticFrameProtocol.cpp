@@ -79,7 +79,7 @@ void ElasticFrameProtocolReceiver::gotData(ElasticFrameProtocolReceiver::pFrameP
                 EFP_LOGGER(true, LOGG_ERROR, "extractEmbeddedData fail")
                 return;
             }
-            for (int x = 0; x < embeddedData.size(); x++) {
+            for (size_t x = 0; x < embeddedData.size(); x++) {
                 c_receiveEmbeddedDataCallback(embeddedData[x].data(), embeddedData[x].size(), embeddedContentFlag[x],
                                               rPacket->mPts, mCTX->mUnsafePointer);
             }
@@ -1220,11 +1220,11 @@ ElasticFrameMessages ElasticFrameProtocolSender::addEmbeddedData(std::vector<uin
 }
 
 // Used by the unit tests
-size_t ElasticFrameProtocolSender::geType1Size() {
+size_t ElasticFrameProtocolSender::getType1Size() {
     return sizeof(ElasticFrameType1);
 }
 
-size_t ElasticFrameProtocolSender::geType2Size() {
+size_t ElasticFrameProtocolSender::getType2Size() {
     return sizeof(ElasticFrameType2);
 }
 
