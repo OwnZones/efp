@@ -450,7 +450,8 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(
                 mDeliveryHOLFirstRun = false;
                 mNextExpectedFrameNumber = mBucketMap.begin()->second->mDeliveryOrder;
             }
-            if (rBucket.second->mDeliveryOrder == mNextExpectedFrameNumber && rBucket.second->mFragmentCounter == rBucket.second->mOfFragmentNo) {
+            if (rBucket.second->mDeliveryOrder == mNextExpectedFrameNumber &&
+                rBucket.second->mFragmentCounter == rBucket.second->mOfFragmentNo) {
                 //We got what we expected. Now deliver.
                 //Assemble all data for delivery
                 rBucket.second->mBucketData->mDataContent = rBucket.second->mDataContent;
@@ -469,7 +470,7 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(
                 }
                 lDeleteList.emplace_back(rBucket.first);
                 mNextExpectedFrameNumber++; //The next expected frame is this frame number + 1
-            } else if (rBucket.second->mTimeout + (mHeadOfLineBlockingTimeoutms * 1000) <= lTimeNow ) {
+            } else if (rBucket.second->mTimeout + (mHeadOfLineBlockingTimeoutms * 1000) <= lTimeNow) {
                 //We got HOL but the next frame has timed out meaning the time out of the bucket + the HOL timeout
                 //We need now need to jump ahead and reset the mNextExpectedFrameNumber
                 //Assemble all data for delivery and reset the HOL pointer.
@@ -635,7 +636,8 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                     }
                 }
 
-                if (rBucket.second->mDeliveryOrder == mNextExpectedFrameNumber && rBucket.second->mFragmentCounter == rBucket.second->mOfFragmentNo) {
+                if (rBucket.second->mDeliveryOrder == mNextExpectedFrameNumber &&
+                    rBucket.second->mFragmentCounter == rBucket.second->mOfFragmentNo) {
                     //We got what we expected. Now deliver.
                     //Assemble all data for delivery
                     {
@@ -655,7 +657,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                     mSuperFrameDeliveryConditionVariable.notify_one();
                     lDeleteList.emplace_back(rBucket.first);
                     mNextExpectedFrameNumber++; //The next expected frame is this frame number + 1
-                } else if (rBucket.second->mTimeout + (mHeadOfLineBlockingTimeoutms * 1000) <= lTimeNow ) {
+                } else if (rBucket.second->mTimeout + (mHeadOfLineBlockingTimeoutms * 1000) <= lTimeNow) {
                     //We got HOL but the next frame has timed out meaning the time out of the bucket + the HOL timeout
                     //We need now need to jump ahead and reset the mNextExpectedFrameNumber
                     //Assemble all data for delivery and reset the HOL pointer.
@@ -1254,8 +1256,9 @@ uint64_t efp_init_send(uint64_t mtu, void (*f)(const uint8_t *, size_t, uint8_t,
     sender_ctx->mUnsafePointer = ctx;
     uint64_t local_c_object_handle = c_object_handle;
     auto result = efp_send_base_map.insert(std::make_pair(local_c_object_handle,
-                                                          std::make_shared<ElasticFrameProtocolSender>(mtu,
-                                                                                                       sender_ctx)));
+                                                          std::make_shared<ElasticFrameProtocolSender>(
+                                                                  static_cast<uint16_t>(mtu),
+                                                                  sender_ctx)));
     if (!result.first->second) {
         return 0;
     }

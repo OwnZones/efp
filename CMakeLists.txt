@@ -14,6 +14,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
 find_package(Threads REQUIRED)
 find_package(GTest REQUIRED)
 
+if(WIN32)
+    set(CMAKE_CXX_FLAGS_RELEASE "/MT")
+    set(CMAKE_CXX_FLAGS_DEBUG "/MTd")
+endif()
+
 add_library(efp STATIC ElasticFrameProtocol.cpp)
 add_library(efp_shared SHARED ElasticFrameProtocol.cpp)
 
@@ -54,8 +59,6 @@ target_include_directories(runUnitTestsEFP
 target_link_libraries(runUnitTestsEFP
         Threads::Threads
         GTest::gtest_main)
-
-target_compile_options(runUnitTestsEFP PRIVATE -Werror -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-comment)
 
 add_executable(performanceLab
         ${CMAKE_CURRENT_SOURCE_DIR}/ElasticFrameProtocol.cpp

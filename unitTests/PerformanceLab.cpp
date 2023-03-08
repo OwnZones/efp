@@ -3,7 +3,7 @@
 #include <memory>
 
 #include "ElasticFrameProtocol.h"
-
+#include "UnitTestHelpers.h"
 
 int main() {
     uint8_t streamID = 1;

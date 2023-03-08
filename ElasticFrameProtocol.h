@@ -480,7 +480,7 @@ public:
     std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)> receiveCallback = nullptr;
 
     /**
-    * receive data callback (C-API version)
+    * Receive data callback (C-API version)
     *
     * @param pData Pointer to the data.
     * @param lSize Size of the data.
