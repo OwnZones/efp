@@ -480,7 +480,7 @@ public:
     std::function<void(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX)> receiveCallback = nullptr;
 
     /**
-    * Recieve data callback (C-API version)
+    * receive data callback (C-API version)
     *
     * @param pData Pointer to the data.
     * @param lSize Size of the data.
@@ -494,7 +494,7 @@ public:
     * @param lFlags signal what flags are used
     * @param lCtx context
     */
-    void (*c_recieveCallback)(uint8_t *pData,
+    void (*c_receiveCallback)(uint8_t *pData,
                               size_t lSize,
                               uint8_t lData_content,
                               uint8_t lBroken,
@@ -511,7 +511,7 @@ public:
     *
     * If the EFP frame is broken this C-callback will not be triggered since the data integrity is unknown,
     * there will be no attempt to extraxt any embedded data.
-    * c_recieveCallback will be triggered with broken set (meaning != 0) and if any embedded data
+    * c_receiveCallback will be triggered with broken set (meaning != 0) and if any embedded data
     * (flags & INLINE_PAYLOAD) it will be in the preamble of the broken EFP-Frame. You may try to
     * extract the data manually.
     *
@@ -521,7 +521,7 @@ public:
     * @param lPts PTS of the frame (Can be used to associate with a EFP frame).
     * @param lCtx context
     */
-    void (*c_recieveEmbeddedDataCallback)(uint8_t *pData,
+    void (*c_receiveEmbeddedDataCallback)(uint8_t *pData,
                                           size_t lSize,
                                           uint8_t lData_type,
                                           uint64_t lPts,
@@ -588,7 +588,7 @@ private:
 
     //Private methods ----- START ------
 
-    // Stop the reciever worker
+    // Stop the receiver worker
     ElasticFrameMessages stopReceiver();
 
     // C-API callback. If C++ is used this is a dummy callback
