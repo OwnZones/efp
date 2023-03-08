@@ -396,6 +396,7 @@ public:
         uint8_t mStreamID = 0;           // A streamID used for stream separation of same content type (if you got more than one H264 streams for example)
         uint8_t mSource = 0;             // A transparent value 'passed by' the receivedFragment method to separate multiple parallel EFP streams
         uint8_t mFlags = NO_FLAGS;       // Flags used by the frame
+        uint16_t mSuperFrameNo = 0;      // The 16 bit super frame counter. Useful for calculating the number of lost frames in HOL mode
 
         SuperFrame(const SuperFrame &) = delete;
 

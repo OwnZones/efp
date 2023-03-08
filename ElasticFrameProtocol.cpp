@@ -463,6 +463,7 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(
                 rBucket.second->mBucketData->mStreamID = rBucket.second->mStream;
                 rBucket.second->mBucketData->mSource = rBucket.second->mSource;
                 rBucket.second->mBucketData->mFlags = rBucket.second->mFlags;
+                rBucket.second->mBucketData->mSuperFrameNo = rBucket.second->mSavedSuperFrameNo;
                 if (rReceiveFunction) {
                     rReceiveFunction(rBucket.second->mBucketData, mCTX ? mCTX.get() : nullptr);
                 } else {
@@ -484,6 +485,7 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(
                 rBucket.second->mBucketData->mStreamID = rBucket.second->mStream;
                 rBucket.second->mBucketData->mSource = rBucket.second->mSource;
                 rBucket.second->mBucketData->mFlags = rBucket.second->mFlags;
+                rBucket.second->mBucketData->mSuperFrameNo = rBucket.second->mSavedSuperFrameNo;
                 if (rReceiveFunction) {
                     rReceiveFunction(rBucket.second->mBucketData, mCTX ? mCTX.get() : nullptr);
                 } else {
@@ -512,6 +514,7 @@ void ElasticFrameProtocolReceiver::runToCompletionMethod(
                 rBucket.second->mBucketData->mStreamID = rBucket.second->mStream;
                 rBucket.second->mBucketData->mSource = rBucket.second->mSource;
                 rBucket.second->mBucketData->mFlags = rBucket.second->mFlags;
+                rBucket.second->mBucketData->mSuperFrameNo = rBucket.second->mSavedSuperFrameNo;
                 if (rReceiveFunction) {
                     rReceiveFunction(rBucket.second->mBucketData, mCTX ? mCTX.get() : nullptr);
                 } else {
@@ -651,6 +654,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                         rBucket.second->mBucketData->mStreamID = rBucket.second->mStream;
                         rBucket.second->mBucketData->mSource = rBucket.second->mSource;
                         rBucket.second->mBucketData->mFlags = rBucket.second->mFlags;
+                        rBucket.second->mBucketData->mSuperFrameNo = rBucket.second->mSavedSuperFrameNo;
                         mSuperFrameQueue.push_back(std::move(rBucket.second->mBucketData));
                         mSuperFrameReady = true;
                     }
@@ -672,6 +676,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                         rBucket.second->mBucketData->mStreamID = rBucket.second->mStream;
                         rBucket.second->mBucketData->mSource = rBucket.second->mSource;
                         rBucket.second->mBucketData->mFlags = rBucket.second->mFlags;
+                        rBucket.second->mBucketData->mSuperFrameNo = rBucket.second->mSavedSuperFrameNo;
                         mSuperFrameQueue.push_back(std::move(rBucket.second->mBucketData));
                         mSuperFrameReady = true;
                     }
@@ -700,6 +705,7 @@ void ElasticFrameProtocolReceiver::receiverWorker() {
                         rBucket.second->mBucketData->mStreamID = rBucket.second->mStream;
                         rBucket.second->mBucketData->mSource = rBucket.second->mSource;
                         rBucket.second->mBucketData->mFlags = rBucket.second->mFlags;
+                        rBucket.second->mBucketData->mSuperFrameNo = rBucket.second->mSavedSuperFrameNo;
                         mSuperFrameQueue.push_back(std::move(rBucket.second->mBucketData));
                         mSuperFrameReady = true;
                     }

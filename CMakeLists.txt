@@ -46,6 +46,7 @@ add_executable(runUnitTestsEFP
         ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest20.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest21.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest22.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTest23.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/unitTests/UnitTestHelpers.cpp
         )
 
