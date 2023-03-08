@@ -1063,7 +1063,7 @@ ElasticFrameProtocolSender::packAndSendFromPtr(const uint8_t *pPacket, size_t lP
 }
 
 ElasticFrameMessages
-ElasticFrameProtocolSender::destructivePackAndSendFromPtr(const uint8_t *pPacket, size_t lPacketSize,
+ElasticFrameProtocolSender::destructivePackAndSendFromPtr(uint8_t *pPacket, size_t lPacketSize,
                                                           ElasticFrameContent lDataContent, uint64_t lPts,
                                                           uint64_t lDts, uint32_t lCode, uint8_t lStreamID,
                                                           uint8_t lFlags, const std::function<void(const uint8_t *,
@@ -1071,9 +1071,7 @@ ElasticFrameProtocolSender::destructivePackAndSendFromPtr(const uint8_t *pPacket
 
     std::lock_guard<std::mutex> lock(mSendMtx);
 
-    if (sizeof(ElasticFrameType1) != sizeof(ElasticFrameType3)) {
-        return ElasticFrameMessages::type1And3SizeError;
-    }
+    static_assert(sizeof(ElasticFrameType1) == sizeof(ElasticFrameType3));
 
     if (lPts == UINT64_MAX) {
         return ElasticFrameMessages::reservedPTSValue;
@@ -1107,7 +1105,7 @@ ElasticFrameProtocolSender::destructivePackAndSendFromPtr(const uint8_t *pPacket
     }
 
     if ((lPacketSize + sizeof(ElasticFrameType2)) <= mCurrentMTU) {
-        auto pType2Frame = (ElasticFrameType2 *) pPacket - sizeof(ElasticFrameType2);
+        auto pType2Frame = reinterpret_cast<ElasticFrameType2 *>(pPacket - sizeof(ElasticFrameType2));
         pType2Frame->hFrameType = Frametype::type2 | lFlags;
         pType2Frame->hStreamID = lStreamID;
         pType2Frame->hDataContent = lDataContent;
@@ -1142,7 +1140,7 @@ ElasticFrameProtocolSender::destructivePackAndSendFromPtr(const uint8_t *pPacket
     }
 
     while (lFragmentNo < lOfFragmentNoType1) {
-        auto pType1Frame = (ElasticFrameType1 *) pPacket - sizeof(ElasticFrameType1) + lDataPointer;
+        auto pType1Frame = reinterpret_cast<ElasticFrameType1 *>(pPacket - sizeof(ElasticFrameType1) + lDataPointer);
         pType1Frame->hFrameType = Frametype::type1 | lFlags;
         pType1Frame->hStream = lStreamID;
         pType1Frame->hSuperFrameNo = mSuperFrameNoGenerator;
@@ -1154,7 +1152,7 @@ ElasticFrameProtocolSender::destructivePackAndSendFromPtr(const uint8_t *pPacket
 
     if (lType3needed) {
         lFragmentNo++;
-        auto pType3Frame = (ElasticFrameType3 *) pPacket - sizeof(ElasticFrameType3) + lDataPointer;
+        auto pType3Frame = reinterpret_cast<ElasticFrameType3 *>(pPacket - sizeof(ElasticFrameType3) + lDataPointer);
         pType3Frame->hFrameType = Frametype::type3 | lFlags;
         pType3Frame->hStreamID = lStreamID;
         pType3Frame->hSuperFrameNo = mSuperFrameNoGenerator;
@@ -1184,7 +1182,7 @@ ElasticFrameProtocolSender::destructivePackAndSendFromPtr(const uint8_t *pPacket
         return ElasticFrameMessages::internalCalculationError;
     }
 
-    auto pType2Frame = (ElasticFrameType2 *) pPacket - sizeof(ElasticFrameType2) + lDataPointer;
+    auto pType2Frame = reinterpret_cast<ElasticFrameType2 *>(pPacket - sizeof(ElasticFrameType2) + lDataPointer);
     pType2Frame->hFrameType = Frametype::type2 | lFlags;
     pType2Frame->hStreamID = lStreamID;
     pType2Frame->hDataContent = lDataContent;
