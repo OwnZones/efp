@@ -7,9 +7,9 @@
 
 
 // UnitTest23
-// Test sending 10 packets, with 5 frame type 1 + 1 frame type 2
+// Test sending 10 packets, each being split into six EFP fragments, five of type 1 and one of type 2
 // Drop packet 4 and 5, and deliver the rest in reversed order
-// Check that we can see that we lost two superframes in the receiver when we receive the last packet
+// Check that we can see that we lost two packets/superframes in the receiver when we receive the last packet
 TEST(UnitTest23, SendFivePacketsDeliverInReversedOrderWithReversedFragmentOrder) {
     std::unique_ptr<ElasticFrameProtocolReceiver> myEFPReceiver = std::make_unique<ElasticFrameProtocolReceiver>(100,
                                                                                                                  40);
