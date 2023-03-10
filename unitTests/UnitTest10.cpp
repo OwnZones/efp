@@ -9,6 +9,7 @@
 //UnitTest10
 //send two type 2 packets out of order and receive them in order.
 TEST(UnitTest10, SendType2FragmentsAndSwapOrder) {
+    const size_t FRAME_SIZE = (MTU - ElasticFrameProtocolSender::getType2Size());
     std::unique_ptr<ElasticFrameProtocolReceiver> myEFPReceiver = std::make_unique<ElasticFrameProtocolReceiver>(50,
                                                                                                                  20);
     std::unique_ptr<ElasticFrameProtocolSender> myEFPPacker = std::make_unique<ElasticFrameProtocolSender>(MTU);
@@ -49,11 +50,11 @@ TEST(UnitTest10, SendType2FragmentsAndSwapOrder) {
         EXPECT_EQ(packet->mCode, 0);
         EXPECT_FALSE(packet->mBroken);
 
-        EXPECT_EQ(packet->mFrameSize, MTU - myEFPPacker->getType2Size());
+        EXPECT_EQ(packet->mFrameSize, FRAME_SIZE);
     };
 
     std::vector<uint8_t> mydata;
-    mydata.resize(MTU - myEFPPacker->getType2Size());
+    mydata.resize(FRAME_SIZE);
 
     uint8_t streamID = 1;
     ElasticFrameMessages result = myEFPPacker->packAndSend(mydata, ElasticFrameContent::h264, 1001, 1, 0, streamID,

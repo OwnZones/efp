@@ -9,6 +9,7 @@
 //UnitTest8
 //Test sending packets, 5 type 1 + 1 type 2.. Send the type2 packet first to the unpacker and send the type1 packets out of order
 TEST(UnitTest8, SendLinearVectorReceiverType2FragmentFirst) {
+    const size_t FRAME_SIZE = ((MTU - ElasticFrameProtocolSender::getType1Size()) * 5) + 12;
     std::unique_ptr<ElasticFrameProtocolReceiver> myEFPReceiver = std::make_unique<ElasticFrameProtocolReceiver>(50,
                                                                                                                  20);
     std::unique_ptr<ElasticFrameProtocolSender> myEFPPacker = std::make_unique<ElasticFrameProtocolSender>(MTU);
@@ -42,7 +43,7 @@ TEST(UnitTest8, SendLinearVectorReceiverType2FragmentFirst) {
         EXPECT_EQ(packet->mCode, 2);
         EXPECT_FALSE(packet->mBroken);
 
-        EXPECT_EQ(packet->mFrameSize, (((MTU - myEFPPacker->getType1Size()) * 5) + 12));
+        EXPECT_EQ(packet->mFrameSize, FRAME_SIZE);
 
         uint8_t vectorChecker = 0;
         for (size_t x = 0; x < packet->mFrameSize; x++) {
@@ -52,7 +53,7 @@ TEST(UnitTest8, SendLinearVectorReceiverType2FragmentFirst) {
     };
 
     std::vector<uint8_t> mydata;
-    mydata.resize(((MTU - myEFPPacker->getType1Size()) * 5) + 12);
+    mydata.resize(FRAME_SIZE);
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
 
     uint8_t streamID = 8;
