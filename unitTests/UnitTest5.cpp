@@ -9,6 +9,7 @@
 //UnitTest5
 //Test sending a packet of MTU*5+MTU/2 containing a linear vector -> the result should be a packet with that size containing a linear vector.
 TEST(UnitTest5, SendLinearVectorOverMultipleFragments) {
+    const size_t FRAME_SIZE = (MTU * 5) + (MTU / 2);
     std::unique_ptr<ElasticFrameProtocolReceiver> myEFPReceiver = std::make_unique<ElasticFrameProtocolReceiver>(50,
                                                                                                                  20);
     std::unique_ptr<ElasticFrameProtocolSender> myEFPPacker = std::make_unique<ElasticFrameProtocolSender>(MTU);
@@ -26,7 +27,7 @@ TEST(UnitTest5, SendLinearVectorOverMultipleFragments) {
         EXPECT_EQ(packet->mPts, 1001);
         EXPECT_EQ(packet->mCode, 2);
         EXPECT_FALSE(packet->mBroken);
-        EXPECT_EQ(packet->mFrameSize, ((MTU * 5) + (MTU / 2)));
+        EXPECT_EQ(packet->mFrameSize, FRAME_SIZE);
 
         uint8_t vectorChecker = 0;
         for (size_t x = 0; x < packet->mFrameSize; x++) {
@@ -36,7 +37,7 @@ TEST(UnitTest5, SendLinearVectorOverMultipleFragments) {
     };
 
     std::vector<uint8_t> mydata;
-    mydata.resize((MTU * 5) + (MTU / 2));
+    mydata.resize(FRAME_SIZE);
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
 
     uint8_t streamID = 1;

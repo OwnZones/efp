@@ -19,6 +19,7 @@
 //Expected result is that all frames should be delivered in order (EFP is set to HOL-mode) but mark frame 2 as broken
 //When passing fragment 5 again (meaning sending late fragments) EFP should respond with too old.
 TEST(UnitTest22, HeadOfLineBlocking) {
+    const size_t FRAME_SIZE = ((MTU - ElasticFrameProtocolSender::getType1Size()) * 5) + 12;
     std::unique_ptr<ElasticFrameProtocolReceiver> myEFPReceiver = std::make_unique<ElasticFrameProtocolReceiver>(20, 20,
                                                                                                                  nullptr,
                                                                                                                  ElasticFrameProtocolReceiver::EFPReceiverMode::RUN_TO_COMPLETION);
@@ -70,7 +71,7 @@ TEST(UnitTest22, HeadOfLineBlocking) {
             EXPECT_FALSE(packet->mBroken);
 
             uint8_t vectorChecker = 0;
-            for (size_t x = 0; x < ((MTU - myEFPPacker->getType1Size()) * 5 + 12); x++) {
+            for (size_t x = 0; x < FRAME_SIZE; x++) {
                 EXPECT_EQ(packet->pFrameData[x], vectorChecker++);
             }
         }
@@ -79,7 +80,7 @@ TEST(UnitTest22, HeadOfLineBlocking) {
     };
 
     std::vector<uint8_t> mydata;
-    mydata.resize(((MTU - myEFPPacker->getType1Size()) * 5) + 12);
+    mydata.resize(FRAME_SIZE);
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
 
     uint8_t streamID = 1;

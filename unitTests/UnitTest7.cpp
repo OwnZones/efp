@@ -10,6 +10,7 @@
 //Test sending packets, 5 type 1 + 1 type 2.. Reorder type1 packet 3 and 2 so the delivery order is 1 3 2 4 5 6
 //then check for correct length and correct vector in the payload
 TEST(UnitTest7, SendLinearVectorAndSwapFragmentOrder) {
+    const size_t FRAME_SIZE = ((MTU - ElasticFrameProtocolSender::getType1Size()) * 5) + 12;
     std::unique_ptr<ElasticFrameProtocolReceiver> myEFPReceiver = std::make_unique<ElasticFrameProtocolReceiver>(50,
                                                                                                                  20);
     std::unique_ptr<ElasticFrameProtocolSender> myEFPPacker = std::make_unique<ElasticFrameProtocolSender>(MTU);
@@ -46,7 +47,7 @@ TEST(UnitTest7, SendLinearVectorAndSwapFragmentOrder) {
         EXPECT_EQ(packet->mCode, 2);
         EXPECT_FALSE(packet->mBroken);
 
-        EXPECT_EQ(packet->mFrameSize, (((MTU - myEFPPacker->getType1Size()) * 5) + 12));
+        EXPECT_EQ(packet->mFrameSize, FRAME_SIZE);
 
         uint8_t vectorChecker = 0;
         for (size_t x = 0; x < packet->mFrameSize; x++) {
@@ -56,7 +57,7 @@ TEST(UnitTest7, SendLinearVectorAndSwapFragmentOrder) {
     };
 
     std::vector<uint8_t> mydata;
-    mydata.resize(((MTU - myEFPPacker->getType1Size()) * 5) + 12);
+    mydata.resize(FRAME_SIZE);
     std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
 
     uint8_t streamID = 8;

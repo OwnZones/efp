@@ -18,6 +18,7 @@ namespace {
 //Send 15 packets with embeddedPrivateData. Odd packet numbers will have two embedded private data fields. Also check for not broken and correct FourCC code.
 //The reminder of the packet is a vector. Check it's integrity
 TEST(UnitTest14, SendPrivateEmbeddedData) {
+    const size_t FRAME_SIZE = ((MTU - ElasticFrameProtocolSender::getType1Size()) * 5) + 12;
     std::unique_ptr<ElasticFrameProtocolReceiver> myEFPReceiver = std::make_unique<ElasticFrameProtocolReceiver>(50,
                                                                                                                  20);
     std::unique_ptr<ElasticFrameProtocolSender> myEFPPacker = std::make_unique<ElasticFrameProtocolSender>(MTU);
@@ -71,7 +72,7 @@ TEST(UnitTest14, SendPrivateEmbeddedData) {
     uint8_t streamID = 1;
     for (size_t packetNumber = 0; packetNumber < 15; packetNumber++) {
         std::vector<uint8_t> mydata;
-        mydata.resize(((MTU - myEFPPacker->getType1Size()) * 5) + 12);
+        mydata.resize(FRAME_SIZE);
         std::generate(mydata.begin(), mydata.end(), [n = 0]() mutable { return n++; });
 
         PrivateData myPrivateData;

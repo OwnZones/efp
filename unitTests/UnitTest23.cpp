@@ -49,7 +49,6 @@ TEST(UnitTest23, SendFivePacketsDeliverInReversedOrderWithReversedFragmentOrder)
     uint16_t lastReceivedSuperFrame = 0;
     myEFPReceiver->receiveCallback = [&](ElasticFrameProtocolReceiver::pFramePtr &packet,
                                          ElasticFrameProtocolContext *) {
-        std::cout << "Receiving frame " << packet->mPts << std::endl;
         receivedFrameNumber++;
         EXPECT_EQ(packet->mPts, nextExpectedPts);
         // Expect pts 1004 and 1005 to be missing

@@ -12,6 +12,7 @@
 //This is testing the out of order head of line blocking mechanism
 //The result should be: deliver packet 1,2,4,5 even though we gave the unpacker them in order 5,4,2,1.
 TEST(UnitTest11, SendFivePacketsDeliverInReversedOrder) {
+    const size_t FRAME_SIZE = ((MTU - ElasticFrameProtocolSender::getType1Size()) * 5) + 12;
     std::unique_ptr<ElasticFrameProtocolReceiver> myEFPReceiver = std::make_unique<ElasticFrameProtocolReceiver>(50,
                                                                                                                  20);
     std::unique_ptr<ElasticFrameProtocolSender> myEFPPacker = std::make_unique<ElasticFrameProtocolSender>(MTU);
@@ -57,12 +58,12 @@ TEST(UnitTest11, SendFivePacketsDeliverInReversedOrder) {
         EXPECT_EQ(packet->mCode, 0);
         EXPECT_FALSE(packet->mBroken);
 
-        EXPECT_EQ(packet->mFrameSize, ((MTU - myEFPPacker->getType1Size()) * 5) + 12);
+        EXPECT_EQ(packet->mFrameSize, FRAME_SIZE);
         dataReceived++;
     };
 
     std::vector<uint8_t> mydata;
-    mydata.resize(((MTU - myEFPPacker->getType1Size()) * 5) + 12);
+    mydata.resize(FRAME_SIZE);
 
     uint8_t streamID = 1;
     for (size_t packetNumber = 0; packetNumber < 5; packetNumber++) {

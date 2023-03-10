@@ -9,6 +9,7 @@
 //UnitTest18
 //Using the optional lambda in the pack and send method
 TEST(UnitTest18, OptionalLambdaInPackAndSend) {
+    const size_t FRAME_SIZE = ((MTU - ElasticFrameProtocolSender::getType1Size()) * 5) + 12;
     std::unique_ptr<ElasticFrameProtocolReceiver> myEFPReceiver = std::make_unique<ElasticFrameProtocolReceiver>(100,
                                                                                                                  40);
     std::unique_ptr<ElasticFrameProtocolSender> myEFPPacker = std::make_unique<ElasticFrameProtocolSender>(MTU);
@@ -29,7 +30,7 @@ TEST(UnitTest18, OptionalLambdaInPackAndSend) {
     };
 
     std::vector<uint8_t> mydata;
-    mydata.resize(((MTU - myEFPPacker->getType1Size()) * 5) + 12);
+    mydata.resize(FRAME_SIZE);
 
     uint8_t streamID = 1;
     for (int packetNumber = 0; packetNumber < 5; packetNumber++) {
