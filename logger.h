@@ -21,7 +21,7 @@ if (g == (LOGG_NOTIFY & (LOGG_MASK))) {a << "Notification: ";} \
 else if (g == (LOGG_WARN & (LOGG_MASK))) {a << "Warning: ";} \
 else if (g == (LOGG_ERROR & (LOGG_MASK))) {a << "Error: ";} \
 else if (g == (LOGG_FATAL & (LOGG_MASK))) {a << "Fatal: ";} \
-if (a.str().length()) { \
+if (!a.str().empty()) { \
 if (l) {a << __FILE__ << " " << __LINE__ << " ";} \
 a << f << std::endl; \
 std::cout << a.str(); \

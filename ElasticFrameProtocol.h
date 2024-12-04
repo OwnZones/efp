@@ -32,7 +32,6 @@
 #include <vector>
 #include <iostream>
 #include <sstream>
-#include <climits>
 #include <cmath>
 #include <thread>
 #include <map>
@@ -46,7 +45,6 @@
 #include <bitset>
 #include <mutex>
 #include <atomic>
-#include <algorithm>
 #include <deque>
 #include <condition_variable>
 #include <chrono>
@@ -64,7 +62,7 @@ extern "C" {
 #define UNIT_TESTS
 
 ///The size of the circular buffer. Must be contiguous set bits defining the size  0b1111111111111 == 8191
-#define CIRCULAR_BUFFER_SIZE 0b1111111111111
+constexpr uint16_t CIRCULAR_BUFFER_SIZE = 0b1111111111111;
 
 /// Flag defines used py EFP
 #define NO_FLAGS        0b00000000 // Normal operation
@@ -75,8 +73,9 @@ extern "C" {
 #define PRIORITY_P3     0b01100000 // God-mode priority (not implemented)
 #define UNDEFINED_FLAG  0b10000000 // TBD
 
-#define EFP_MAJOR_VERSION 0
-#define EFP_MINOR_VERSION 4
+constexpr uint8_t EFP_MAJOR_VERSION = 0;
+constexpr uint8_t EFP_MINOR_VERSION = 4;
+constexpr uint16_t EFP_VERSION = static_cast<uint16_t>(EFP_MAJOR_VERSION) << 8 | EFP_MINOR_VERSION;
 
 // Bitwise operations are used on members therefore the namespace is wrapping enum instead of 'enum class'
 /// Definition of the data types supported by EFP
@@ -220,7 +219,7 @@ public:
     virtual ~ElasticFrameProtocolSender();
 
     ///Return the version of the current implementation (Uint16)((8 MSB Major) + (8 LSB Minor))
-    uint16_t getVersion() { return ((uint16_t)EFP_MAJOR_VERSION << 8) | (uint16_t)EFP_MINOR_VERSION; }
+    static uint16_t getVersion() { return EFP_VERSION; }
 
     /**
   * Converts the original data from a vector to EFP packets/fragments
@@ -343,7 +342,7 @@ protected:
 private:
     //Private methods ----- START ------
     // Used by the C - API
-    void sendData(const std::vector<uint8_t> &rSubPacket, uint8_t lStreamID, ElasticFrameProtocolContext* pCTX);
+    void sendData(const std::vector<uint8_t> &rSubPacket, uint8_t lStreamID, ElasticFrameProtocolContext* pCTX) const;
     //Private methods ----- END ------
 
     // Internal lists and variables ----- START ------
@@ -439,8 +438,7 @@ public:
     virtual ~ElasticFrameProtocolReceiver();
 
     ///Return the version of the current implementation
-    uint16_t getVersion() { return ((uint16_t)EFP_MAJOR_VERSION << 8) | (uint16_t)EFP_MINOR_VERSION; }
-
+    static uint16_t getVersion() { return EFP_VERSION; }
     /**
     * Function assembling received fragments from a vector
     *
@@ -593,7 +591,7 @@ private:
     ElasticFrameMessages stopReceiver();
 
     // C-API callback. If C++ is used this is a dummy callback
-    void gotData(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX);
+    void gotData(pFramePtr &rPacket, ElasticFrameProtocolContext* pCTX) const;
 
     // Method unpacking Type1 fragments
     ElasticFrameMessages unpackType1(const uint8_t *pSubPacket, size_t lPacketSize, uint8_t lFromSource);
