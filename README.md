@@ -339,7 +339,7 @@ Please feel free to use, clone / fork and contribute to this new way of intercon
 
 ## Credits
 
-The UnitX team at Edgeware AB. From 2021 Edgeware is a part of Agile Content.
+The Ateliere Live development team.
 
 ## License
 
