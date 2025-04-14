@@ -23,11 +23,6 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 enable_testing()
 
-if(WIN32)
-    set(CMAKE_CXX_FLAGS_RELEASE "/MT")
-    set(CMAKE_CXX_FLAGS_DEBUG "/MTd")
-endif()
-
 add_library(efp STATIC ElasticFrameProtocol.cpp)
 add_library(efp_shared SHARED ElasticFrameProtocol.cpp)
 
