@@ -167,6 +167,14 @@ ElasticFrameProtocolReceiver::unpackType1(const uint8_t *pSubPacket, size_t lPac
             pThisBucket->mActive = false;
             return ElasticFrameMessages::memoryAllocationError;
         }
+
+        if (pThisBucket->mOfFragmentNo < lType1Frame->hFragmentNo) {
+            EFP_LOGGER(true, LOGG_FATAL, "bufferOutOfBounds")
+            mBucketMap.erase(pThisBucket->mDeliveryOrder);
+            pThisBucket->mActive = false;
+            return ElasticFrameMessages::bufferOutOfBounds;
+        }
+
         std::copy_n(pSubPacket + sizeof(ElasticFrameType1), lPacketSize - sizeof(ElasticFrameType1),
                     pThisBucket->mBucketData->pFrameData + lInsertDataPointer);
         return ElasticFrameMessages::noError;
@@ -329,7 +337,7 @@ ElasticFrameProtocolReceiver::unpackType2(const uint8_t *pSubPacket, size_t lPac
     return ElasticFrameMessages::noError;
 }
 
-// Unpack method for type3 packets. Type3 packets are the parts of frames where the reminder data does not fit a type2 packet. Then a type 3 is added
+// Unpack method for type3 packets. Type3 packets are the parts of frames where the remainder data does not fit a type2 packet. Then a type 3 is added
 // in front of a type2 packet to catch the data overshoot.
 // Type 3 frames MUST be the same header size as type1 headers (FIXME part of the opportunistic data discussion)
 ElasticFrameMessages

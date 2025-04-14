@@ -42,7 +42,7 @@ void send_data_callback(const uint8_t *data, size_t size, uint8_t stream_id, voi
 }
 
 void receive_embedded_data_callback(uint8_t *data, size_t size, uint8_t data_type, uint64_t pts, void* ctx) {
-    printf("Got embedded data: %zu bytes size and of type %d pts: %lu\n", size, data_type, pts);
+    printf("Got embedded data: %zu bytes size and of type %d pts: %llu\n", size, data_type, pts);
     //In this example we know it's a string, print it.
     printf("Data: %s \n", data);
     printf("Context: %d \n\n", *(int*)ctx);
@@ -72,8 +72,8 @@ void receive_data_callback(uint8_t *data,
     printf("mFrameSize: %zu\n", size);
     printf("mDataContent: %d\n", data_content);
     printf("mBroken: %d\n", broken);
-    printf("mPts: %lu\n", pts);
-    printf("mDts: %lu\n", dts);
+    printf("mPts: %llu\n", pts);
+    printf("mDts: %llu\n", dts);
     printf("mCode: %d\n", code);
     printf("mStreamID: %d\n", stream_id);
     printf("mSource: %d\n", source);
