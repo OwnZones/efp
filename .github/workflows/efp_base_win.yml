@@ -12,10 +12,8 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - name: Install gtest
-      uses: MarkusJx/googletest-installer@v1.1
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: CMake set-up
-      run: cmake -S . `-D CMAKE_BUILD_TYPE=Release -D GTEST_ROOT=D:/gtest`
+      run: cmake -S . `-D CMAKE_BUILD_TYPE=Release`
     - name: make
       run: cmake --build . --config Release
