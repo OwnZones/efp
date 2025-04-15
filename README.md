@@ -49,7 +49,7 @@ Your needs might be different than ours. Or you might use already existing proto
 Anyhow, the above requirements are why we designed and implemented EFP.
 
 
-Please read -> [**ElasticFrameProtocol**](https://github.com/agilecontent/efp/blob/master/docs/ElasticFrameProtocol.pdf) for more information.
+Please read -> [**ElasticFrameProtocol**](https://github.com/OwnZones/efp/blob/master/docs/ElasticFrameProtocol.pdf) for more information.
 
 ## Notification about version 0.3
 
@@ -59,7 +59,7 @@ The internal delivery mechanism has changed to absolute relative time-outs inste
 
 Version 0.3 also implements an optional context to be used in all callbacks. Please see Unit test 19 for details.
 
-**This version changes the API for the receiver!!** 
+**This version changes the API for the receiver!!**
 
 X == milliseconds before timing out non-complete frames.
 
@@ -75,31 +75,31 @@ ElasticFrameProtocolReceiver myEFPReceiver(X, Y, (optional context), (optional s
 
 **Build**
 
-[![efp_base_macos](https://github.com/agilecontent/efp/workflows/efp_base_macos/badge.svg)](https://github.com/agilecontent/efp/actions?query=workflow%3Aefp_base_macos) **(MacOS build)**
+[![efp_base_macos](https://github.com/OwnZones/efp/workflows/efp_base_macos/badge.svg)](https://github.com/OwnZones/efp/actions?query=workflow%3Aefp_base_macos) **(MacOS build)**
 
-[![efp_base_win](https://github.com/agilecontent/efp/workflows/efp_base_win/badge.svg)](https://github.com/agilecontent/efp/actions?query=workflow%3Aefp_base_win) **(Windows 10 build)**
+[![efp_base_win](https://github.com/OwnZones/efp/workflows/efp_base_win/badge.svg)](https://github.com/OwnZones/efp/actions?query=workflow%3Aefp_base_win) **(Windows 10 build)**
 
-[![efp_base_ubuntu](https://github.com/agilecontent/efp/workflows/efp_base_ubuntu/badge.svg)](https://github.com/agilecontent/efp/actions?query=workflow%3Aefp_base_ubuntu) **(Ubuntu build)**
+[![efp_base_ubuntu](https://github.com/OwnZones/efp/workflows/efp_base_ubuntu/badge.svg)](https://github.com/OwnZones/efp/actions?query=workflow%3Aefp_base_ubuntu) **(Ubuntu build)**
 
 **Code quality**
 
-[![CodeFactor](https://www.codefactor.io/repository/github/agilecontent/efp/badge)](https://www.codefactor.io/repository/github/agilecontent/efp)
+[![CodeFactor](https://www.codefactor.io/repository/github/OwnZones/efp/badge)](https://www.codefactor.io/repository/github/OwnZones/efp)
 
 **Code scanning alerts**
 
-[![CodeQL](https://github.com/agilecontent/efp/workflows/CodeQL/badge.svg?branch=master)](https://github.com/agilecontent/efp/security/code-scanning)
+[![CodeQL](https://github.com/OwnZones/efp/workflows/CodeQL/badge.svg?branch=master)](https://github.com/OwnZones/efp/security/code-scanning)
 
-[![deepcode](https://www.deepcode.ai/api/gh/badge?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGF0Zm9ybTEiOiJnaCIsIm93bmVyMSI6IlVuaXQtWCIsInJlcG8xIjoiZWZwIiwiaW5jbHVkZUxpbnQiOmZhbHNlLCJhdXRob3JJZCI6MjE5MTYsImlhdCI6MTU5NzkzMzY5MX0.VMWvZfxEBy8Ib23oONlN65tNZUrubUqQt6eUnMIiWrA)](https://www.deepcode.ai/app/gh/agilecontent/efp/_/dashboard?utm_content=gh%2Fagilecontent%2Fefp) 
+[![deepcode](https://www.deepcode.ai/api/gh/badge?key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJwbGF0Zm9ybTEiOiJnaCIsIm93bmVyMSI6IlVuaXQtWCIsInJlcG8xIjoiZWZwIiwiaW5jbHVkZUxpbnQiOmZhbHNlLCJhdXRob3JJZCI6MjE5MTYsImlhdCI6MTU5NzkzMzY5MX0.VMWvZfxEBy8Ib23oONlN65tNZUrubUqQt6eUnMIiWrA)](https://www.deepcode.ai/app/gh/OwnZones/efp/_/dashboard?utm_content=gh%2FOwnZones%2Fefp)
 
 **Tests**
 
-[![unit_tests](https://github.com/agilecontent/efp/workflows/unit_tests/badge.svg?branch=master)](https://github.com/agilecontent/efp/actions?query=workflow%3Aunit_tests) **(Unit tests running on Ubuntu)**
+[![unit_tests](https://github.com/OwnZones/efp/workflows/unit_tests/badge.svg?branch=master)](https://github.com/OwnZones/efp/actions?query=workflow%3Aunit_tests) **(Unit tests running on Ubuntu)**
 
 **Issues**
 
-[![Percentage of issues still open](http://isitmaintained.com/badge/open/agilecontent/efp.svg)](http://isitmaintained.com/project/agilecontent/efp "Percentage of issues still open")
+[![Percentage of issues still open](http://isitmaintained.com/badge/open/OwnZones/efp.svg)](http://isitmaintained.com/project/OwnZones/efp "Percentage of issues still open")
 
-[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/agilecontent/efp.svg)](http://isitmaintained.com/project/agilecontent/efp "Average time to resolve an issue")
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/OwnZones/efp.svg)](http://isitmaintained.com/project/OwnZones/efp "Average time to resolve an issue")
 
 ## Installation
 
@@ -143,7 +143,7 @@ On Linux, install the following package to be able to run it:
 ---
 
 **EFP** Is built on Ubuntu, Windows10 and MacOS every commit by us.
- 
+
 
 ---
 
@@ -159,7 +159,7 @@ The unit test
 ```cpp
 // The send fragment callback -> 'sendCallback'
 void sendData(const std::vector<uint8_t> &subPacket, uint8_t lStreamID, (optional context.. see below)) {
-// Send the fragment data 
+// Send the fragment data
 // UDP.send(subPacket);
 }
 
@@ -241,7 +241,7 @@ Add this in your CMake file.
 #Include EFP
 include(ExternalProject)
 ExternalProject_Add(project_efp
-        GIT_REPOSITORY https://github.com/agilecontent/efp.git
+        GIT_REPOSITORY https://github.com/OwnZones/efp.git
         GIT_SUBMODULES ""
         SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
         BINARY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/efp
@@ -279,11 +279,11 @@ You should now be able to use EFP in your project and use any CMake supported ID
 
 EFP is all about framing data and checking the integrity of the content. For other functionality EFP uses plug-ins. Available plug-ins are listed below.
 
-[**EFPBonding**](https://github.com/agilecontent/efpbond)
+[**EFPBonding**](https://github.com/OwnZones/efpbond)
 
 EFPBond makes it possible for all streams to use multiple underlying transport interfaces for protection or to increase the capacity.
 
-[**EFPSignal**](https://github.com/agilecontent/efpsignal)
+[**EFPSignal**](https://github.com/OwnZones/efpsignal)
 
 EFPSignal adds signalling, content declaration and dynamic/static subscription to EFP-Streams.
 
@@ -303,7 +303,7 @@ When working with media workflows, both live and non-live, we use framing protoc
 For those situations, MPEG-TS has traditionally been used and is a common multiplexing standard for media. However, MPEG-TS, was designed in the mid ’90s for the transport of media over ATM networks and was later also heavily used in the serial ASI interface. MPEG-TS solved a lot of transport problems in the 1990’s where simplex transport was common and data integrity looked different. However, MPEG-TS has not changed since then, it does not match modern IP protocols well and it has a high protocol overhead. Some of today’s underlying transport protocols also lose data and there might be out of order delivery of data. MPEG-TS was not built to handle that type of delivery behaviour. Another deficiency of
 MPEG-TS is its 33-bits time stamps which wrap every 26 hours and are used to carry a system reference time. Similarly, RTP has 32 bits time stamps. EFP uses 64 bits and can therefore carry monotonically increasing time stamps like TAI with high precision.
 
-There has been work done in the MPEG group to modernize media/data framing using MMT (MPEG Media Transport) for better adaption against underlying transport. MMT is currently used in the ATSC 3.0 standard but has not gained popularity in the data center/cloud/internet domain. 
+There has been work done in the MPEG group to modernize media/data framing using MMT (MPEG Media Transport) for better adaption against underlying transport. MMT is currently used in the ATSC 3.0 standard but has not gained popularity in the data center/cloud/internet domain.
 
 Another common solution to cover for a protocol’s shortcomings is to stack protocols and framing structures on top of each other. However, this drives complexity to the solution, ads overhead and sometimes delay. Many implementations are closed source and, if they aren’t, they are often of license types that are unwanted in commercial products.
 
@@ -312,7 +312,7 @@ Now with the rise of protocols such as RIST, Zixi, and SRT we wanted to fully ut
 That’s why we developed ElasticFrameProtocol, we are so enthusiastic about where RIST, Zixi, and SRT is taking the future of broadcast.
 There are new open source projects putting these building blocks together, creating new ways of working and transporting media all the time.  We would like to simplify the way of building media solutions even more by open sourcing the layer on top of the transport protocols so that you can focus on developing great services instead.
 
-Please feel free to use, clone / fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks in your next project or lab. 
+Please feel free to use, clone / fork and contribute to this new way of interconnecting media services between datacenters, internet and private networks in your next project or lab.
 
 
 ## Examples
@@ -322,7 +322,7 @@ Please feel free to use, clone / fork and contribute to this new way of intercon
 
 [EFP + SRT Client/Server](https://github.com/agilecontent/efp_srt_example)
 
-2. A example showing how to use the EBPBond plug-in 
+2. A example showing how to use the EBPBond plug-in
 
 [EFP + EFPBond + SRT](https://github.com/agilecontent/efp_srt_bonding_example)
 

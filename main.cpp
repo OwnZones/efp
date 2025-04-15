@@ -1,4 +1,4 @@
-// Copyright Edgeware AB 2020, Agile Content 2021-2022
+// Copyright Edgeware AB 2020, Agile Content 2021-2024, Ateliere Creative Technologies 2024-
 #include "unitTests/UnitTest1.h"
 #include "unitTests/UnitTest2.h"
 #include "unitTests/UnitTest3.h"

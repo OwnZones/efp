@@ -1,4 +1,4 @@
-// Copyright Edgeware AB 2020, Agile Content 2021-2022
+// Copyright Edgeware AB 2020, Agile Content 2021-2024, Ateliere Creative Technologies 2024-
 #ifndef LOGGER_H
 #define LOGGER_H
 
