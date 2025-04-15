@@ -26,6 +26,8 @@ TEST(UnitTest24, SendPacketFrameType1AndFrameType2) {
 
       std::generate(garbage.begin(), garbage.end(),
                     [&]() { return static_cast<uint8_t>(dis(gen)); });
+
+      myEFPReceiver->receiveFragment(garbage, 0);
     };
 
     std::vector<uint8_t> mydata;
