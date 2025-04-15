@@ -7,7 +7,7 @@
 //  | |____ | || (_| |\__ \| |_ | || (__ | |   | |  | (_| || | | | | ||  __/
 //  |______||_| \__,_||___/ \__||_| \___||_|   |_|   \__,_||_| |_| |_| \___|
 //                                                                  Protocol
-// Copyright Edgeware AB 2020, Agile Content 2021-2022
+// Copyright Edgeware AB 2020, Agile Content 2021-2024, Ateliere Creative Technologies 2024-
 //
 
 #include "ElasticFrameProtocol.h"
